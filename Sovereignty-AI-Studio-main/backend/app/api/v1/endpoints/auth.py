@@ -2,15 +2,75 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta
+from typing import Optional
 
 from app.dependencies import get_database
 from app.core.security import create_access_token, verify_password, get_password_hash
 from app.schemas.user import UserCreate, User, Token, UserLogin
 from app.services.user_service import get_user_by_username, get_user_by_email, create_user
 from app.config import settings
+from app.models.user import User as UserModel
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+
+
+def authenticate_and_create_token(
+    username: str,
+    password: str,
+    db: Session
+) -> Token:
+    """
+    Authenticate user credentials and create access token.
+    
+    This is a shared helper function to avoid code duplication between
+    login endpoints.
+    
+    Args:
+        username: Username or email
+        password: Plain text password
+        db: Database session
+        
+    Returns:
+        Token object with access_token and token_type
+        
+    Raises:
+        HTTPException 401: If credentials are invalid
+        HTTPException 403: If account is inactive
+    """
+    # Get user by username
+    user = get_user_by_username(db, username)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Verify password
+    if not verify_password(password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Check if user is active
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is inactive",
+        )
+
+    # Create access token
+    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
+    access_token = create_access_token(
+        data={"sub": user.username},
+        expires_delta=access_token_expires,
+    )
+
+    return Token(access_token=access_token, token_type="bearer")
 
 
 @router.post("/register", response_model=User, status_code=status.HTTP_201_CREATED)
@@ -74,39 +134,11 @@ async def login(
     Raises:
         HTTPException 401: If credentials are invalid
     """
-    # Get user by username
-    user = get_user_by_username(db, form_data.username)
-    
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    # Verify password
-    if not verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    # Check if user is active
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account is inactive",
-        )
-
-    # Create access token
-    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
-    access_token = create_access_token(
-        data={"sub": user.username},
-        expires_delta=access_token_expires,
+    return authenticate_and_create_token(
+        username=form_data.username,
+        password=form_data.password,
+        db=db
     )
-
-    return {"access_token": access_token, "token_type": "bearer"}
 
 
 @router.post("/token", response_model=Token)
@@ -127,39 +159,11 @@ async def login_for_access_token(
     Raises:
         HTTPException 401: If credentials are invalid
     """
-    # Get user by username
-    user = get_user_by_username(db, user_credentials.username)
-    
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    # Verify password
-    if not verify_password(user_credentials.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    # Check if user is active
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account is inactive",
-        )
-
-    # Create access token
-    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
-    access_token = create_access_token(
-        data={"sub": user.username},
-        expires_delta=access_token_expires,
+    return authenticate_and_create_token(
+        username=user_credentials.username,
+        password=user_credentials.password,
+        db=db
     )
-
-    return {"access_token": access_token, "token_type": "bearer"}
 
 
 @router.post("/refresh", response_model=Token)
@@ -168,7 +172,7 @@ async def refresh_token(
     db: Session = Depends(get_database),
 ):
     """
-    Refresh an access token (placeholder for future implementation).
+    Refresh an access token.
 
     Args:
         current_token: Current valid access token
@@ -193,4 +197,4 @@ async def refresh_token(
         expires_delta=access_token_expires,
     )
 
-    return {"access_token": access_token, "token_type": "bearer"}
+    return Token(access_token=access_token, token_type="bearer")
