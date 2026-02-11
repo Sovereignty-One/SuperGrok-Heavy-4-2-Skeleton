@@ -10,9 +10,9 @@ ENV TERM=dumb \
 WORKDIR /app
 
 # Zero-trace install — only what burns
-RUN apt-get update --no-cache \
+RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        gcc \
+        gcc curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     /tmp/* \

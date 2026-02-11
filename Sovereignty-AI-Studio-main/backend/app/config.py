@@ -9,14 +9,14 @@ class Settings(BaseSettings):
     debug: bool = False
 
     # Database
-    database_url: str
+    database_url: str = "postgresql://localhost/sovereignty_db"
 
     # Redis
-    redis_url: str
+    redis_url: str = "redis://localhost:6379/0"
 
     # Security
     secret_key: str = Field(
-        ...,
+        default_factory=lambda: secrets.token_urlsafe(32),
         min_length=32,
         description="Secret key for JWT signing - must be at least 32 characters"
     )

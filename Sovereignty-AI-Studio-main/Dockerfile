@@ -2,7 +2,8 @@ FROM alpine:3.21
 RUN apk add --no-cache python3 py3-pip tzdata git openssh curl
 WORKDIR /app
 COPY . .
-RUN pip install --no-cache-dir --break-system-packages -r requirements.txt
+RUN pip install --no-cache-dir --break-system-packages -r requirements.txt \
+    && pip install --no-cache-dir --break-system-packages -r backend/requirements.txt
 RUN mkdir -p /app/logs && chmod 700 /app/logs
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8000

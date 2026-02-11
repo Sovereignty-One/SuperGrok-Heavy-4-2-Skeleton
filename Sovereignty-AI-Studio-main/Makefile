@@ -11,11 +11,11 @@ lint:
 	PYTHONPATH=./backend flake8 src/ --max-line-length=100
 
 build:
-	docker-compose build
+	docker compose build
 
 deploy:
-	docker-compose up -d
+	docker compose up -d
 
 clean:
-	docker-compose down
+	docker compose down
 	rm -rf __pycache__ */__pycache__
