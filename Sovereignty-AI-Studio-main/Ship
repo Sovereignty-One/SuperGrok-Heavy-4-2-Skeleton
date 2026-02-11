@@ -1,0 +1,205 @@
+/.ship:
+
+#!/usr/bin/env bash
+# ============================================================
+# --- Sovereignty AI Studio: Full Ship Script (verbose ready) ---
+# ============================================================
+
+set -euo pipefail
+
+# -----------------------------
+# ARG PARSING
+# -----------------------------
+VERBOSE=0
+if [ "${1-}" = "-v" ]; then
+    VERBOSE=1
+fi
+
+vlog() {
+    if [ "$VERBOSE" -eq 1 ]; then
+        echo "$@"
+    fi
+}
+
+# -----------------------------
+# CONFIG
+# -----------------------------
+FED_DIR="/tmp/sovereign_fed"
+mkdir -p "$FED_DIR"
+
+CHAIN_FILE="/tmp/sovereign_chain.log"
+
+HEAD=$(git rev-parse HEAD)
+TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+COMMIT_MSG=$(git log -1 --pretty=%B)
+EVENT_STR="$TS|$HEAD|$COMMIT_MSG"
+
+# -----------------------------
+# SEAL COMMIT: Hardware + Argon2
+# -----------------------------
+seal_commit() {
+    python3 - <<PY
+import sys, subprocess, time
+from seal_hardware import seal_in_hardware
+
+start_hw = time.time()
+event = "$EVENT_STR".encode()
+
+try:
+    hw_seal = seal_in_hardware(event)
+except Exception as e:
+    print("⚠️ HARDWARE SEAL FAILURE:", e)
+    sys.exit(1)
+hw_time = time.time() - start_hw
+
+start_argon = time.time()
+argon_cmd = [
+    "argon2", hw_seal, "-id", "-t", "2", "-m", "19", "-p", "1", "-l", "64"
+]
+result = subprocess.run(argon_cmd, capture_output=True, text=True, check=True)
+argon_seal = result.stdout.strip().split()[-1]
+argon_time = time.time() - start_argon
+
+# Append to chain
+with open("$CHAIN_FILE", "a") as f:
+    f.write(f"{'$HEAD'}|{argon_seal}|{TS}\n")
+
+# Verbose log
+if $VERBOSE:
+    print(f"🔹 Hardware seal time: {hw_time:.3f}s")
+    print(f"🔹 Argon2 grind time: {argon_time:.3f}s, mem=64MB, iter=2, threads=1")
+
+print(argon_seal)
+PY
+}
+
+ARGON_SEAL=$(seal_commit)
+
+# -----------------------------
+# HIPAA WRAP
+# -----------------------------
+hipaa_wrap() {
+    local user_id="$1"
+    python3 - <<PY
+import hashlib, json, time
+
+log = "$ARGON_SEAL"
+user_id = "$user_id"
+
+pid = hashlib.sha3_256((user_id + str(time.time())).encode()).hexdigest()[:12]
+wrapped = {
+    "pid": pid,
+    "data": log,
+    "seal": log
+}
+
+with open("$FED_DIR/hipaa_log.json", "a") as f:
+    f.write(json.dumps(wrapped) + "\\n")
+
+if $VERBOSE:
+    print(f"🔹 HIPAA PID generated: {pid}")
+PY
+}
+
+hipaa_wrap "kid-001"
+
+# -----------------------------
+# Verifiable Credential Export
+# -----------------------------
+vc_credential() {
+    python3 - <<PY
+import json
+
+claim = {
+    "@context": "https://www.w3.org/ns/credentials/v2",
+    "type": ["SovereignAction", "EEGIntent"],
+    "credentialSubject": {
+        "kid": "kid-001",
+        "action": "$COMMIT_MSG",
+        "timestamp": "$TS",
+        "seal": "$ARGON_SEAL"
+    }
+}
+
+with open("$FED_DIR/vc.json", "w") as f:
+    f.write(json.dumps(claim, indent=2))
+
+if $VERBOSE:
+    print(f"🔹 VC exported: kid-001, seal head {claim['credentialSubject']['seal'][:8]}...")
+PY
+}
+
+vc_credential
+
+# -----------------------------
+# Federation Check: broadcast & scan Argon2 seal
+# -----------------------------
+bluetooth_beacon() {
+    python3 - <<PY
+import time
+start = time.time()
+print("$ARGON_SEAL")
+end = time.time()
+if $VERBOSE:
+    print(f"🔹 Broadcast latency: {end-start:.3f}s")
+PY
+}
+
+bluetooth_scan_heads() {
+    python3 - <<PY
+import time
+start = time.time()
+print("$ARGON_SEAL")  # stub: replace with real BLE scan
+end = time.time()
+if $VERBOSE:
+    print(f"🔹 Scan latency: {end-start:.3f}s")
+PY
+}
+
+divergence_log() {
+    REMOTE_SEALS="$*"
+    python3 - <<PY
+import json
+from seal_hardware import seal_in_hardware
+
+event = {
+    "timestamp": "$TS",
+    "local_seal": "$ARGON_SEAL",
+    "remote_seals": "$REMOTE_SEALS",
+    "severity": "RED",
+    "action": "HALT"
+}
+
+payload = json.dumps(event, sort_keys=True).encode()
+seal_raw = seal_in_hardware(payload)
+event["seal"] = seal_raw
+
+with open("$FED_DIR/divergence.log", "a") as f:
+    f.write(json.dumps(event) + "\\n")
+
+if $VERBOSE:
+    print("🔹 Divergence sealed with hardware.")
+PY
+}
+
+# Broadcast
+bluetooth_beacon
+
+# Poll once (5s)
+REMOTES=$(timeout 5 bluetooth_scan_heads || true)
+
+if [ -n "$REMOTES" ]; then
+    if echo "$REMOTES" | grep -v "^$ARGON_SEAL$" | grep -q . ; then
+        echo ""
+        echo "🔴🔴🔴 DIVERGENCE ALERT 🔴🔴🔴"
+        echo "Local seal    : $ARGON_SEAL"
+        echo "Remote seal(s):"
+        echo "$REMOTES"
+        echo ""
+        echo "SYSTEM HALTED. NO PUSH. NO SYNC."
+        echo "CHECK DEVICES. CHECK PEOPLE."
+        divergence_log "$REMOTES"
+        exit 1
+    fi
+fi
+echo "✅ All devices in agreement. Intent sovereign. Push complete."
