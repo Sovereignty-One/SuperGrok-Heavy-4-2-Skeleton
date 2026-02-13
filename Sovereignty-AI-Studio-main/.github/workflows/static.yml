@@ -31,13 +31,20 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Prepare static content
+        run: |
+          mkdir -p _site
+          cp Sovereignty-AI-Studio-main/Deploy.html _site/index.html
+          cp Sovereignty-AI-Studio-main/Real_Validator.html _site/validator.html
+          cp Sovereignty-AI-Studio-main/Tools_Post_Quantum_Dashboard.html _site/dashboard.html
+          cp Sovereignty-AI-Studio-main/SuperGrok-Heavy4-2-Validator.html _site/model-validator.html
+          cp README.md _site/README.md
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
-          path: '.'
+          path: '_site'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

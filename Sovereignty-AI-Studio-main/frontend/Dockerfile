@@ -11,8 +11,11 @@ RUN npm install
 # Copy source code
 COPY . .
 
+# Build for production
+RUN npm run build
+
 # Expose port
-EXPOSE 98765
+EXPOSE 3000
 
 # Start the application
 CMD ["npm", "start"]
