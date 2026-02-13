@@ -1,0 +1,59 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: Sovereignty-AI-Studio-main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r backend/requirements.txt
+          pip install pytest pytest-asyncio flake8
+
+      - name: Lint
+        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --max-line-length=120
+
+      - name: Run tests
+        run: pytest --tb=short -q
+        env:
+          DATABASE_URL: sqlite:///./test.db
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key-for-ci-only-not-production-use-1234
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend Docker image
+        run: docker build -t sovereignty-backend ./backend
+
+      - name: Build frontend Docker image
+        run: docker build -t sovereignty-frontend ./frontend
+
+      - name: Verify Docker Compose config
+        run: docker compose config --quiet
+        env:
+          POSTGRES_PASSWORD: ci-test-password
+          SECRET_KEY: ci-test-secret-key-for-validation-only-1234
