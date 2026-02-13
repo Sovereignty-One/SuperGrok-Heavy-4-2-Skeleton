@@ -2,10 +2,30 @@
 # SuperGrok-Hevy-Skeleton-
 The entire skeleton 
 
+<<<<<< copilot/update-remote-repo-url-again
+## Repository Migration Instructions
+
+To migrate the Sovereignty-AI-Studio repository to the new organization, follow these steps:
+
+```bash
+# Clone the current repo
+git clone https://github.com/Appel420/Sovereignty-AI-Studio.git
+
+# Navigate into the directory
+cd Sovereignty-AI-Studio
+
+# Change the remote to point to the new org repo
+git remote set-url origin https://github.com/sovereignty-one/Sovereignty-AI-Studio.git
+
+# Push all branches and tags
+git push --all
+git push --tags
+```
+
 ## Documentation
 
 - [Migration Guide](MIGRATION.md) - Instructions for migrating the Sovereignty-AI-Studio repository from the old organization to the new organization
-=======
+
 # SuperGrok-Hevy-Skeleton
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
@@ -31,7 +51,7 @@ All components are designed for **complete operational independence**, **end-to-
 
 ## 🏗️ Project Structure
 
-```
+
 SuperGrok-Hevy-Skeleton/
 ├── Sovereignty-AI-Studio-main/      # Main project source code
 │   ├── ai_core/                      # AI Core Modules
@@ -545,3 +565,4 @@ For questions, issues, or collaboration inquiries:
 **Status**: Active Development  
 **Core Model**: Super Grok Heavy 4.2
 main
+>>>>>> main
