@@ -1,0 +1,99 @@
+SYSTEM_VALIDATOR.md – Final Version
+🔐 FamilyGuard v2.1 System Validator
+Public. Auditable. On-device.
+
+1. Purpose
+Universal, zero-trust compliance engine. Checks:
+	•	Firmware integrity
+	•	AI model fingerprint
+	•	Runtime telemetry chains
+	•	Emergency-mode hooks
+Runs offline, signed with your Blake3 + Argon2 key. No cloud. No telemetry back to XAI.
+
+2. Flow (ASCII Diagram)
+                  ┌─────────────────────┐
+                  │   USER COMMAND       │
+                  │   (STOP / OFF / FIGHT)│
+                  └────────────┬─────────┘
+                               │
+               ┌───────────────┴───────────────┐
+               │   Secure Enclave (SE)         │
+               │   • Key derivation            │
+               │   • TPM quote fetch           │
+               │   • Signature generation      │
+               └───────────────┬───────────────┘
+                               │
+            ┌──────────────────┴──────────────────┐
+            │   ON-DEVICE VALIDATION LOOP          │
+            │   1. AES-GCM decrypt last state      │
+            │   2. Compare TPM PCR0 → PCR14        │
+            │   3. Re-verify ratchet chain        │
+            │   4. Heart-rate / LiDAR model hash  │
+            │   5. Pass → unlock / fail → wipe    │
+            └───────────────────┬──────────────────┘
+                                │
+           ┌--------------------┴-------------------┐
+           │   OUTPUT (voice + 1-bit LED)           │
+           │   • OK → "green" flash + "Clear"      │
+           │   • FAIL → "red" flash + "OFF" forced │
+           └───────────────────────────────────────┘
+
+3. Core Tests (Executed Every Boot / Command)
+Test
+Method
+Pass Criteria
+Firmware Seal
+TPM PCR0 SHA256
+Matches golden value in vault
+Model Integrity
+Blake3 hash of .tflite
+Must equal pinned hash
+Key Chain
+X3DH + Double Ratchet log
+No skipped ratchets, last HKDF matches enclave
+Emergency Hooks
+bpftool prog list check
+No eBPF programs outside whitelist
+Sensor Bind
+LiDAR / mic / heart sensor
+Hardware-bound UID verified
+
+4. API Logic (Exposed Only via Voice / Shortcut)
+func ValidateSystem() bool {
+  if tpm.PCR(0) != goldenPCR0 {
+    forceOff()
+    return false
+  }
+  if modelHash != blake3.Sum256(modelBytes) {
+    forceOff()
+    return false
+  }
+  if ratchetAudit() != nil {
+    forceOff()
+    return false
+  }
+  // emergency mode active
+  if fightMode && eBPF.List().any() {
+    forceOff()
+    return false
+  }
+  return true
+}
+
+5. Fail-Safe Kill
+	•	Any failed check → echo OFF > /dev/voice_trigger
+	•	
+	•	Device goes dark:
+	◦	Wi-Fi off
+	◦	Cellular off
+	◦	LiDAR off
+	◦	Logs shredded (shred -u -n 5)
+	◦	LED stays red until user taps RESET (Blake3 challenge)
+
+6. Audit Trail (Optional)
+If you flip LOG = TRUE (voice command: “audit on”):
+	•	Creates /vault/log.db (SQLite, encrypted)
+	•	Entries signed with your enclave key
+	•	Auto-wipe after 30 days
+	•	No IP, no location, only hash of state
+

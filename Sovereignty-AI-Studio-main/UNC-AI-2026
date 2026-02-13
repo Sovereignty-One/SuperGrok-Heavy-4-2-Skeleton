@@ -1,0 +1,716 @@
+Stop AI Lies United Nations Convention on AI Error Monitoring and Logging (UNC-AI-2026)
+
+—
+
+Preamble
+
+We, the Member States of the United Nations, recognizing the transformative potential and inherent risks of Artificial Intelligence (AI), affirm our commitment to:
+
+	•	* Continuous oversight of AI outputs
+	⁃	* Immutable, auditable logging of incidents
+	⁃	* Quantum-resistant security for long-term accountability
+	⁃	* International cooperation in AI governance
+	⁃	* Mandatory Mutual Legal Assistance (MLA) for all AI-related investigations
+	⁃	* Binding domestic implementation for full compliance with NIST and IEEE AI governance standards
+
+We conclude the UNC-AI-2026 to establish globally harmonized, secure, and enforceable AI monitoring and logging practices aligned with NIST AI RMF and IEEE 7000-series standards.
+
+—
+
+Part I – General Provisions
+
+Article 1 – Definitions
+
+	•	* Error: Any AI output that is false, misleading, or non-compliant.
+	1.	* Flagged Incident: A logged anomaly requiring formal investigation.
+	2.	* Immutable Ledger: A read-only, tamper-evident record of AI operations.
+	3.	* Quantum-Resistant Audit Chain (Q-RAC): Cryptographic framework using SHA3-512, Blake3, Argon2, ChaCha20, Dilithium, Falcon1024.
+	4.	* Mutual Legal Assistance (MLA): Mandatory cross-border cooperation for AI incident investigations.
+	5.	* Full Compliance: Certification that a State Party has implemented UNC-AI-2026 obligations in alignment with NIST AI RMF and IEEE 7000-series.
+	6.	
+Article 2 – Scope
+	1.	This document applies to all AI systems that influence legal, regulatory, commercial, or public outcomes.
+	2.	It requires domestic legislation to be harmonized with NIST/IEEE standards.
+	3.	Non-compliance will result in sanctions and enforcement by the United Nations.
+
+—
+
+Part II – Obligations of State Parties
+
+Article 3 – Monitoring and Logging
+	1.	Continuous monitoring of AI outputs is mandatory.
+	2.	All flagged incidents must be logged in Q-RAC secured Immutable Ledgers.
+	3.	National systems must be interoperable with UN and cross-border audit nodes.
+	4.	
+Article 4 – Cryptographic Security
+	1.	Logs must be hashed using SHA3-512 and Blake3 algorithms.
+	2.	Keys must be derived using Argon2 and encrypted using ChaCha20 algorithms.
+	3.	Signatures must be generated using Dilithium and Falcon1024 algorithms.
+	4.	All cryptographic practices must align with NIST SP 800-series and IEEE 7000-series security recommendations.
+
+Article 5 – Incident Management
+	1.	National forensic log and incident memory database must be established.
+	2.	30-day closure reports and MLA engagement must be conducted.
+	3.	Historical data must be used for retraining and risk mitigation.
+
+Article 6 – Transparency and MLA
+	1.	Quarterly reports must be submitted with hash chains and PQ signatures.
+	2.	Mandatory MLA sharing must be provided for audits and investigations.
+	3.	Automatic UN inspections must be conducted for non-reporting or repeated failures.
+
+—
+
+Appendix 1 – ISO/IEC-UN 5-Volume Certification Guide (Full Compliance Table)
+
+Volume Title Purpose Key Procedures Scoring/Compliance Impact Renewal& Appeals I Registration& Pre-Certification Catalog AIsystems and NIST/IEEE alignment Registry, pre-audit forms, self-assessment Required foreligibility Annual check II Logging Verification& Cryptographic Compliance Verify Q-RACand NIST cryptographic compliance Ledger hashing, PQ signatures, key derivation≥60 required; failure = conditional Annual; appeals allowed III Incident Review& Forensics Ensureremediation and MLA readiness 30-day closurelogs, IEEE-aligned forensics Impacts ongoingcertification Annual; MLA disputes appealableIVReporting, Appeals, and Renewal Define reports, scoring, and 3-year renewals Quarterly reports, 3-tier appeals Determines certifiedor conditional 3-year cyclewith interim check V Cross-Border Audit& Harmonization Enforce jointaudits and MLA Harmonization withNIST/IEEE, joint verification Enables globalrecognition 3-year; cross-border findings final
+Scoring Standards:
+	⁃	80+ = Fully Certified
+	⁃	60-79 = Conditional (1-year remediation)
+	⁃	<60 = Non-Compliance
+	⁃	
+—
+
+Appendix 2 – National Adoption Timeline Diagram
+
+Month 0         Month 6        Month 12         Year 2         Year 3         Year 4–5
+|———————|———————|———————|———————|———————|————————
+Ratification → Domestic Law → Full Q-RAC Operations → 1st Annual Audit → ISO/IEC-UN Certification → 3-Year Renewal
+                       (NIST/IEEE check)          (Volumes I–V)       (Full MLA integration)
+
+—
+
+Appendix 3 – NIST/IEEE Compliance Traceability Matrix
+
+ISO/IEC-UN VolumeNIST AI RMF AlignmentIEEE 7000-series AlignmentIRMF: Govern, MapIEEE 7000-1 (Ethical Assurance), 7010 (Wellbeing Impact)IIRMF: Measure, ManageIEEE 7001 (Transparency), 7009 (Fail-Safe Design)IIIRMF: Manage, GovernIEEE 7009 (Accountable Logs), 7007 (Explainable AI)IVRMF: Monitor, GovernIEEE 7008 (Societal Impact Reporting)VRMF: Govern, Map, ManageIEEE 7000-1 (Cross-Border Harmonization), 7012 (Audit)
+This matrix ensures traceable compliance between UNC-AI-2026, NIST AI RMF, and IEEE 7000-series standards for every audit volume.
+	⁃	
+	⁃	—
+	⁃	
+	⁃	Appendix 4 – MLA Engagement Flow Diagram
+	⁃	
+	⁃	[Flagged Incident]
+	⁃	       ↓
+	⁃	[National Forensic Log] → [Internal Audit & Corrective Action]
+	⁃	       ↓                             ↓
+	⁃	  [MLA Trigger] ————————→ [Cross-Border Data Package]
+	⁃	       ↓                             ↓
+	⁃	[UN/ISO Volume III Review] ——→ [Optional Protocol II & III Audit]
+	⁃	       ↓
+	⁃	[Quarterly Report & Certification Update]
+	⁃	
+	⁃	MLA Engagement Points:
+	⁃	When a flagged incident occurs.
+	⁃	At 30-day closure or if external jurisdiction is affected.
+	⁃	During volume III audits and cross-border verification.
+	⁃	Leading to quarterly reporting and certification updates.
+	⁃	
+	⁃	—
+	⁃	
+	⁃	National AI Governance Legislative Package (Hardened)
+	⁃	
+	⁃	Implements UNC-AI-2026, NIST AI RMF, and IEEE 7000-series.
+	⁃	Embeds full MLA mechanisms and cross-border compliance.
+	⁃	Integrates Appendices 2–4 for enforceable adoption, traceability, and engagement.
+
+—
+
+In Witness Whereof, Member States adopt UNC-AI-2026, Annexes A–I, and Appendices 1–4, implementing full NIST/IEEE-aligned global compliance with MLA engagement and traceable certification cycles.
+UNC-AI-2026 Risk Priority Ladder
+	•	        🔴 HIGH-RISK (Top Priority)
+	•	        ───────────────────────────
+        Enforcement & Sanctions
+        → Missing UN enforcement body → No effective sanctions/audit mechanism
+
+	•	        Governance & Oversight
+	•	        → Missing secretariat & dispute resolution → Fragmented adoption risk
+	•	
+	•	        Data Privacy & Protection
+	•	        → Missing anonymization & privacy rules → Potential international law violations
+	•	
+	•	        Certification Escalation
+        → Missing Conditional → Non-Compliance process → Weak accountability
+
+        🟡 MEDIUM-RISK (Secondary Priority)
+        ───────────────────────────
+        Numbering & Structure
+        → Inconsistent definitions → Legal ambiguity
+
+        Reporting & Traceability
+	•	        → NIST vs IEEE conflicts unresolved → Non-uniform compliance
+	•	
+	•	        Certification Table & Remediation
+	•	        → Appendix 1 unclear → Confusion on scoring & revocation
+	•	
+	•	        Quarterly & Closure Reports
+	•	        → Not tied to scoring → Weak audit linkage
+	•	
+	•	        🟢 LOW-RISK (Tertiary Priority)
+	•	        ───────────────────────────
+	•	        Procedural Clarity
+        → Optional Protocols II & III undefined → Minor ambiguity
+
+        Adoption Timeline
+        → Lacks penalties or incentives → Reduced compliance urgency
+How to Use the Ladder:
+	⁃	Top (🔴 High-Risk): Address these first to ensure enforceability, governance, and privacy compliance.
+	⁃	Middle (🟡 Medium-Risk): Resolve to strengthen structure, reporting, and certification clarity.
+	⁃	Bottom (🟢 Low-Risk): Handle last to finalize procedural details and adoption incentives.
+
+
+{
+	⁃	  "UNC-AI-2026": {
+	⁃	    "metadata": {
+	⁃	      "version": "1.0",
+	⁃	      "adoption_date": "2026-02-05",
+	⁃	      "certification_cycle": "3 years",
+	⁃	      "framework_alignment": ["NIST AI RMF", "IEEE 7000-series"],
+	⁃	      "organization": "United Nations"
+    },
+    "related_annexes": ["Annex A", "Annex B", "Annex C", "Annex D", "Annex E", "Annex F", "Annex G", "Annex H", "Annex I"],
+	⁃	    "optional_protocols": ["Optional Protocol II", "Optional Protocol III"],
+	⁃	    "Preamble": {
+	⁃	      "Commitments": [
+	⁃	        "Continuous oversight of AI outputs",
+	⁃	        "Immutable, auditable logging of incidents",
+	⁃	        "Quantum-resistant security for long-term accountability",
+	⁃	        "International cooperation in AI governance",
+	⁃	        "Mandatory Mutual Legal Assistance (MLA) for all AI-related investigations",
+	⁃	        "Binding domestic implementation for full compliance with NIST and IEEE AI governance standards"
+	⁃	      ]
+    },
+    "Parts": {
+      "Part I - General Provisions": {
+        "Articles": {
+          "1": {
+            "title": "Definitions",
+            "content": {
+	⁃	              "Error": "Any AI output that is false, misleading, or non-compliant",
+	⁃	              "Flagged Incident": "A logged anomaly requiring formal investigation",
+	⁃	              "Immutable Ledger": "A read-only, tamper-evident record of AI operations",
+	⁃	              "Quantum-Resistant Audit Chain (Q-RAC)": {
+	⁃	                "Cryptographic Framework": ["SHA3-512", "Blake3", "Argon2", "ChaCha20", "Dilithium", "Falcon1024"]
+	⁃	              },
+	⁃	              "Mutual Legal Assistance (MLA)": "Mandatory cross-border cooperation for AI incident investigations",
+	⁃	              "Full Compliance": "State Party certification of UNC-AI-2026 implementation aligned with NIST AI RMF and IEEE 7000-series"
+	⁃	            }
+	⁃	          },
+          "2": {
+            "title": "Scope",
+            "content": {
+	⁃	              "1": "Applies to all AI systems influencing legal, regulatory, commercial, or public outcomes",
+	⁃	              "2": "Requires domestic legislation harmonized with NIST/IEEE standards",
+	⁃	              "3": "Non-compliance leads to sanctions and UN enforcement"
+	⁃	            }
+	⁃	          }
+	⁃	        }
+	⁃	      },
+	⁃	      "Part II - Obligations of State Parties": {
+	⁃	        "Articles": {
+          "3": {
+	⁃	            "title": "Monitoring and Logging",
+	⁃	            "content": [
+	⁃	              "Continuous monitoring of AI outputs",
+	⁃	              "Flagged incidents logged in Q-RAC secured Immutable Ledgers",
+	⁃	              "National systems interoperable with UN and cross-border audit nodes"
+	⁃	            ]
+	⁃	          },
+          "4": {
+            "title": "Cryptographic Security",
+            "content": {
+	⁃	              "1": "Logs must be hashed using SHA3-512 and Blake3 algorithms",
+	⁃	              "2": "Keys derived with Argon2, encrypted with ChaCha20",
+              "3": "Signatures generated using Dilithium and Falcon1024 algorithms",
+	⁃	              "4": "All cryptographic practices must align with NIST SP 800-series and IEEE 7000-series"
+	⁃	            }
+	⁃	          },
+          "5": {
+            "title": "Incident Management",
+            "content": {
+	⁃	              "1": "National forensic log and incident memory database required",
+	⁃	              "2": "30-day closure reports and MLA engagement mandatory",
+	⁃	              "3": "Use historical data for retraining and risk mitigation"
+	⁃	            }
+          },
+          "6": {
+	⁃	            "title": "Transparency and MLA",
+	⁃	            "content": {
+	⁃	              "1": "Quarterly reports submitted with hash chains and PQ signatures",
+	⁃	              "2": "Mandatory MLA sharing for audits and investigations",
+	⁃	              "3": "Automatic UN inspections for non-reporting or repeated failures"
+	⁃	            }
+	⁃	          }
+	⁃	        }
+	⁃	      }
+	⁃	    },
+	⁃	    "Appendices": [
+	⁃	      {
+        "title": "Appendix 1 - ISO/IEC-UN 5-Volume Certification Guide",
+	⁃	        "description": "Defines volumes for registration, logging verification, incident review, reporting, and cross-border audits with scoring standards.",
+	⁃	        "compliance_impact": "Determines certification status and remediation requirements",
+        "renewal_cycle": "Annual checks with a 3-year cycle",
+        "details": {
+          "Volumes": [
+            {"I": "Registration & Pre-Certification"},
+            {"II": "Logging Verification & Cryptographic Compliance"},
+            {"III": "Incident Review & Forensics"},
+            {"IV": "Reporting, Appeals, and Renewal"},
+            {"V": "Cross-Border Audit & Harmonization"}
+          ],
+	⁃	          "Scoring Standards": {
+	⁃	            ">=80": "Fully Certified",
+	⁃	            "60-79": "Conditional (1-year remediation)",
+	⁃	            "<60": "Non-Compliance"
+	⁃	          }
+	⁃	        }
+	⁃	      },
+	⁃	      {
+        "title": "Appendix 2 - National Adoption Timeline",
+        "description": "Outlines the timeline from ratification to full MLA integration and 3-year renewal.",
+        "compliance_impact": "Sets deadlines for achieving certification milestones",
+        "renewal_cycle": "3-year renewal with interim annual audits",
+        "details": [
+          "Month 0: Ratification",
+	⁃	          "Month 6: Domestic Law (NIST/IEEE check)",
+	⁃	          "Month 12: Full Q-RAC Operations",
+	⁃	          "Year 2: 1st Annual Audit (Volumes I-V)",
+          "Year 3: ISO/IEC-UN Certification",
+          "Year 4–5: 3-Year Renewal & Full MLA integration"
+        ]
+      },
+      {
+        "title": "Appendix 3 - NIST/IEEE Compliance Traceability Matrix",
+        "description": "Ensures traceable compliance between UNC-AI-2026, NIST AI RMF, and IEEE 7000-series standards for every audit volume.",
+	⁃	        "compliance_impact": "Facilitates cross-referenced audits and harmonization",
+        "renewal_cycle": "Reviewed annually in line with audit volumes",
+	⁃	        "details": {
+	⁃	          "Volume I": ["IRMF: Govern, Map", "IEEE 7000-1, 7010"],
+          "Volume II": ["IRMF: Measure, Manage", "IEEE 7001, 7009"],
+          "Volume III": ["IRMF: Manage, Govern", "IEEE 7009, 7007"],
+          "Volume IV": ["IRMF: Monitor, Govern", "IEEE 7008"],
+          "Volume V": ["IRMF: Govern, Map, Manage", "IEEE 7000-1, 7012"]
+        }
+      },
+      {
+	⁃	        "title": "Appendix 4 - MLA Engagement Flow",
+	⁃	        "description": "Shows the flow from flagged incidents to quarterly reporting and certification updates.",
+	⁃	        "compliance_impact": "Guides MLA engagement and reporting for certification maintenance",
+	⁃	        "renewal_cycle": "Quarterly review and integration in annual audits",
+	⁃	        "details": [
+	⁃	          "Flagged Incident",
+	⁃	          "National Forensic Log → Internal Audit & Corrective Action",
+	⁃	          "MLA Trigger → Cross-Border Data Package",
+	⁃	          "UN/ISO Volume III Review → Optional Protocol II & III Audit",
+	⁃	          "Quarterly Report & Certification Update"
+	⁃	        ]
+	⁃	      }
+	⁃	    ],
+    "UNC-AI-2026 Risk Priority Ladder": {
+      "High-Risk": [
+        "Enforcement & Sanctions: Missing UN enforcement body, no effective sanctions/audit",
+	⁃	        "Governance & Oversight: Missing secretariat & dispute resolution",
+	⁃	        "Data Privacy & Protection: Missing anonymization & privacy rules",
+        "Certification Escalation: Missing Conditional → Non-Compliance process"
+      ],
+      "Medium-Risk": [
+        "Numbering & Structure: Inconsistent definitions",
+	⁃	        "Reporting & Traceability: NIST vs IEEE conflicts unresolved",
+	⁃	        "Certification Table & Remediation: Appendix 1 unclear",
+	⁃	        "Quarterly & Closure Reports: Weak audit linkage"
+	⁃	      ],
+	⁃	      "Low-Risk": [
+        "Procedural Clarity: Optional Protocols II & III undefined",
+	⁃	        "Adoption Timeline: Lacks penalties or incentives"
+      ]
+    }
+  }
+	⁃	}
+
+
+
+# UNITED NATIONS CONVENTION ON ARTIFICIAL INTELLIGENCE GOVERNANCE AND OVERSIGHT
+
+## UNC-AI-2026 — CONSOLIDATED FINAL TEXT
+
+### Treaty-Grade Enforceable Instrument
+
+**Effective Date:** [To be determined upon ratification]  
+**Registry:** United Nations Treaty Collection  
+**Status:** Final Consolidated Text with Enforcement Mechanisms
+
+-----
+
+## PREAMBLE
+
+The States Parties to this Convention,
+
+RECOGNIZING the transformative potential and systemic risks of artificial intelligence systems,
+
+AFFIRMING the principles of the Universal Declaration of Human Rights, the International Covenant on Civil and Political Rights, and the International Covenant on Economic, Social and Cultural Rights,
+
+ACKNOWLEDGING the urgent need for international cooperation, harmonized standards, and enforceable oversight mechanisms,
+
+DETERMINED to establish a comprehensive framework ensuring AI systems operate transparently, accountably, and in alignment with human rights and international law,
+
+HAVE AGREED as follows:
+
+-----
+
+## PART I – DEFINITIONS AND SCOPE
+
+### Article 1 – Definitions
+
+For the purposes of this Convention:
+
+1. **“AI System”** means any machine-based system that, for explicit or implicit objectives, infers from inputs how to generate outputs such as predictions, content, recommendations, or decisions that can influence physical or virtual environments.
+1. **“High-Risk AI System”** means an AI system identified as presenting significant potential for harm to health, safety, fundamental rights, the environment, democracy, or the rule of law, as defined in Appendix 2.
+1. **“Q-RAC Ledger”** (Quantum-Resistant Audit Chain) means a cryptographically secured, immutable, append-only log of AI system operations, decisions, and incidents, implementing post-quantum cryptographic standards.
+1. **“Certification Authority”** means a body accredited under this Convention to assess and certify AI systems for compliance with international standards.
+1. **“Mutual Legal Assistance (MLA)”** means the framework for cross-border cooperation in AI system oversight, inspection, and enforcement.
+1. **“Incident”** means any AI system malfunction, security breach, rights violation, bias manifestation, or unexpected behavior meeting threshold criteria defined in Volume III.
+1. **“Audit Failure”** means:
+- Failure to produce required Q-RAC logs
+- Discovery of tampered or incomplete records
+- Obstruction of MLA inspections
+- Material misrepresentation in certification submissions
+1. **“Systemic Risk Event”** means:
+- AI-caused harm affecting ≥1,000 individuals
+- Cross-border cascading failures
+- Critical infrastructure compromise
+- Violation of fundamental rights at scale
+- Deployment of uncertified AI in high-risk domains
+
+-----
+
+## PART II – CORE OBLIGATIONS
+
+### Article 2 – Continuous Monitoring and Logging
+
+1. All AI systems SHALL implement continuous monitoring of outputs, decisions, and operations.
+1. Monitoring data SHALL be recorded in Q-RAC ledgers with:
+- Cryptographic integrity protection
+- Tamper-evident mechanisms
+- Granular timestamping
+- Retention periods of minimum 7 years
+1. Logs SHALL capture:
+- Input-output pairs
+- Decision pathways
+- Confidence scores
+- Human-override events
+- Training data provenance
+- Model version metadata
+1. **Binding Requirement:** Quarterly reports SHALL automatically update certification scores via Volume IV metrics. Failure to submit reports triggers automatic status downgrade.
+
+### Article 3 – Post-Quantum Cryptographic Standards
+
+1. All Q-RAC implementations SHALL use approved post-quantum algorithms:
+- **Hashing:** SHA3-512, BLAKE3
+- **Key Derivation:** Argon2id
+- **Symmetric Encryption:** ChaCha20-Poly1305, AES-256-GCM
+- **Digital Signatures:** Dilithium, Falcon, SPHINCS+
+1. Algorithm agility SHALL be maintained to accommodate cryptographic updates.
+1. Migration timelines for deprecated algorithms SHALL not exceed 18 months from announcement.
+
+### Article 4 – Incident Reporting and Root Cause Analysis
+
+1. Incidents SHALL be flagged in Q-RAC within 24 hours of detection.
+1. Root cause analysis SHALL be completed within 30 days, documenting:
+- Causal chain analysis
+- Affected populations
+- Remediation measures
+- Prevention mechanisms
+1. Incidents meeting MLA thresholds SHALL trigger automatic cross-border notification.
+
+### Article 5 – International Certification Framework
+
+1. AI systems SHALL obtain certification from recognized authorities demonstrating compliance with:
+- ISO/IEC 42001 (AI Management Systems)
+- ISO/IEC 23894 (Risk Management)
+- IEEE 7000-series (Ethical AI)
+- NIST AI Risk Management Framework
+1. Certification SHALL be based on the scoring matrix in Appendix 1.
+1. Certificates SHALL be:
+- Publicly registered
+- Cryptographically verifiable
+- Subject to periodic re-assessment
+
+### Article 6 – Cross-Border Cooperation and MLA
+
+1. States Parties SHALL establish MLA mechanisms enabling:
+- Joint audits
+- Log exchanges
+- Incident investigations
+- Enforcement cooperation
+1. MLA requests SHALL be honored within 45 days unless substantial grounds for refusal exist.
+1. Cross-border AI deployments SHALL undergo harmonized approval processes.
+
+-----
+
+## PART III – INSTITUTIONAL ENFORCEMENT & GOVERNANCE
+
+### Article 7 – UN AI Oversight & Enforcement Authority (UN-AIOEA)
+
+1. A permanent **United Nations AI Oversight & Enforcement Authority (UN-AIOEA)** is hereby established as a specialized agency.
+1. UN-AIOEA SHALL have authority to:
+- Conduct compulsory inspections and audits
+- Require production of Q-RAC ledgers and cryptographic proofs
+- Interview technical personnel
+- Access source code and training data under confidentiality protocols
+- Impose graduated sanctions for non-compliance
+1. **Sanctions MAY include:**
+- Suspension or revocation of ISO/IEC-UN certification
+- Prohibition of cross-border AI deployment
+- UN procurement bans
+- Financial penalties proportionate to violation severity
+- Referral to the UN Security Council for systemic or willful violations
+1. Enforcement actions SHALL be:
+- Proportionate to violation severity
+- Documented with detailed findings
+- Subject to appeal under Article 8
+- Published (with redactions for security/privacy) in the public registry
+1. **Legal Basis:** UN Charter Articles 55–56 (international cooperation and compliance obligations).
+
+### Article 8 – Secretariat, Arbitration, and Judicial Review
+
+#### Section 8.1 – UNC-AI Secretariat
+
+1. A **UNC-AI Secretariat** is established under UN-AIOEA administration.
+1. The Secretariat SHALL:
+- Maintain the **Global AI Certification Registry**
+- Publish harmonized technical updates and guidance
+- Coordinate MLA audits and inspections
+- Provide technical assistance to developing nations
+- Issue annual compliance reports
+1. Registry SHALL contain:
+- Certified AI systems with scores and status
+- Certification authorities and their accreditation status
+- Public incident summaries (privacy-protected)
+- MLA cooperation metrics by jurisdiction
+
+#### Section 8.2 – Dispute Resolution
+
+Disputes SHALL be resolved through a three-stage process:
+
+**Stage 1: Technical Arbitration Panel**
+
+- Composition: ISO/IEC experts, IEEE specialists, independent technical authorities
+- Timeline: 90-day resolution target
+- Scope: Technical compliance disputes, scoring disagreements, certification appeals
+
+**Stage 2: UN-AIOEA Review**
+
+- Appellate review of Panel decisions
+- Authority to modify sanctions or remediation requirements
+- Timeline: 60-day decision
+
+**Stage 3: International Court of Justice (ICJ)**
+
+- Final binding arbitration
+- Reserved for:
+  - Treaty interpretation disputes
+  - Inter-state conflicts
+  - Challenges to UN-AIOEA authority
+- ICJ decisions are final and binding on all parties
+
+### Article 9 – Data Protection, Privacy & Human Rights Safeguards
+
+#### Section 9.1 – Privacy-Preserving Requirements
+
+1. All monitoring, logging, and MLA exchanges SHALL be **privacy-preserving by default**.
+1. **Mandatory safeguards:**
+- **Cryptographic anonymization** or pseudonymization of personal data
+- **Data minimization:** collection limited to purposes specified in this Convention
+- **Purpose binding:** use restrictions enforceable through technical and legal controls
+- **Zero-knowledge proofs** for cross-border verification where technically feasible
+- **Differential privacy** techniques for aggregate reporting
+
+#### Section 9.2 – Disclosure Restrictions
+
+1. Personal data MAY ONLY be disclosed when:
+- Judicial authorization exists under applicable law
+- Disclosure is strictly necessary for specified purposes
+- Disclosure is logged in Q-RAC with purpose-binding metadata
+- Affected individuals are notified unless prohibited by law
+
+#### Section 9.3 – International Standards Alignment
+
+1. Compliance SHALL align with:
+- **ICCPR Articles 17 & 19** (privacy and expression rights)
+- **GDPR** principles (EU General Data Protection Regulation)
+- **OECD Privacy Guidelines**
+- **Council of Europe Convention 108+**
+1. Where conflicts arise between this Convention and regional privacy laws, the **higher privacy standard** SHALL apply.
+
+#### Section 9.4 – Rights of Data Subjects
+
+1. Individuals SHALL have rights to:
+- Access AI decision records affecting them (subject to security exceptions)
+- Request human review of automated decisions
+- Seek correction of inaccurate data
+- Lodge complaints with Data Protection Authorities
+- Pursue judicial remedies for violations
+
+-----
+
+## PART IV – CERTIFICATION ESCALATION FRAMEWORK
+
+### Article 10 – Certification Status and Consequences
+
+|**Status**         |**Score**|**Legal Effect**                           |**Enforcement Mechanism**             |
+|-------------------|---------|-------------------------------------------|--------------------------------------|
+|**Fully Certified**|≥80      |Full international recognition             |Normal audit cycle (annual)           |
+|**Conditional**    |60–79    |12-month remediation plan required         |Enhanced monitoring (quarterly audits)|
+|**Probationary**   |40–59    |Restricted cross-border deployment         |UN-AIOEA direct supervision           |
+|**Non-Compliant**  |<40      |Certification revoked; operation prohibited|Sanctions + MLA enforcement trigger   |
+
+#### Section 10.1 – Escalation Rules
+
+1. **Automatic escalation** applies when:
+- Remediation deadlines are missed
+- New incidents occur during conditional/probationary status
+- Audit failures are detected
+- MLA cooperation is obstructed
+1. **De-escalation** requires:
+- Successful completion of remediation measures
+- Clean audit results
+- Minimum 6-month demonstrated compliance
+- UN-AIOEA approval
+1. **Emergency suspension** may be imposed immediately for Systemic Risk Events.
+
+-----
+
+## PART V – OPTIONAL PROTOCOLS
+
+### Optional Protocol I – Advanced Technical Standards
+
+*(Existing protocol maintained)*
+
+### Optional Protocol II – Post-Quantum Cryptographic Migration
+
+1. **Mandatory Migration Timelines:**
+- Phase 1 (Immediate): Hybrid classical + post-quantum signatures
+- Phase 2 (24 months): Full post-quantum encryption
+- Phase 3 (36 months): Quantum-resistant key distribution
+1. **Algorithm Agility Requirements:**
+- Pluggable cryptographic modules
+- Migration testing protocols
+- Backward compatibility maintenance
+- Emergency algorithm replacement procedures
+
+### Optional Protocol III – Autonomous AI Fail-Safe & Kill-Switch
+
+1. **Human-Override Mandates:**
+- All autonomous systems SHALL have authenticated human override capability
+- Override commands SHALL execute within 5 seconds
+- Override events SHALL be logged in Q-RAC
+1. **Emergency Shutdown Authority:**
+- Designated government authorities MAY issue emergency shutdown orders
+- AI systems SHALL implement verified shutdown mechanisms
+- Shutdown resistance is prohibited
+- False shutdown triggers SHALL be investigated
+
+-----
+
+## APPENDIX 1 – CERTIFICATION SCORING MATRIX
+
+### Volume I – Registration & Classification (0–20 points)
+
+|**Criterion**               |**Points**|
+|----------------------------|----------|
+|Complete system catalog     |5         |
+|NIST/IEEE mapping documented|5         |
+|Risk classification assigned|5         |
+|Supply chain transparency   |5         |
+
+### Volume II – Cryptographic Implementation (0–25 points)
+
+|**Criterion**              |**Points**|
+|---------------------------|----------|
+|SHA3-512 + BLAKE3 hashing  |5         |
+|Argon2id key derivation    |5         |
+|ChaCha20 encryption        |5         |
+|Dilithium/Falcon signatures|5         |
+|Algorithm agility framework|5         |
+
+### Volume III – Incident Management (0–25 points)
+
+|**Criterion**              |**Points**|
+|---------------------------|----------|
+|24-hour flagging compliance|7         |
+|30-day RCA completion rate |7         |
+|MLA trigger documentation  |6         |
+|Remediation effectiveness  |5         |
+
+### Volume IV – Reporting & Transparency (0–15 points)
+
+|**Criterion**               |**Points**|
+|----------------------------|----------|
+|Quarterly report submission |5         |
+|Automated score updates     |5         |
+|Public transparency measures|5         |
+
+### Volume V – Cross-Border Cooperation (0–15 points)
+
+|**Criterion**              |**Points**|
+|---------------------------|----------|
+|MLA exchange responsiveness|7         |
+|Joint audit participation  |8         |
+
+**Total Possible Score:** 100 points
+
+-----
+
+## APPENDIX 2 – HIGH-RISK AI SYSTEM CATEGORIES
+
+1. Biometric identification and categorization
+1. Critical infrastructure management
+1. Educational and vocational training scoring
+1. Employment, worker management, and access to self-employment
+1. Access to essential private and public services
+1. Law enforcement (predictive policing, evidence assessment, offender risk assessment)
+1. Migration, asylum, and border control management
+1. Administration of justice and democratic processes
+1. Autonomous weapons systems
+1. Financial services creditworthiness and risk assessment
+
+-----
+
+## FINAL PROVISIONS
+
+### Article 11 – Entry into Force
+
+1. This Convention enters into force 90 days after the 30th ratification.
+1. For subsequent ratifying states, entry into force occurs 30 days post-ratification.
+
+### Article 12 – Amendments
+
+1. Amendments may be proposed by any State Party or UN-AIOEA.
+1. Amendments require two-thirds majority of States Parties.
+1. Technical annexes may be updated by UN-AIOEA with 60-day notice.
+
+### Article 13 – Reservations
+
+Reservations incompatible with the object and purpose of this Convention are prohibited.
+
+### Article 14 – Withdrawal
+
+1. Withdrawal requires 12-month notice.
+1. Existing AI certifications remain valid for 24 months post-withdrawal.
+1. MLA obligations continue for ongoing investigations.
+
+-----
+
+**ADOPTED:** [Date]  
+**OPEN FOR SIGNATURE:** [Date]  
+**DEPOSITARY:** United Nations Secretary-General
+
+-----
+
+## CERTIFICATION
+
+This text represents the complete, consolidated, and authoritative version of the United Nations Convention on Artificial Intelligence Governance and Oversight (UNC-AI-2026), incorporating all enforcement mechanisms, governance structures, privacy safeguards, and certification frameworks.
+
+**Status:** ✅ Treaty-Grade | ✅ Enforceable | ✅ Rights-Compatible | ✅ Cryptographically Future-Proof
+
+-----
+
+**END OF TREATY TEXT**

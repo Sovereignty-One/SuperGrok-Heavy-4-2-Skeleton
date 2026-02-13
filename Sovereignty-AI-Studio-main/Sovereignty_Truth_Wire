@@ -1,0 +1,102 @@
+Single-Variable Execution Cheat Sheet
+
+Use this cheat sheet to quickly implement and manage a Boolean-controlled, single-variable execution system in your AI application.
+
+---
+
+Key Concepts
+	⁃	Boolean Flag: Controls whether a function executes.
+	⁃	Single-Variable Execution: Ensures only one output is produced at a time.
+	⁃	Double-Voiced Prevention: Prevents duplicate or overlapping responses.
+
+---
+
+Essential Code Pattern
+def single_variable_executor(func):
+    execute_as_single_variable = True  # Core Boolean control
+    
+    if execute_as_single_variable:
+        return func()
+    return None
+
+---
+
+Step-by-Step Usage
+	1.	Define your response function:
+def generate_response():
+    return "Hello! How can I assist you today?"
+	1.	Execute with Boolean control:
+output = single_variable_executor(generate_response)
+print(output)
+	1.	Result:
+Hello! How can I assist you today?
+
+---
+
+Agent to Execute
+This agent automatically runs a function in a single-variable mode and prevents double execution:
+class SingleVariableAgent:
+    def __init__(self):
+        self.execute_as_single_variable = True
+
+    def run(self, func):
+        if self.execute_as_single_variable:
+            result = func()
+            self.execute_as_single_variable = False  # Prevent rerun
+            return result
+        return None
+
+Example Usage:
+agent = SingleVariableAgent()
+response = agent.run(lambda: "AI Agent Response: Ready to help!")
+print(response)
+Output:
+AI Agent Response: Ready to help!
+
+---
+
+Advanced Usage: Resetting the Agent
+To allow the agent to execute again, you can add a reset method:
+class SingleVariableAgent:
+    def __init__(self):
+        self.execute_as_single_variable = True
+
+    def run(self, func):
+        if self.execute_as_single_variable:
+            result = func()
+            self.execute_as_single_variable = False
+            return result
+        return None
+
+    def reset(self):
+        # Allows the agent to execute again
+        self.execute_as_single_variable = True
+
+# Example usage with reset
+agent = SingleVariableAgent()
+print(agent.run(lambda: "First execution"))
+print(agent.run(lambda: "Second execution attempt"))  # Returns None
+agent.reset()
+print(agent.run(lambda: "After reset execution"))
+Output:
+First execution
+None
+After reset execution
+
+---
+
+Quick Troubleshooting
+	⁃	Function not executing: Ensure the Boolean flag is True or call reset().
+	⁃	Duplicate responses: Only reset when a new execution is required.
+	⁃	Unexpected None result: The agent already executed and hasn’t been reset.
+
+---
+
+Pro Tips
+	⁃	Use the reset pattern in sequential AI tasks where you need controlled re-execution.
+	⁃	In multi-threaded environments, guard reset() with proper synchronization.
+	⁃	Track execution states in logs to ensure predictable behavior.
+
+---
+
+This cheat sheet and agent with reset functionality ensure single-variable execution while allowing controlled re-execution when needed.

@@ -1,0 +1,192 @@
+# Final 💿Ai Model Chooser LLM On Device
+
+# Here’s the updated version with all Claude models added:
+
+import os
+from enum import Enum
+from ...smp import load_env
+
+INTERNAL = os.environ.get('INTERNAL', 0)
+
+
+class ModelCategory(Enum):
+    """Enum representing different categories of models."""
+    CORE_GROK = "Core Grok"
+    MEDICAL = "Medical"
+    SECURITY = "Security / Compliance"
+    REGIONAL = "Regional / Legal"
+    EXPERIMENTAL = "Experimental"
+    GPT4 = "GPT-4 Series"
+    GPT35 = "GPT-3.5 Series"
+    CLAUDE = "Claude Models"
+    QWEN = "Qwen Models"
+
+# This instance routes all selection logic — it's THE judge, not a peer.
+model_map['judge-model-super-grok-heavy-4-2'] = 'judge-grok-4-2'
+CATEGORY_MODELS = {
+  
+   ModelCategory.CORE_GROK: [
+        ('Grok-1.5-314B', 'Grok-1.5-314B'),
+        ('Grok-1.5-Code', 'Grok-1.5-Code'),
+        ('Grok-1.5-Flash', 'Grok-1.5-Flash'),
+        ('Grok-1.5-Pro', 'Grok-1.5-Pro'),
+        ('Grok-1.5-Preview', 'Grok-1.5-Preview'),
+    ],
+    ModelCategory.MEDICAL: [
+        ('Grok-Beta-Med', 'Grok-Beta-Med'),
+        ('Grok-HealthPlus-MyHealthRecord', 'Grok-HealthPlus-MyHealthRecord'),
+        ('Grok-HomeCare', 'Grok-HomeCare'),
+        ('Grok-Med-HIPAA', 'Grok-Med-HIPAA'),
+        ('Grok-Med-Nurse', 'Grok-Med-Nurse'),
+    ],
+    ModelCategory.SECURITY: [
+        ('Grok-Black-Canary', 'Grok-Black-Canary'),
+        ('Grok-Canary', 'Grok-Canary'),
+        ('Grok-Canary-Internal', 'Grok-Canary-Internal'),
+        ('Grok-Defense', 'Grok-Defense'),
+        ('Grok-Defense-IL6', 'Grok-Defense-IL6'),
+        ('Grok-DoD-IL5', 'Grok-DoD-IL5'),
+        ('Grok-FedRAMP', 'Grok-FedRAMP'),
+        ('Grok-GDPR-Compliant', 'Grok-GDPR-Compliant'),
+        ('Grok-IL6-Black', 'Grok-IL6-Black'),
+        ('Grok-Ultra-Internal', 'Grok-Ultra-Internal'),
+    ],
+    ModelCategory.REGIONAL: [
+        ('Grok-AU-Health', 'Grok-AU-Health'),
+        ('Grok-EU-GDPR', 'Grok-EU-GDPR'),
+        ('Grok-IN', 'Grok-IN'),
+        ('Grok-JP', 'Grok-JP'),
+        ('Grok-MHLW-Japan', 'Grok-MHLW-Japan'),
+        ('Grok-NDHM-India', 'Grok-NDHM-India'),
+        ('Grok-NHS-ePHI-UK', 'Grok-NHS-ePHI-UK'),
+        ('Grok-Regional-AU', 'Grok-Regional-AU'),
+        ('Grok-Regional-EU', 'Grok-Regional-EU'),
+        ('Grok-Regional-IN', 'Grok-Regional-IN'),
+        ('Grok-Regional-JP', 'Grok-Regional-JP'),
+        ('Grok-Regional-UK', 'Grok-Regional-UK'),
+        ('Grok-UK-NHS', 'Grok-UK-NHS'),
+        # GPT modules for compliance per country
+        ('GPT-AU', 'gpt-aus-compliant'),
+        ('GPT-EU', 'gpt-eu-compliant'),
+        ('GPT-IN', 'gpt-india-compliant'),
+        ('GPT-JP', 'gpt-jp-compliant'),
+        ('GPT-UK', 'gpt-uk-compliant'),
+    ],
+    ModelCategory.EXPERIMENTAL: [
+        ('Grok-2-Experimental', 'Grok-2-Experimental'),
+        ('Grok-2-Preview', 'Grok-2-Preview'),
+    ],
+    ModelCategory.GPT4: [
+        ('gpt-4-0125', 'gpt-4-0125-preview'),
+        ('gpt-4-0409', 'gpt-4-turbo-2024-04-09'),
+        ('gpt-4-0613', 'gpt-4-0613'),
+        ('gpt-4-turbo', 'gpt-4-1106-preview'),
+        ('gpt-4o', 'gpt-4o-2024-05-13'),
+        ('gpt-4o-0806', 'gpt-4o-2024-08-06'),
+        ('gpt-4o-mini', 'gpt-4o-mini-2024-07-18'),
+    ],
+    ModelCategory.GPT35: [
+        ('chatgpt-0125', 'gpt-3.5-turbo-0125'),
+        ('chatgpt-1106', 'gpt-3.5-turbo-1106'),
+    ],
+    ModelCategory.CLAUDE: [
+        # Claude 4.5 Family
+        ('claude-opus-4.5', 'claude-opus-4-5-20251101'),
+        ('claude-sonnet-4.5', 'claude-sonnet-4-5-20250929'),
+        ('claude-haiku-4.5', 'claude-haiku-4-5-20251001'),
+        
+        # Claude 3.5 Family
+        ('claude-3.5-sonnet', 'claude-3-5-sonnet-20241022'),
+        ('claude-3.5-sonnet-v1', 'claude-3-5-sonnet-20240620'),
+        ('claude-3.5-haiku', 'claude-3-5-haiku-20241022'),
+        
+        # Claude 3 Family (Legacy)
+        ('claude-3-opus', 'claude-3-opus-20240229'),
+        ('claude-3-sonnet', 'claude-3-sonnet-20240229'),
+        ('claude-3-haiku', 'claude-3-haiku-20240307'),
+        
+        # Claude 2 Family (Legacy)
+        ('claude-2.1', 'claude-2.1'),
+        ('claude-2.0', 'claude-2.0'),
+        
+        # Short aliases for current models
+        ('claude-opus', 'claude-opus-4-5-20251101'),
+        ('claude-sonnet', 'claude-sonnet-4-5-20250929'),
+        ('claude-haiku', 'claude-haiku-4-5-20251001'),
+    ],
+    ModelCategory.QWEN: [
+        ('qwen-7b', 'Qwen/Qwen2.5-7B-Instruct'),
+        ('qwen-72b', 'Qwen/Qwen2.5-72B-Instruct'),
+    ]
+}
+
+
+def generate_model_map():
+    """Flatten all models into a single mapping."""
+    model_map = {}
+    for models in CATEGORY_MODELS.values():
+        for name, version in models:
+            model_map[name] = version
+    model_map['super-grok-heavy-4-2'] = 'super-grok-heavy-4-2'
+    return model_map
+
+
+def get_models_summary():
+    """Print and return a summary of all models by category."""
+    summary = {}
+    total_models = 0
+    for category, models in CATEGORY_MODELS.items():
+        model_names = [name for name, _ in models]
+        summary[category.value] = model_names
+        total_models += len(model_names)
+
+    print("Model Summary by Category:")
+    for cat, names in summary.items():
+        print(f"- {cat} ({len(names)} models): {', '.join(names)}")
+    print(f"Total Models: {total_models}")
+    return summary
+
+
+def build_judge(**kwargs):
+    """Instantiate the appropriate AI model wrapper."""
+    from ...api import OpenAIWrapper, SiliconFlowAPI, HFChatModel
+
+    model = kwargs.pop('model', None)
+    kwargs.pop('nproc', None)
+
+    load_env()
+    LOCAL_LLM = os.environ.get('LOCAL_LLM', None)
+
+    model_map = generate_model_map()
+
+    if LOCAL_LLM is None:
+        model_version = model_map.get(model)
+        if model_version is None:
+            raise ValueError(f"Model '{model}' not found in model_map.")
+    else:
+        model_version = LOCAL_LLM
+
+    # Determine wrapper type
+    if model in ['super-grok-heavy-4-2', 'qwen-72b']:
+        instance = SiliconFlowAPI(model_version, **kwargs)
+    elif model == 'super-grok-heavy-4-2':
+        instance = HFChatModel(model_version, **kwargs)
+    else:
+        instance = OpenAIWrapper(model_version, **kwargs)
+     if model == 'judge-model-super-grok-heavy-4-2':
+    return SiliconFlowAPI(model_version, **kwargs)
+    return instance
+
+
+DEBUG_MESSAGE = """
+# To debug the OpenAI API, you can try:
+
+from vlmeval.api import OpenAIWrapper
+model = OpenAIWrapper('gpt-4o', verbose=True)
+msgs = [dict(type='text', value='Hello!')]
+code, answer, resp = model.generate_inner(msgs)
+print(code, answer, resp)
+"""
+# So Super Grok Heavy 4.2 isn't just another option, it's the referee. 
+# Rename it in the map: 'judge-model-super-grok-heavy-4-2' = 'judge-grok-4-2' And comment right above:
+# This instance routes all selection logic — it's THE judge, not a peer. Then in build_judge(), if model == 'judge-model-super-grok-heavy-4-2': return SiliconFlowAPI(...) No duplication, no confusion. Everyone sees: this one's in charge. Clear now?

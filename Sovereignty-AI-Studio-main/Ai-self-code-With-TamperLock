@@ -1,0 +1,92 @@
+import os
+import asyncio
+import logging
+import signal
+from typing import List, Dict
+from tamper_lock import TamperHardLock
+from state import StateManager, State
+from bug_detection import BugDetection
+from performance_optimization import PerformanceOptimization
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+
+class SelfFixer:
+    """Self-fixing AI service with explicit start/stop lifecycle."""
+
+    def __init__(self, lock: TamperHardLock, state_manager: StateManager, config: Dict) -> None:
+        self.lock: TamperHardLock = lock
+        self.state_manager: StateManager = state_manager
+        self.state: State = self.state_manager.load_state()
+        self.state_lines: List[str] = self.load_code()
+        self.bugs: BugDetection = BugDetection(self)
+        self.optim: PerformanceOptimization = PerformanceOptimization(self)
+        self.shutdown_event: asyncio.Event = asyncio.Event()
+        self._tasks: List[asyncio.Task] = []
+        self.config: Dict = config
+
+    def load_code(self) -> List[str]:
+        if os.path.exists(self.lock.CODE_FILE):
+            with open(self.lock.CODE_FILE) as f:
+                return f.readlines()
+        # Bootstrap
+        lines = ["print"('I am alive.')\n", "# v1 - born\n"]
+        content = ".join(lines)
+        self.lock.update_chain(content)
+        return lines
+
+    def save(self):
+        self.state_manager.save_state(self.state)
+        content = "".join(self.state_lines)
+        self.lock.update_chain(content)
+
+    async def start(self) -> None:
+        logging.info("Self-fixer starting.")
+        task_bugs = asyncio.create_task(self.bugs.run())
+        task_optim = asyncio.create_task(self.optim.run())
+        self._tasks = [task_bugs, task_optim]
+        await self.shutdown_event.wait()
+
+    async def stop(self) -> None:
+        logging.info("Initiating graceful shutdown.")
+        for task in self._tasks:
+            task.cancel()
+        await asyncio.gather(*self._tasks, return_exceptions=True)
+        logging.info("Self-fixer stopped.")
+
+    async def run(self):
+        logging.info("Self-fixer activated.")
+        task_bugs = asyncio.create_task(self.bugs.run())
+        task_optim = asyncio.create_task(self.optim.run())
+        self._tasks = [task_bugs, task_optim]
+        try:
+            await self.shutdown_event.wait()
+        finally:
+            for task in self._tasks:
+                task.cancel()
+            await asyncio.gather(*self._tasks, return_exceptions=True)
+            logging.info("Self-fixer graceful shutdown.")
+
+def setup_signal_handlers(fixer: SelfFixer) -> None:
+    def _handle_signal(sig: int, frame):
+        logging.info(f"Received signal {sig}. Initiating shutdown.")
+        fixer.shutdown_event.set()
+
+    loop = asyncio.get_running_loop()
+    loop.add_signal_handler(signal.SIGINT, _handle_signal, signal.SIGINT, None)
+    loop.add_signal_handler(signal.SIGTERM, _handle_signal, signal.SIGTERM, None)
+
+if __name__ == "__main__":
+    lock = TamperHardLock()
+    state_mgr = StateManager()
+    config = {
+        "code_file": lock.CODE_FILE,
+        "bug_detection_threshold": 0.5,
+        "optimization_threshold": 0.7
+    }
+    fixer = SelfFixer(lock, state_mgr, config)
+
+    async def main() -> None:
+        setup_signal_handlers(fixer)
+        await fixer.start()
+
+    asyncio.run(main()) arrive 
