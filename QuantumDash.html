@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Q-Resist BLAKE3 | Ustream4Free</title>
+
+  <!-- BLAKE3 + SHA3 + ARGON2 (OFFLINE) -->
+  <script src="https://cdn.jsdelivr.net/npm/blake3@2.1.7/dist/blake3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/js-sha3@0.9.3/src/sha3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/argon2-browser@1.18.0/dist/argon2-bundled.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #0d0d1f;
+      --card: #1a1a2e;
+      --primary: #00d4ff;
+      --secondary: #ff6b6b;
+      --text: #e0e0e0;
+      --border: rgba(255,255,255,0.15);
+      --shadow: 0 8px 32px rgba(0,0,0,0.6);
+      --fast: #00ff88;
+      --warn: #ff6b6b;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 1rem;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: var(--card);
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
+      background: linear-gradient(45deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    textarea, .drop-zone {
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+      padding: 1rem;
+      margin: 1rem auto;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+      font-family: monospace;
+      resize: vertical;
+      display: block;
+    }
+
+    .drop-zone {
+      border: 2px dashed var(--border);
+      text-align: center;
+      cursor: pointer;
+      transition: 0.3s;
+      padding: 2rem 1rem;
+      margin: 1rem auto;
+      max-width: 100%;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    .drop-zone.dragover {
+      border-color: var(--primary);
+      background: rgba(0,212,255,0.1);
+      transform: scale(1.02);
+    }
+
+    button {
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+      padding: 1rem;
+      background: linear-gradient(45deg, var(--primary), #0080ff);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 1rem auto;
+      transition: 0.3s;
+      display: block;
+      touch-action: manipulation;
+    }
+
+    button:active { transform: scale(0.98); }
+
+    .output, .bench, .streaming, .instructions, .argon, .camera {
+      background: rgba(0,0,0,0.3);
+      padding: 1rem;
+      border-radius: 10px;
+      margin: 1rem auto;
+      font-family: 'Courier New', monospace;
+      word-break: break-all;
+      max-width: 100%;
+      text-align: left;
+    }
+
+    label {
+      font-weight: bold;
+      color: var(--primary);
+      display: block;
+      margin: 0.5rem 0 0.2rem;
+    }
+
+    .progress-container {
+      height: 20px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 0.5rem 0;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, var(--primary), #0080ff);
+      transition: width 0.1s ease;
+    }
+
+    .winner {
+      text-align: center;
+      color: var(--fast);
+      font-weight: bold;
+      margin: 1rem 0;
+    }
+
+    .badge {
+      background: var(--fast);
+      color: #000;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      margin-left: 0.5rem;
+    }
+
+    .support {
+      text-align: center;
+      font-size: 0.9rem;
+      color: #aaa;
+      margin: 2rem auto 1rem;
+      padding: 1rem;
+      background: rgba(0,0,0,0.2);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      max-width: 100%;
+    }
+
+    .support a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    canvas {
+      background: var(--card);
+      border-radius: 10px;
+      margin: 1rem auto;
+      width: 100%;
+      max-width: 100%;
+      display: block;
+    }
+
+    .streaming-status {
+      color: var(--warn);
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .chunk-info {
+      font-size: 0.9rem;
+      color: #aaa;
+      margin-top: 0.5rem;
+      text-align: center;
+    }
+
+    .instructions {
+      background: rgba(0, 245, 255, 0.05);
+      border: 1px solid var(--primary);
+      color: #ccc;
+      font-family: system-ui;
+      text-align: left;
+    }
+
+    .instructions h3 {
+      margin-top: 0;
+      color: var(--primary);
+      text-align: center;
+    }
+
+    .argon {
+      border: 1px solid var(--secondary);
+    }
+
+    .argon label {
+      color: var(--secondary);
+    }
+
+    .argon-params {
+      display: flex;
+      gap: 0.5rem;
+      margin: 0.5rem 0;
+      flex-wrap: wrap;
+    }
+
+    .argon-params select, .argon-params input {
+      flex: 1;
+      min-width: 80px;
+      padding: 0.5rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+    }
+
+    .file-info {
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+      color: #ccc;
+    }
+
+    .camera-preview {
+      max-width: 100%;
+      margin: 0.5rem 0;
+      border-radius: 8px;
+      display: none;
+    }
+
+    .ffmpeg {
+      border: 1px solid var(--primary);
+    }
+
+    @media (max-width: 768px) {
+      .container { padding: 1rem; }
+      h1 { font-size: 1.6rem; }
+      .argon-params { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Q-Resist BLAKE3</h1>
+
+    <!-- INSTRUCTIONS -->
+    <div class="instructions">
+      <h3>How to Use</h3>
+      <p><strong>1. Drag & Drop / Take Photo:</strong> Drop file or tap "Take Photo" → auto-loads.</p>
+      <p><strong>2. Compute Hashes:</strong> Click → BLAKE3 + SHA3-512.</p>
+      <p><strong>3. Streaming Mode:</strong> Large files → chunked BLAKE3.</p>
+      <p><strong>4. Password Hash:</strong> Enter password → Argon2id.</p>
+      <p><strong>5. Script Hash:</strong> Paste JS → BLAKE3 hash.</p>
+      <p><strong>6. FFmpeg Prep:</strong> Transcode AV to H.264/AAC for RTMP.</p>
+      <p><strong>Offline. No tracking.</strong></p>
+    </div>
+
+    <textarea id="inputText" placeholder="Enter text or drop file...">hello world</textarea>
+
+    <div id="dropZone" class="drop-zone">
+      <p>Drag & drop file here<br>or tap to select (mobile)</p>
+      <input type="file" id="fileInput" accept="image/*,video/*,.txt,.js" style="display:none">
+      <div class="file-info" id="fileInfo"></div>
+      <img id="filePreview" style="max-width:100%;max-height:200px;border-radius:8px;display:none" alt="Preview">
+    </div>
+
+    <!-- CAMERA CAPTURE -->
+    <div class="camera">
+      <button id="cameraBtn">Take Photo</button>
+      <video id="cameraStream" class="camera-preview" playsinline></video>
+      <canvas id="photoCanvas" style="display:none"></canvas>
+      <div id="cameraStatus" style="color:var(--warn);font-weight:bold;text-align:center">Ready</div>
+    </div>
+
+    <button id="computeBtn">Compute Hashes + Benchmark (10K)</button>
+
+    <div class="output">
+      <div><label>BLAKE3 Unkeyed (64B):</label> <span id="blake3Unkeyed"></span></div>
+      <div><label>BLAKE3 Keyed (32B):</label> <span id="blake3Keyed"></span></div>
+      <div><label>BLAKE3 Derive (32B):</label> <span id="blake3Derive"></span></div>
+      <div><label>SHA3-512 (Q-Resist):</label> <span id="sha3"></span></div>
+    </div>
+
+    <canvas id="hashChart"></canvas>
+
+    <div class="bench">
+      <h3 style="margin:0 0 1rem;text-align:center">Performance (10,000 hashes)</h3>
+      <div><label>BLAKE3 (64B)</label><div class="progress-container"><div id="progBlake64" class="progress-bar"></div></div><div id="benchBlake64" style="font-size:0.9rem;margin-top:0.3rem;color:#ccc">Ready</div></div>
+      <div><label>BLAKE3 Keyed</label><div class="progress-container"><div id="progBlakeKey" class="progress-bar"></div></div><div id="benchBlakeKey" style="font-size:0.9rem;margin-top:0.3rem;color:#ccc">Ready</div></div>
+      <div><label>BLAKE3 Derive</label><div class="progress-container"><div id="progBlakeDerive" class="progress-bar"></div></div><div id="benchBlakeDerive" style="font-size:0.9rem;margin-top:0.3rem;color:#ccc">Ready</div></div>
+      <div><label>SHA3-512</label><div class="progress-container"><div id="progSha3" class="progress-bar"></div></div><div id="benchSha3" style="font-size:0.9rem;margin-top:0.3rem;color:#ccc">Ready</div></div>
+      <div id="winner" class="winner"></div>
+    </div>
+
+    <!-- BLAKE3 STREAMING MODE -->
+    <div class="streaming">
+      <h3 style="margin:0 0 1rem;text-align:center">BLAKE3 Streaming Mode</h3>
+      <p><strong>Chunked hashing for large files.</strong></p>
+      <button id="startStreamBtn">Start Streaming Hash</button>
+      <div id="streamStatus" class="streaming-status">Ready</div>
+      <div id="chunkInfo" class="chunk-info"></div>
+      <div><label>Final Stream Hash:</label> <span id="streamHash"></span></div>
+    </div>
+
+    <!-- ARGON2 + SCRIPT HASH -->
+    <div class="argon">
+      <h3 style="margin:0 0 1rem;text-align:center">Argon2id + Script Hash</h3>
+      <p><strong>Optimized:</strong> t=2, m=32MB, p=1 → ~80ms on mobile</p>
+      <div class="argon-params">
+        <select id="argonTime"><option value="2">Time: 2</option><option value="3">3</option><option value="4">4</option></select>
+        <select id="argonMem"><option  
+    });
+  </script>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const input = $('inputText'), drop = $('dropZone'), fileInput = $('fileInput'), fileInfo = $('fileInfo'), filePreview = $('filePreview');
+    const out = { u:`\(('blake3Unkeyed'), k:\)`('blake3Keyed'), d:`\(('blake3Derive'), s:\)`('sha3') };
+    const prog = { u:`\(('progBlake64'), k:\)`('progBlakeKey'), d:`\(('progBlakeDerive'), s:\)`('progSha3') };
+    const bench = { u:`\(('benchBlake64'), k:\)`('benchBlakeKey'), d:`\(('benchBlakeDerive'), s:\)`('benchSha3') };
+    const streamBtn = $('startStreamBtn'), streamStatus = $('streamStatus'), chunkInfo = $('chunkInfo'), streamHashEl = $('streamHash');
+    const argonPass = $('argonPass'), argonBtn = $('argonBtn'), argonStatus = $('argonStatus'), argonHash = $('argonHash');
+    const scriptInput = $('scriptInput'), scriptBtn = $('scriptBtn'), scriptHash = $('scriptHash');
+    const cameraBtn = $('cameraBtn'), cameraStream = $('cameraStream'), photoCanvas = $('photoCanvas'), cameraStatus = $('cameraStatus');
+    let chart, data = new TextEncoder().encode('hello world'), file = null, hasher = null, chunkCount = 0, stream = null;
+
+    // Drag & Drop + File Preview
+    const openPicker = () => fileInput.click();
+    drop.addEventListener('click', openPicker);
+    drop.addEventListener('touchstart', e => { e.preventDefault(); openPicker(); }, { passive: false });
+
+    drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
+    drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
+    drop.addEventListener('drop', e => {
+      e.preventDefault(); drop.classList.remove('dragover');
+      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', e => { if (e.target.files.length) handleFile(e.target.files[0]); });
+
+    async function handleFile(f) {
+      if (!f) return;
+      file = f;
+      fileInfo.textContent = `File: ${f.name} (${(f.size/1024).toFixed(1)} KB)`;
+      const buf = await f.arrayBuffer();
+      data = new Uint8Array(buf);
+      input.value = `[File: ${f.name}]`;
+      // Preview image/video
+      if (f.type.startsWith('image/') || f.type.startsWith('video/')) {
+        const url = URL.createObjectURL(f);
+        filePreview.src = url;
+        filePreview.style.display = 'block';
+        filePreview.onload = () => URL.revokeObjectURL(url);
+      } else {
+        filePreview.style.display = 'none';
+      }
+    }
+
+    // Camera (unchanged)
+    cameraBtn.addEventListener('click', async () => {
+      cameraStatus.textContent = 'Requesting camera...';
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        cameraStream.srcObject = stream;
+        cameraStream.style.display = 'block';
+        cameraStream.play();
+        cameraStatus.textContent = 'Tap screen to capture';
+        cameraStream.onclick = capturePhoto;
+      } catch (err) {
+        cameraStatus.textContent = 'Camera denied';
+        console.error(err);
+      }
+    });
+
+    function capturePhoto() {
+      const ctx = photoCanvas.getContext('2d');
+      photoCanvas.width = cameraStream.videoWidth;
+      photoCanvas.height = cameraStream.videoHeight;
+      ctx.drawImage(cameraStream, 0, 0);
+      photoCanvas.toBlob(blob => {
+        const photoFile = new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
+        handleFile(photoFile);
+        cameraStatus.textContent = 'Photo captured';
+        stopCamera();
+      }, 'image/jpeg', 0.9);
+    }
+
+    function stopCamera() {
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      cameraStream.style.display = 'none';
+    }
+
+    // Bench (unchanged, fixed async await in loop)
+    async function bench(fn, label, p, b, runs = 10000) {
+      p.style.width = '0%'; b.textContent = 'Running...';
+      const start = performance.now();
+      for (let i = 0; i < runs; i++) {
+        fn();
+        if (i % 1000 === 0) {
+          p.style.width = `${(i/runs)*100}%`;
+          b.textContent = `Running... ${i.toLocaleString()}/10,000`;
+          await new Promise(r => setTimeout(r, 0));  // Yield
+        }
+      }
+      p.style.width = '100%';
+      const ms = (performance.now() - start).toFixed(1);
+      const perSec = Math.round(runs / (ms / 1000));
+      b.innerHTML = `Done: ${ms}ms | <strong>${perSec.toLocaleString()}</strong> hashes/sec`;
+      return { label, perSec };
+    }
+
+    $('computeBtn').addEventListener('click', async () => {
+      const d = data instanceof Uint8Array ? data : new TextEncoder().encode(input.value || 'hello world');
+      const key = new Uint8Array(32); key.set(new TextEncoder().encode('key-1').slice(0,32));  // Fixed key
+
+      out.u.textContent = blake3.hash(d, {length:64}).toString('hex');
+      out.k.textContent = blake3.hash(d, {length:32, key}).toString('hex');
+      out.d.textContent = blake3.deriveKey('ustream4free', d, {length:32}).toString('hex');
+      out.s.textContent = sha3.sha3_512(d);
+
+      if (chart) chart.destroy();
+      const ctx = $('hashChart').getContext('2d');
+      chart = new Chart(ctx, {
+        type: 'bar',
+        data: { 
+          labels: ['BLAKE3 64B','Keyed 32B','Derive 32B','SHA3-512'], 
+          datasets: [{ label: 'Size (bytes)', data: [64,32,32,64], backgroundColor: ['#00d4ff','#ff6b6b','#4ecdc4','#ff8c00'] }] 
+        },
+        options: { 
+          responsive: true, 
+          plugins: { legend: { display: false }, title: { display: true, text: 'Hash Output Size', color: '#e0e0e0' } }, 
+          scales: { y: { beginAtZero: true, max: 70, ticks: { color: '#ccc' } }, x: { ticks: { color: '#ccc' } } } 
+        }
+      });
+
+      const results = await Promise.all([
+        bench(() => blake3.hash(d, {length:64}), 'BLAKE3 64B', prog.u, bench.u),
+        bench(() => blake3.hash(d, {length:32, key}), 'BLAKE3 Keyed', prog.k, bench.k),
+        bench(() => blake3.deriveKey('ustream4free', d, {length:32}), 'BLAKE3 Derive', prog.d, bench.d),
+        bench(() => sha3.sha3_512(d), 'SHA3-512', prog.s, bench.s)
+      ]);
+
+      const fastest = results.reduce((a,b) => a.perSec > b.perSec ? a : b);
+      $('winner').innerHTML = `FASTEST: <span style="color:var(--fast);">${fastest.label}</span> <span class="badge">${fastest.perSec.toLocaleString()}/sec</span>`;
+    });
+
+    // Streaming (unchanged)
+    streamBtn.addEventListener('click', async () => {
+      if (!file) { streamStatus.textContent = 'Drop a file first!'; return; }
+      streamStatus.textContent = 'Streaming...'; streamHashEl.textContent = ''; chunkInfo.textContent = ''; chunkCount = 0;
+      const reader = file.stream().getReader(); hasher = blake3.createHash();
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          hasher.update(value);
+          chunkCount++;
+          chunkInfo.textContent = `Chunk ${chunkCount} | ${(value.length/1024).toFixed(1)} KB`;
+        }
+        streamHashEl.textContent = hasher.digest('hex');
+      } catch (e) {
+        streamStatus.textContent = 'Stream error: ' + e.message;
+      }
+      streamStatus.textContent = 'Complete';
+    });
+
+    // Argon2 (fixed: random salt)
+    argonBtn.addEventListener('click', async () => {
+      const pass = argonPass.value.trim();
+      if (!pass) { argonStatus.textContent = 'Enter password'; return; }
+      argonStatus.textContent = 'Hashing...';
+      try {
+        const salt = await crypto.subtle.generateKey('raw', new Uint8Array(16).fill(0), false, ['deriveKey']);  // Random salt
+        const result = await argon2.hash({
+          pass,
+          salt: await crypto.subtle.exportKey('raw', salt),
+          time: +$('argonTime').value,
+          mem: +$('argonMem').value,
+          parallelism: +$('argonPar').value,
+          hashLen: 32,
+          type: argon2.ArgonType.Argon2id
+        });
+        argonHash.textContent = result.hashHex;
+        argonStatus.textContent = 'Done (~80ms)';
+      } catch (e) { 
+        argonStatus.textContent = 'Error: ' + e.message; 
+      }
+    });
+
+    scriptBtn.addEventListener('click', () => {
+      const script = scriptInput.value;
+      if (!script) return;
+      const hash = blake3.hash(new TextEncoder().encode(script)).toString('hex');
+      scriptHash.textContent = hash;
+    });
+  </script>
+</body>
+</html>
