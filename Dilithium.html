@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Q-Resist Ultimate – Falcon vs Dilithium + Errors</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/blake3@2.1.7/dist/blake3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/js-sha3@0.9.3/src/sha3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/argon2-browser@1.18.0/dist/argon2-bundled.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl.min.js"></script>
+
+<script>
+  let oqs = null;
+  async function loadOQS() {
+    if (oqs) return oqs;
+    const s = document.getElementById('pqStatus');
+    s.textContent = 'Loading liboqs WASM…';
+    oqs = await import('https://cdn.jsdelivr.net/npm/@openquantumsafe/liboqs-javascript@0.9.1/dist/liboqs.min.js');
+    s.textContent = 'liboqs ready';
+    return oqs;
+  }
+</script>
+
+<style>
+  body {font-family:system-ui;background:#0d0d1f;color:#e0e0e0;margin:0;padding:1rem;}
+  .container {max-width:960px;margin:0 auto;background:#1a1a2e;padding:2rem;border-radius:16px;}
+  button {padding:1rem;margin:0.5rem 0;width:100%;background:linear-gradient(45deg,#00d4ff,#0080ff);border:none;border-radius:10px;color:white;font-weight:bold;cursor:pointer;}
+  table {width:100%;border-collapse:collapse;margin:1rem 0;}
+  th,td {border:1px solid #0f0;padding:0.5rem;text-align:center;}
+  th {background:#00ff880c;}
+  .error {color:#ff6b6b;font-weight:bold;}
+  .timeline {background:#0004;padding:1rem;border-radius:8px;margin:1rem 0;line-height:1.8;}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Q-Resist Ultimate</h1>
+
+<!-- Previous BLAKE3/Argon2 sections omitted for brevity -->
+
+<div class="pq">
+  <h3>Post-Quantum Signatures</h3>
+  <select id="sigAlgo">
+    <option value="Dilithium2">ML-DSA-44 (Dilithium2)</option>
+    <option value="Dilithium3">ML-DSA-65 (Dilithium3)</option>
+    <option value="Dilithium5">ML-DSA-87 (Dilithium5)</option>
+    <option value="Falcon-512" selected>Falcon-512</option>
+    <option value="SPHINCS+-SHA256-128s-robust">SPHINCS+ 128s</option>
+    <option value="Hybrid">Hybrid ML-DSA-65 + Ed25519</option>
+  </select>
+
+  <button onclick="genKey()">Generate Keypair</button>
+  <button onclick="signData()">Sign Data</button>
+  <button onclick="verifySig()">Verify Signature</button>
+  <button onclick="benchPQ()">Benchmark Falcon vs Dilithium (10 runs)</button>
+
+  <div class="key" id="pubKey">Public key: –</div>
+  <div class="key" id="signature">Signature: –</div>
+  <div id="pqStatus">Ready</div>
+
+  <!-- Falcon vs Dilithium real performance Nov 19 2025 -->
+  <div id="benchTable"></div>
+
+  <!-- NIST PQC Timeline -->
+  <div class="timeline">
+    <strong>NIST PQC Standardization Timeline (final)</strong><br>
+    Jul 2022: Round 3 finalists announced<br>
+    Aug 2024: First three standards published<br>
+    • FIPS 203: ML-DSA (Dilithium) – Aug 13 2024<br>
+    • FIPS 204: ML-KEM (Kyber) – Aug 13 2024<br>
+    • FIPS 205: SLH-DSA (SPHINCS+) – Aug 13 2024<br>
+    2025–2026: Falcon expected as alternate (not primary MLS standard)<br>
+    Current status: Dilithium = primary signature, Falcon = backup (smaller sigs, floating-point concerns)
+  </div>
+</div>
+</div>
+
+<script>
+let signer = null, hybridEd = null, publicKey = null, signature = null;
+const status = document.getElementById('pqStatus');
+
+async function getData() {
+  return data instanceof Uint8Array ? data : new TextEncoder().encode(document.getElementById('inputText')?.value || 'hello world');
+}
+
+async function genKey() {
+  try {
+    await loadOQS();
+    const algo = document.getElementById('sigAlgo').value;
+    status.textContent = 'Generating...';
+    if (algo === 'Hybrid') {
+      signer = new oqs.sig.Signature('Dilithium3');
+      await signer.generateKeypair();
+      hybridEd = nacl.sign.keyPair();
+      publicKey = signer.getPublicKey();
+    } else {
+      signer = new oqs.sig.Signature(algo);
+      await signer.generateKeypair();
+      publicKey = signer.getPublicKey();
+    }
+    document.getElementById('pubKey').textContent = `Public key ${publicKey.byteLength} bytes`;
+    status.textContent = 'Keypair ready';
+  } catch(e) { status.innerHTML = `<span class="error">Keygen failed: ${e.message}</span>`; }
+}
+
+async function signData() {
+  if (!signer) return status.textContent = 'Generate key first';
+  try {
+    const msg = await getData();
+    status.textContent = 'Signing...';
+    if (document.getElementById('sigAlgo').value === 'Hybrid') {
+      const ml = await signer.sign(msg);
+      const ed = nacl.sign.detached(msg, hybridEd.secretKey);
+      signature = new Uint8Array(ml.length + ed.length);
+      signature.set(ml); signature.set(ed, ml.length);
+    } else {
+      signature = await signer.sign(msg);
+    }
+    document.getElementById('signature').textContent = `Signature ${signature.byteLength} bytes`;
+    status.textContent = 'Signed';
+  } catch(e) { status.innerHTML = `<span class="error">Sign failed: ${e.message}</span>`; }
+}
+
+async function verifySig() {
+  if (!signer || !signature) return status.textContent = 'Nothing to verify';
+  try {
+    const msg = await getData();
+    status.textContent = 'Verifying...';
+    let valid = false;
+    if (document.getElementById('sigAlgo').value === 'Hybrid') {
+      const mlLen = signer.details.signatureLength || 2420;
+      const mlSig = signature.slice(0, mlLen);
+      const edSig = signature.slice(mlLen);
+      const mlOk = await signer.verify(msg, mlSig);
+      const edOk = nacl.sign.detached.verify(msg, edSig, hybridEd.publicKey);
+      valid = mlOk && edOk;
+    } else {
+      valid = await signer.verify(msg, signature);
+    }
+    status.innerHTML = valid ? '✓ VALID' : '<span class="error">✗ INVALID</span>';
+    status.style.color = valid ? '#00ff88' : '#ff6b6b';
+  } catch(e) {
+    status.innerHTML = `<span class="error">Verify error: ${e.message}</span>`;
+  }
+}
+
+async function benchPQ() {
+  await loadOQS();
+  const algos = ['Dilithium2','Dilithium3','Dilithium5','Falcon-512'];
+  const results = [];
+  for (const a of algos) {
+    const s = new oqs.sig.Signature(a);
+    const times = {keygen:[],sign:[],verify:[]};
+    for (let i = 0; i < 10; i++) {
+      const start = performance.now();
+      await s.generateKeypair();
+      times.keygen.push(performance.now()-start);
+      const msg = await getData();
+      start = performance.now();
+      const sig = await s.sign(msg);
+      times.sign.push(performance.now()-start);
+      start = performance.now();
+      const ok = await s.verify(msg, sig);
+      times.verify.push(performance.now()-start);
+    }
+    results.push({algo:a, keygen:avg(times.keygen), sign:avg(times.sign), verify:avg(times.verify),
+                  pk:s.getPublicKey().byteLength, sig:s.details.signatureLength});
+  }
+  // Render table
+  let html = `<table><tr><th>Algo</th><th>Keygen (ms)</th><th>Sign (ms)</th><th>Verify (ms)</th><th>PK (B)</th><th>Sig (B)</th></tr>`;
+  results.forEach(r=>html+=`<tr><td>${r.algo}</td><td>${r.keygen.toFixed(1)}</td><td>${r.sign.toFixed(1)}</td><td>${r.verify.toFixed(1)}</td><td>${r.pk}</td><td>${r.sig}</td></tr>`);
+  html+='</table>';
+  document.getElementById('benchTable').innerHTML = html;
+}
+function avg(arr){return arr.reduce((a,b)=>a+b,0)/arr.length;}
+</script>
+</body>
+</html>

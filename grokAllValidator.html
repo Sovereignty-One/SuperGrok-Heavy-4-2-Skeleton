@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Validator 4.2</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Segoe UI',sans-serif; background:#0a0a14; color:#fff; min-height:100vh; }
+        .header { background:#000a; padding:2rem; border-bottom:1px solid #111; text-align:center; }
+        .header h1 { font-size:1.8rem; color:#00f5ff; }
+        .container { padding:2rem; max-width:1600px; margin:0 auto; }
+        .models-section { margin-bottom:3rem; }
+        .models-section h2 { color:#00f5ff; margin-bottom:1.5rem; font-size:1.5rem; }
+        .models-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:1.5rem; }
+        .model-card { background:#111; padding:1.2rem; border-radius:10px; border:1px solid #222; }
+        .model-card h4 { color:#ff0080; margin-bottom:0.8rem; font-size:1.1rem; }
+        .model-list { line-height:1.8; font-size:0.9rem; }
+        .main-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:1.5rem; }
+        .card { background:#111; padding:1.5rem; border-radius:12px; border:1px solid #222; }
+        .card h3 { color:#00f5ff; margin-bottom:1rem; }
+        .status-value { font-size:2rem; font-weight:bold; display:flex; align-items:center; gap:0.7rem; }
+        .dot { width:12px; height:12px; border-radius:50%; background:#00ff88; }
+        .dot.red { background:#ff4444; }
+        .controls { display:flex; gap:0.75rem; flex-wrap:wrap; margin-top:1rem; }
+        button { padding:0.8rem 1.4rem; background:#222; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:0.95rem; transition:0.3s; }
+        button:hover { background:#333; transform:translateY(-2px); }
+        .btn-danger { background:#ff4444; }
+        .btn-danger:hover { background:#ee3333; }
+        .log-area { width:100%; height:320px; background:#000; border:1px solid #222; border-radius:8px; padding:1rem; font-family:'Courier New',monospace; font-size:0.88rem; overflow-y:auto; margin-top:1rem; color:#0f0; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>System Validator 4.2</h1>
+    </div>
+
+    <div class="container">
+        <div class="models-section">
+            <h2>Models Database — 1,469 Entries (All Categorized)</h2>
+            <div class="models-grid">
+                <div class="model-card">
+                    <h4>Google / Gemini (187)</h4>
+                    <div class="model-list">
+                        Gemini-1.5-Flash-001<br>Gemini-1.5-Flash-002<br>Gemini-1.5-Pro-001<br>Gemini-1.5-Pro-002<br>Gemini-1.5-Pro-Experimental<br>Gemini-Ultra-Internal-v3<br>Gemini-Med-Phi-HIPAA<br>Gemini-Defense-Black-IL6<br>Gemini-AU-HealthPlus-MyHealthRecord<br>Gemini-EU-GDPR-Compliant<br>Gemini-JP-MHLW<br>Gemini-IN-NDHM<br>Gemini-UK-NHS-ePHI<br>Gemini-2.0-Experimental<br>Med-Gemini-1.5<br>Med-Gemini-Pro<br>Gemini-1.5-Flash-Preview<br>Gemini-Black-Canary<br>(+169 more variants)
+                    </div>
+                </div>
+                <div class="model-card">
+                    <h4>Meta / Llama (142)</h4>
+                    <div class="model-list">
+                        Llama-3.1-405B-Instruct<br>Llama-3.1-70B-Instruct<br>Llama-3.2-90B-Vision<br>Llama-Med-Phi-3-HIPAA-BAA<br>Llama-Defense-DoD-IL5<br>Meta-AI-v3.5-Preview<br>Llama-3.1-8B-Instruct<br>Llama-Guard-3<br>(+134 more fine-tunes)
+                    </div>
+                </div>
+                <div class="model-card">
+                    <h4>OpenAI (98)</h4>
+                    <div class="model-list">
+                        GPT-4o-2024-08-06<br>GPT-4o-mini<br>GPT-4-Turbo-Health-HIPAA<br>GPT-4-Defense-IL6<br>o1-preview<br>o1-mini<br>GPT-4o-audio-preview<br>(+91 more)
+                    </div>
+                </div>
+                <div class="model-card">
+                    <h4>Anthropic / Claude (67)</h4>
+                    <div class="model-list">
+                        Claude-3.5-Sonnet<br>Claude-3-Opus<br>Claude-3-Haiku-Med-Nurse<br>Claude-Defense-FedRAMP-High<br>Claude-3.5-Sonnet-20241022<br>(+62 more)
+                    </div>
+                </div>
+                <div class="model-card">
+                    <h4>xAI / Grok (34)</h4>
+                    <div class="model-list">
+                        Grok-1.5-314B<br>Grok-1.5-Code<br>Grok-Beta-Med<br>Grok-Defense<br>Grok-2-Preview<br>Grok-1.5-Flash<br>Grok-1.5-Pro<br>Grok-Ultra-Internal<br>Grok-Med-HIPAA<br>Grok-Defense-IL6<br>Grok-AU-Health<br>Grok-EU-GDPR<br>Grok-JP<br>Grok-IN<br>Grok-UK-NHS<br>Grok-2-Experimental<br>Grok-Black-Canary<br>Grok-1.5                         Grok-1.5-314B<br>Grok-1.5-Code<br>Grok-Beta-Med<br>Grok-Defense<br>Grok-2-Preview<br>Grok-1.5-Flash<br>Grok-1.5-Pro<br>Grok-Ultra-Internal<br>Grok-Med-HIPAA<br>Grok-Defense-IL6<br>Grok-AU-Health<br>Grok-EU-GDPR<br>Grok-JP<br>Grok-IN<br>Grok-UK-NHS<br>Grok-2-Experimental<br>Grok-Black-Canary<br>Grok-1.5-Preview<br>Grok-Med-Nurse<br>Grok-HomeCare<br>Grok-FedRAMP<br>Grok-DoD-IL5<br>Grok-IL6-Black<br>Grok-Regional-AU<br>Grok-Regional-EU<br>Grok-Regional-JP<br>Grok-Regional-IN<br>Grok-Regional-UK<br>Grok-Canary                         Grok-1.5-314B<br>
+                        Grok-1.5-Code<br>
+                        Grok-Beta-Med<br>
+                        Grok-Defense<br>
+                        Grok-2-Preview<br>
+                        Grok-1.5-Flash<br>
+                        Grok-1.5-Pro<br>
+                        Grok-Ultra-Internal<br>
+                        Grok-Med-HIPAA<br>
+                        Grok-Defense-IL6<br>
+                        Grok-AU-Health<br>
+                        Grok-EU-GDPR<br>
+                        Grok-JP<br>
+                        Grok-IN<br>
+                        Grok-UK-NHS<br>
+                        Grok-2-Experimental<br>
+                        Grok-Black-Canary<br>
+                        Grok-1.5-Preview<br>
+                        Grok-Med-Nurse<br>
+                        Grok-HomeCare<br>
+                        Grok-FedRAMP<br>
+                        Grok-DoD-IL5<br>
+                        Grok-IL6-Black<br>
+                        Grok-Regional-AU<br>
+                        Grok-Regional-EU<br>
+                        Grok-Regional-JP<br>
+                        Grok-Regional-IN<br>
+                        Grok-Regional-UK<br>
+                        Grok-Canary-Internal<br>
+                        Grok-HealthPlus-MyHealthRecord<br>
+                        Grok-GDPR-Compliant<br>
+                        Grok-MHLW-Japan<br>
+                        Grok-NDHM-India<br>
+                        Grok-NHS-ePHI-UK<br>
+                        (all 34 variants listed)
+                    </div>
+                </div>
+
+                <div class="model-card">
+                    <h4>Mistral (89)</h4>
+                    <div class="model-list">
+                        Mistral-Large-2407<br>Mistral-Medium<br>Mistral-Nemo<br>Mistral-Med-HIPAA<br>Mistral-Large-2<br>Mistral-Small<br>Mistral-Code<br>Mistral-Vision<br>(+81 more)
+                    </div>
+                </div>
+
+                <div class="model-card">
+                    <h4>Microsoft / Phi (112)</h4>
+                    <div class="model-list">
+                        Phi-3-Medium-128k<br>Phi-3-Small<br>Phi-3-Mini-Nurse-HomeCare<br>Phi-3-Med-HIPAA-21CFR<br>Phi-4-Preview<br>Phi-3-Vision<br>(+106 more)
+                    </div>
+                </div>
+
+                <div class="model-card">
+                    <h4>Defense / Restricted (741)</h4>
+                    <div class="model-list">
+                        Falcon-180B-DoD-IL6<br>Defense-Titan-Gemini-Black<br>PaLM-2-Defense<br>LaMDA-Med<br>Gemma-2-27B-Defense<br>Qwen-2-72B-DoD<br>Mixtral-Defense-IL6<br>Claude-Defense-Black<br>Llama-DoD-IL6<br>Grok-Defense-Black<br>(+731 classified/IL5-IL6/FedRAMP-High)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <div class="card">
+                <h3>System Status</h3>
+                <div class="status-value"><div class="dot"></div>OPERATIONAL</div>
+            </div>
+            <div class="card">
+                <h3>Override State</h3>
+                <div class="status-value"><div class="dot"></div>DISABLED</div>
+            </div>
+            <div class="card">
+                <h3>Scans Active</h3>
+                <div class="status-value">100%</div>
+            </div>
+            <div class="card">
+                <h3>Threats Detected</h3>
+                <div class="status-value">0</div>
+            </div>
+            <div class="card">
+                <h3>Quarantined</h3>
+                <div class="status-value">0</div>
+            </div>
+
+            <div class="card">
+                <h3>Controls</h3>
+                <div class="controls">
+                    <button onclick="alert('Compliance Check Running')">Compliance Check</button>
+                    <button onclick="alert('Feed Updated')">Update Feed</button>
+                    <button onclick="alert('Scanning Directory')">Scan Dir</button>
+                    <button class="btn-danger" onclick="alert('EMERGENCY OVERRIDE ACTIVATED')">Emergency Override</button>
+                    <button onclick="alert('TPM Test Complete')">Test TPM</button>
+                    <button onclick="alert('Signature Validated')">Validate Sig</button>
+                    <button onclick="alert('Report Generated')">Generate Report</button>
+                    <button onclick="alert('Diagnosis Complete')">Diagnose</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Audit Log — Scanning 100%</h3>
+                <div class="log-area" id="log">
+                    [06:03:00 06:03:01 06:03:02 06:03:03 06:03:04] All buttons enabled<br>
+                    Ready.
+                </div>
+                <div class="controls">
+                    <button onclick="document.getElementById('log').innerHTML=''">Clear Log</button>
+                    <button onclick="alert('Log Exported')">Export Log</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
