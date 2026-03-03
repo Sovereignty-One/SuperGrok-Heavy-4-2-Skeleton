@@ -155,7 +155,7 @@ if (cfg.pp) {
 if (!passphrase_hash) { audit('NO_PP', name+':'+r, {ip}); return { s:403, d:{ detail:'Passphrase required' } }; }
 const ex = PP_HASHES[r] || '';
 const a = Buffer.alloc(32), b = Buffer.alloc(32);
-Buffer.from((passphrase_hash||'').toLowerCase().slice(0,64).padEnd(64,'0'), 'hex').copy(a);
+Buffer.from(passphrase_hash.toLowerCase().slice(0,64).padEnd(64,'0'), 'hex').copy(a);
 Buffer.from(ex.slice(0,64).padEnd(64,'0'), 'hex').copy(b);
 if (!crypto.timingSafeEqual(a, b)) {
 recordFail(ip); audit('PP_FAIL', name+':'+r, {ip});
