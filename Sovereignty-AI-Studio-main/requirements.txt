@@ -1,19 +1,149 @@
+# Core / Crypto
 blake3==1.0.7
 cryptography==46.0.5
+pqcrypto==0.4.0
+argon2-cffi==23.1.0
+pyjwt==2.10.1
+encypher-ai==1.0.0
+
+# ML / AI
 torch==2.8.0
 numpy==1.26.4
-requests==2.32.4
-python-dotenv==1.0.1
-pydantic==2.9.0
+pennylane>=0.44.0
+guardrails-ai>=0.8.0
+lionagi==0.19.2
+opik==1.10.12
+aiml==0.9.2
+memory==1.0.0
+scalexi-llm==0.1.22
+ai-model-picker==0.1.0
+nlweb-core==0.7.0
+openintent==0.14.1
+blocksolver==0.9.4
+
+# Web Frameworks
 fastapi==0.115.0
 uvicorn[standard]==0.32.0
-quart==0.19.6
-pyjwt==2.9.0
+quart==0.20.0
+Flask==3.1.3
+
+# Voice / TTS / STT
 pyttsx3==2.90
-moviepy==1.0.3
+piper-tts==1.4.1
+txt2voice==0.1.4
+onnx-asr==0.10.2
+ovos-stt-plugin-vosk==0.2.7
+stts==0.1.38
+soniox-transcribe==0.1.0
+speechmatics-voice==0.2.8
+sirine==1.0.0
+
+# Media
+moviepy==2.2.1
+media-downloader==2.2.7
+mediaref==0.5.0
+vtt-transcribe==0.3.1
+video-cli==1.3.3
+pyimagedl==0.3.7
+
+# Networking / SSH / IoT
 h11==0.16.0
+requests==2.32.4
+fabric==3.2.2
+concurrent-ssh==0.1.0
+sshoc==0.1.4
+HAP-python==5.0.0
+HAP-python-pycryptodome==4.9.8
+isc-dhcp-leases==0.10.0
+event-isc==0.1.0
+connector2==0.2.3
+webex-message-handler==0.5.0
+
+# Instruments / Hardware
+SCPI-Instrument-Control==1.1.0
+
+# Security / Policy
+policyshield==0.5.0
+access-guard==0.1.6
+ransomwatch==1.5.0
+aip-identity==0.5.26
+cognautic-cli==1.2.4.post6
+
+# Quantum Computing
+qubitos==0.4.0
+qubit-os-proto==0.1.0
+quyaml==1.0.0
+
+# Utilities
+python-dotenv==1.1.0
+pydantic==2.12.5
+parse==1.21.0
+pip-tools==7.5.3
 celery==5.4.0
-argon2-cffi==23.1.0
-pqcrypto==0.1.3
+mackup==0.10.2
+scmrepo==3.3.10
+jsonid==0.12.3
+fileherder==1.0.1
+pyp==3.0.9
+solve==0.0.0
+check-duplicate-variables==1.0.5
+mpytool==2.3.3
+onedb==1.0.0
+iphone-backup-decrypt==0.9.0
+mpra==0.2.1
+
+# Agents / Orchestration
+agent-maestro==0.1.1
+strands-xai==0.1.4
+livekit-plugins-xai==1.4.1
+splinter-agent==0.1.1
+frontier-council==0.2.1
+brainbow==0.1.12
+classync==0.1.1
+streaq==6.0.2
+xai-review-oleg-fork==1.2.4
+xstate-statemachine==0.4.3
+humanbound-cli==0.5.0
+metorial-xai==1.0.5
+progressor-lib==1.0.1
+
+# Data / DevOps
+dagster-multihost-launcher==0.1.2
+stablestack==0.3.4
+dalexor==1.0.5
+sc-oa==0.7.0.17
+depkeeper==0.1.0
+synpi==1.1.4
+subtidal==1.1.0
+late-sdk==1.2.59
+allen-powerplatform-client==0.1.4
+
+# MCP / CLI
+manhattan-mcp==0.1.31
+llm-grok==1.4.1
+anysite-cli==0.3.13
+taxgrok==0.1.2
+
+# Grok / xAI Tools
+grok-image-generator==1768531.555.964
+grok-video-generator==1768377.239.270
+free-grok==0.1.0
+groktest==0.3.2
+megrok.strictrequire==5.2
+qodacode==1.0.3
+usefy==2.1.1
+
+# Automation / Infra
+flanes==0.4.4
+sanna==0.13.7
+novalang==3.0.28
+axiron==0.0.1
+pyhabitat==1.2.2
+piviz-3d==2.1.0
+lexis==0.1.3
+brainstem==2.12.1
+wagtail-thumbnail-choice-block==0.1.5
+
+# Testing
 pytest==8.3.3
-pytest-asyncio==0.23.0
+pytest-asyncio==0.23.8

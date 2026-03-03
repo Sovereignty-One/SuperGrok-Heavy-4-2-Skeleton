@@ -13,7 +13,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def create_access_token(
     data: dict,
-    expires_delta: Optional = None,
+    expires_delta: Optional[timedelta] = None,
 ) -> str:
     """Create a signed JWT access token."""
     to_encode = data.copy()

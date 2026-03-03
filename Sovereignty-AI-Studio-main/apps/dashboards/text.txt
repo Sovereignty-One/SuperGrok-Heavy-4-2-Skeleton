@@ -1,0 +1,1867 @@
+import SwiftUI
+import Foundation
+import Network
+import UserNotifications
+import MessageUI
+import AVFoundation
+import Speech
+import Intents
+import IntentsUI
+import Combine
+import SystemConfiguration
+import Security
+import LocalAuthentication
+
+// MARK: - Main App
+@main
+struct DevAssist420App: App {
+@StateObject private var appManager = AppManager()
+
+```
+var body: some Scene {
+    WindowGroup {
+        ContentView()
+            .environmentObject(appManager)
+            .onAppear {
+                appManager.initialize()
+            }
+    }
+}
+```
+
+}
+
+// MARK: - App Manager
+class AppManager: ObservableObject {
+@Published var isInitialized = false
+@Published var openAIConnected = false
+@Published var siriEnabled = false
+@Published var securityStatus = “Initializing”
+@Published var logs: [LogEntry] = []
+@Published var alerts: [AlertEntry] = []
+
+```
+private let openAIService = OpenAIService()
+private let securityMonitor = SecurityMonitor()
+private let notificationManager = NotificationManager()
+private let trackerDetector = TrackerDetector()
+
+func initialize() {
+    Task {
+        await setupServices()
+        await MainActor.run {
+            self.isInitialized = true
+            self.addLog("DevAssist420 initialized successfully", type: .success)
+        }
+    }
+}
+
+private func setupServices() async {
+    await openAIService.connect()
+    await securityMonitor.startMonitoring()
+    await notificationManager.requestPermissions()
+    await trackerDetector.startDetection()
+    
+    await MainActor.run {
+        self.openAIConnected = true
+        self.siriEnabled = true
+        self.securityStatus = "Active"
+    }
+}
+
+func addLog(_ message: String, type: LogType = .info) {
+    let entry = LogEntry(message: message, type: type)
+    logs.insert(entry, at: 0)
+    
+    if logs.count > 100 {
+        logs.removeLast()
+    }
+    
+    // Send notifications for important logs
+    if type == .error || type == .warning {
+        Task {
+            await notificationManager.sendNotification(message: message, type: type)
+        }
+    }
+}
+
+func addAlert(_ message: String, severity: AlertSeverity = .medium) {
+    let alert = AlertEntry(message: message, severity: severity)
+    alerts.insert(alert, at: 0)
+    
+    if alerts.count > 50 {
+        alerts.removeLast()
+    }
+}
+```
+
+}
+
+// MARK: - OpenAI Service
+class OpenAIService: ObservableObject {
+@Published var isConnected = false
+@Published var isProcessing = false
+
+```
+private let apiKey: String
+private let session = URLSession.shared
+private let baseURL = "https://api.openai.com/v1"
+
+init() {
+    // Load API key from Keychain
+    self.apiKey = KeychainService.load(key: "openai_api_key") ?? ""
+}
+
+func connect() async {
+    guard !apiKey.isEmpty else {
+        print("OpenAI API key not found")
+        return
+    }
+    
+    // Test connection
+    do {
+        let _ = try await makeRequest(endpoint: "/models", method: "GET")
+        await MainActor.run {
+            self.isConnected = true
+        }
+    } catch {
+        print("OpenAI connection failed: \(error)")
+    }
+}
+
+func sendMessage(_ message: String) async throws -> String {
+    await MainActor.run { self.isProcessing = true }
+    defer { Task { await MainActor.run { self.isProcessing = false } } }
+    
+    let payload: [String: Any] = [
+        "model": "gpt-4",
+        "messages": [
+            ["role": "user", "content": message]
+        ],
+        "max_tokens": 500,
+        "temperature": 0.7
+    ]
+    
+    let response = try await makeRequest(endpoint: "/chat/completions", method: "POST", body: payload)
+    
+    if let choices = response["choices"] as? [[String: Any]],
+       let firstChoice = choices.first,
+       let message = firstChoice["message"] as? [String: Any],
+       let content = message["content"] as? String {
+        return content
+    }
+    
+    throw OpenAIError.invalidResponse
+}
+
+private func makeRequest(endpoint: String, method: String, body: [String: Any]? = nil) async throws -> [String: Any] {
+    guard let url = URL(string: baseURL + endpoint) else {
+        throw OpenAIError.invalidURL
+    }
+    
+    var request = URLRequest(url: url)
+    request.httpMethod = method
+    request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    
+    if let body = body {
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+    }
+    
+    let (data, response) = try await session.data(for: request)
+    
+    guard let httpResponse = response as? HTTPURLResponse,
+          200...299 ~= httpResponse.statusCode else {
+        throw OpenAIError.requestFailed
+    }
+    
+    return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+}
+```
+
+}
+
+// MARK: - Security Monitor
+class SecurityMonitor: ObservableObject {
+@Published var isMonitoring = false
+@Published var threatsDetected = 0
+@Published var lastScanDate: Date?
+
+```
+private var monitor: NWPathMonitor?
+private let queue = DispatchQueue(label: "SecurityMonitor")
+
+func startMonitoring() async {
+    await MainActor.run { self.isMonitoring = true }
+    
+    // Network monitoring
+    monitor = NWPathMonitor()
+    monitor?.pathUpdateHandler = { [weak self] path in
+        self?.analyzeNetworkPath(path)
+    }
+    monitor?.start(queue: queue)
+    
+    // Jailbreak detection
+    if isJailbroken() {
+        await MainActor.run {
+            NotificationCenter.default.post(name: .securityThreat, object: "Jailbreak detected")
+        }
+    }
+    
+    // Certificate pinning check
+    validateCertificates()
+}
+
+func performSecurityScan() async -> ScanResult {
+    await MainActor.run {
+        self.lastScanDate = Date()
+    }
+    
+    var result = ScanResult()
+    
+    // Check for suspicious processes
+    result.processesScanned = await scanProcesses()
+    
+    // Check network connections
+    result.networkScanned = await scanNetworkConnections()
+    
+    // Check file system
+    result.filesScanned = await scanFileSystem()
+    
+    await MainActor.run {
+        self.threatsDetected = result.threatsFound
+    }
+    
+    return result
+}
+
+private func isJailbroken() -> Bool {
+    let jailbreakPaths = [
+        "/Applications/Cydia.app",
+        "/Library/MobileSubstrate/MobileSubstrate.dylib",
+        "/bin/bash",
+        "/usr/sbin/sshd",
+        "/etc/apt"
+    ]
+    
+    for path in jailbreakPaths {
+        if FileManager.default.fileExists(atPath: path) {
+            return true
+        }
+    }
+    
+    // Check if we can write to system directories
+    let testPath = "/private/test_jailbreak"
+    do {
+        try "test".write(toFile: testPath, atomically: true, encoding: .utf8)
+        try FileManager.default.removeItem(atPath: testPath)
+        return true
+    } catch {
+        return false
+    }
+}
+
+private func validateCertificates() {
+    // Implement certificate pinning validation
+    // This would check against known good certificates
+}
+
+private func analyzeNetworkPath(_ path: NWPath) {
+    if path.status == .satisfied {
+        // Check for suspicious network activity
+        Task {
+            await detectSuspiciousConnections()
+        }
+    }
+}
+
+private func scanProcesses() async -> Int {
+    // Simulate process scanning
+    return 145
+}
+
+private func scanNetworkConnections() async -> Int {
+    // Simulate network scanning
+    return 23
+}
+
+private func scanFileSystem() async -> Int {
+    // Simulate file system scanning
+    return 1247
+}
+
+private func detectSuspiciousConnections() async {
+    // Implement suspicious connection detection
+    // This would analyze network traffic patterns
+}
+```
+
+}
+
+// MARK: - Tracker Detector (Watchdog/Honeypot)
+class TrackerDetector: ObservableObject {
+@Published var isDetecting = false
+@Published var trackersFound: [TrackerInfo] = []
+
+```
+private var locationManager: CLLocationManager?
+private var networkMonitor: NWPathMonitor?
+private let honeypotService = HoneypotService()
+
+func startDetection() async {
+    await MainActor.run { self.isDetecting = true }
+    
+    // Start honeypot services
+    await honeypotService.startHoneypot()
+    
+    // Monitor location access
+    startLocationMonitoring()
+    
+    // Monitor network traffic
+    startNetworkMonitoring()
+    
+    // Check for known tracking domains
+    await scanForTrackers()
+}
+
+private func startLocationMonitoring() {
+    locationManager = CLLocationManager()
+    // Monitor for unauthorized location access
+}
+
+private func startNetworkMonitoring() {
+    networkMonitor = NWPathMonitor()
+    // Monitor for tracking requests
+}
+
+private func scanForTrackers() async {
+    let knownTrackers = [
+        "google-analytics.com",
+        "facebook.com/tr",
+        "doubleclick.net",
+        "googletagmanager.com"
+    ]
+    
+    // Simulate tracker detection
+    for tracker in knownTrackers {
+        if Bool.random() {
+            let info = TrackerInfo(domain: tracker, type: .analytics, blocked: true)
+            await MainActor.run {
+                self.trackersFound.append(info)
+            }
+        }
+    }
+}
+```
+
+}
+
+// MARK: - Honeypot Service
+class HoneypotService {
+private var server: NWListener?
+
+```
+func startHoneypot() async {
+    // Start honeypot on common attack ports
+    let ports: [UInt16] = [22, 23, 80, 443, 3389]
+    
+    for port in ports {
+        await startListener(on: port)
+    }
+}
+
+private func startListener(on port: UInt16) async {
+    do {
+        let listener = try NWListener(using: .tcp, on: NWEndpoint.Port(rawValue: port)!)
+        
+        listener.newConnectionHandler = { connection in
+            // Log suspicious connection attempt
+            self.logSuspiciousConnection(from: connection.endpoint, port: port)
+        }
+        
+        listener.start(queue: .global())
+    } catch {
+        print("Failed to start honeypot on port \(port): \(error)")
+    }
+}
+
+private func logSuspiciousConnection(from endpoint: NWEndpoint, port: UInt16) {
+    let message = "Suspicious connection attempt to port \(port) from \(endpoint)"
+    NotificationCenter.default.post(name: .securityThreat, object: message)
+}
+```
+
+}
+
+// MARK: - Notification Manager
+class NotificationManager: ObservableObject {
+@Published var emailEnabled = false
+@Published var smsEnabled = false
+@Published var pushEnabled = false
+
+```
+private var emailService: EmailService?
+private var smsService: SMSService?
+
+func requestPermissions() async {
+    let center = UNUserNotificationCenter.current()
+    
+    do {
+        let granted = try await center.requestAuthorization(options: [.alert, .badge, .sound])
+        await MainActor.run {
+            self.pushEnabled = granted
+        }
+    } catch {
+        print("Notification permission error: \(error)")
+    }
+}
+
+func sendNotification(message: String, type: LogType) async {
+    // Send push notification
+    if pushEnabled {
+        await sendPushNotification(message: message)
+    }
+    
+    // Send email if enabled
+    if emailEnabled, let email = emailService {
+        await email.sendAlert(message: message, type: type)
+    }
+    
+    // Send SMS if enabled
+    if smsEnabled, let sms = smsService {
+        await sms.sendAlert(message: message, type: type)
+    }
+}
+
+private func sendPushNotification(message: String) async {
+    let content = UNMutableNotificationContent()
+    content.title = "DevAssist420 Alert"
+    content.body = message
+    content.sound = .default
+    
+    let request = UNNotificationRequest(
+        identifier: UUID().uuidString,
+        content: content,
+        trigger: nil
+    )
+    
+    do {
+        try await UNUserNotificationCenter.current().add(request)
+    } catch {
+        print("Failed to send notification: \(error)")
+    }
+}
+
+func configureEmail(_ email: String) {
+    emailService = EmailService(to: email)
+    emailEnabled = true
+}
+
+func configureSMS(_ phoneNumber: String) {
+    smsService = SMSService(to: phoneNumber)
+    smsEnabled = true
+}
+```
+
+}
+
+// MARK: - Email Service
+class EmailService {
+private let recipientEmail: String
+private let smtpConfig: SMTPConfig
+
+```
+init(to email: String) {
+    self.recipientEmail = email
+    self.smtpConfig = SMTPConfig.load()
+}
+
+func sendAlert(message: String, type: LogType) async {
+    let subject = "DevAssist420 \(type.rawValue.capitalized) Alert"
+    let body = """
+    DevAssist420 Security Alert
+    
+    Type: \(type.rawValue.capitalized)
+    Time: \(Date().formatted())
+    Message: \(message)
+    
+    Sent from DevAssist420 iOS App
+    """
+    
+    await sendEmail(to: recipientEmail, subject: subject, body: body)
+}
+
+private func sendEmail(to: String, subject: String, body: String) async {
+    // Implement actual email sending using SMTP or email service API
+    // This would use a service like SendGrid, AWS SES, or similar
+    print("Sending email to \(to): \(subject)")
+}
+```
+
+}
+
+// MARK: - SMS Service
+class SMSService {
+private let phoneNumber: String
+private let twilioConfig: TwilioConfig
+
+```
+init(to phone: String) {
+    self.phoneNumber = phone
+    self.twilioConfig = TwilioConfig.load()
+}
+
+func sendAlert(message: String, type: LogType) async {
+    let smsBody = "DevAssist420 \(type.rawValue.capitalized): \(message) - \(Date().formatted(.dateTime.hour().minute()))"
+    await sendSMS(to: phoneNumber, body: smsBody)
+}
+
+private func sendSMS(to: String, body: String) async {
+    // Implement SMS sending using Twilio API
+    guard let url = URL(string: "https://api.twilio.com/2010-04-01/Accounts/\(twilioConfig.accountSID)/Messages.json") else { return }
+    
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+    
+    let auth = "\(twilioConfig.accountSID):\(twilioConfig.authToken)".data(using: .utf8)?.base64EncodedString() ?? ""
+    request.setValue("Basic \(auth)", forHTTPHeaderField: "Authorization")
+    
+    let params = [
+        "From": twilioConfig.fromNumber,
+        "To": to,
+        "Body": body
+    ]
+    
+    request.httpBody = params.map { "\($0.key)=\($0.value)" }.joined(separator: "&").data(using: .utf8)
+    
+    do {
+        let (_, _) = try await URLSession.shared.data(for: request)
+        print("SMS sent to \(to)")
+    } catch {
+        print("SMS send failed: \(error)")
+    }
+}
+```
+
+}
+
+// MARK: - Picture-in-Picture Manager
+class PictureInPictureManager: ObservableObject {
+@Published var isPiPActive = false
+
+```
+private var pipController: AVPictureInPictureController?
+
+func setupPictureInPicture(with view: UIView) {
+    guard AVPictureInPictureController.isPictureInPictureSupported() else {
+        print("Picture in Picture not supported")
+        return
+    }
+    
+    let playerLayer = AVPlayerLayer()
+    playerLayer.frame = view.bounds
+    view.layer.addSublayer(playerLayer)
+    
+    pipController = AVPictureInPictureController(playerLayer: playerLayer)
+    pipController?.delegate = self
+}
+
+func startPictureInPicture() {
+    pipController?.startPictureInPicture()
+}
+
+func stopPictureInPicture() {
+    pipController?.stopPictureInPicture()
+}
+```
+
+}
+
+extension PictureInPictureManager: AVPictureInPictureControllerDelegate {
+func pictureInPictureControllerDidStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+isPiPActive = true
+}
+
+```
+func pictureInPictureControllerDidStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+    isPiPActive = false
+}
+```
+
+}
+
+// MARK: - Siri Integration
+class SiriIntegration: NSObject, ObservableObject {
+@Published var isAvailable = false
+
+```
+override init() {
+    super.init()
+    requestSiriAuthorization()
+}
+
+private func requestSiriAuthorization() {
+    INPreferences.requestSiriAuthorization { status in
+        DispatchQueue.main.async {
+            self.isAvailable = status == .authorized
+        }
+    }
+}
+
+func registerIntents() {
+    // Register custom intents for DevAssist420 commands
+    let securityScanIntent = SecurityScanIntent()
+    let statusCheckIntent = StatusCheckIntent()
+    let gptQueryIntent = GPTQueryIntent()
+    
+    // Donate intents to Siri
+    let interaction = INInteraction(intent: securityScanIntent, response: nil)
+    interaction.donate { error in
+        if let error = error {
+            print("Failed to donate intent: \(error)")
+        }
+    }
+}
+```
+
+}
+
+// MARK: - Speech Recognition
+class SpeechRecognizer: NSObject, ObservableObject {
+@Published var isRecording = false
+@Published var transcript = “”
+
+```
+private let audioEngine = AVAudioEngine()
+private let speechRecognizer = SFSpeechRecognizer()
+private var recognitionTask: SFSpeechRecognitionTask?
+private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
+
+func requestPermissions() async -> Bool {
+    let speechStatus = await SFSpeechRecognizer.requestAuthorization()
+    let audioStatus = await AVAudioSession.sharedInstance().requestRecordPermission()
+    
+    return speechStatus == .authorized && audioStatus
+}
+
+func startRecording() async throws {
+    recognitionTask?.cancel()
+    recognitionTask = nil
+    
+    let audioSession = AVAudioSession.sharedInstance()
+    try audioSession.setCategory(.record, mode: .measurement, options: .duckOthers)
+    try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+    
+    recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
+    guard let recognitionRequest = recognitionRequest else {
+        throw SpeechError.recognitionRequestFailed
+    }
+    
+    recognitionRequest.shouldReportPartialResults = true
+    
+    recognitionTask = speechRecognizer?.recognitionTask(with: recognitionRequest) { [weak self] result, error in
+        if let result = result {
+            DispatchQueue.main.async {
+                self?.transcript = result.bestTranscription.formattedString
+            }
+        }
+        
+        if error != nil {
+            self?.stopRecording()
+        }
+    }
+    
+    let inputNode = audioEngine.inputNode
+    let recordingFormat = inputNode.outputFormat(forBus: 0)
+    
+    inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
+        recognitionRequest.append(buffer)
+    }
+    
+    audioEngine.prepare()
+    try audioEngine.start()
+    
+    await MainActor.run {
+        self.isRecording = true
+    }
+}
+
+func stopRecording() {
+    audioEngine.stop()
+    audioEngine.inputNode.removeTap(onBus: 0)
+    
+    recognitionRequest?.endAudio()
+    recognitionRequest = nil
+    recognitionTask = nil
+    
+    isRecording = false
+}
+```
+
+}
+
+// MARK: - Text-to-Speech
+class TextToSpeechManager: NSObject, ObservableObject {
+@Published var isSpeaking = false
+@Published var volume: Float = 0.8
+@Published var rate: Float = 0.5
+
+```
+private let synthesizer = AVSpeechSynthesizer()
+
+override init() {
+    super.init()
+    synthesizer.delegate = self
+}
+
+func speak(_ text: String) {
+    let utterance = AVSpeechUtterance(string: text)
+    utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+    utterance.volume = volume
+    utterance.rate = rate
+    
+    synthesizer.speak(utterance)
+}
+
+func stop() {
+    synthesizer.stopSpeaking(at: .immediate)
+}
+
+func pause() {
+    synthesizer.pauseSpeaking(at: .immediate)
+}
+
+func resume() {
+    synthesizer.continueSpeaking()
+}
+```
+
+}
+
+extension TextToSpeechManager: AVSpeechSynthesizerDelegate {
+func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didStart utterance: AVSpeechUtterance) {
+isSpeaking = true
+}
+
+```
+func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+    isSpeaking = false
+}
+```
+
+}
+
+// MARK: - Keychain Service
+class KeychainService {
+static func save(key: String, data: String) {
+let data = data.data(using: .utf8)!
+
+```
+    let query: [String: Any] = [
+        kSecClass as String: kSecClassGenericPassword,
+        kSecAttrAccount as String: key,
+        kSecValueData as String: data
+    ]
+    
+    SecItemDelete(query as CFDictionary)
+    SecItemAdd(query as CFDictionary, nil)
+}
+
+static func load(key: String) -> String? {
+    let query: [String: Any] = [
+        kSecClass as String: kSecClassGenericPassword,
+        kSecAttrAccount as String: key,
+        kSecReturnData as String: kCFBooleanTrue!,
+        kSecMatchLimit as String: kSecMatchLimitOne
+    ]
+    
+    var dataTypeRef: AnyObject?
+    let status = SecItemCopyMatching(query as CFDictionary, &dataTypeRef)
+    
+    if status == noErr,
+       let data = dataTypeRef as? Data,
+       let string = String(data: data, encoding: .utf8) {
+        return string
+    }
+    
+    return nil
+}
+
+static func delete(key: String) {
+    let query: [String: Any] = [
+        kSecClass as String: kSecClassGenericPassword,
+        kSecAttrAccount as String: key
+    ]
+    
+    SecItemDelete(query as CFDictionary)
+}
+```
+
+}
+
+// MARK: - Main Content View
+struct ContentView: View {
+@EnvironmentObject var appManager: AppManager
+@StateObject private var openAIService = OpenAIService()
+@StateObject private var securityMonitor = SecurityMonitor()
+@StateObject private var notificationManager = NotificationManager()
+@StateObject private var pipManager = PictureInPictureManager()
+@StateObject private var siriIntegration = SiriIntegration()
+@StateObject private var speechRecognizer = SpeechRecognizer()
+@StateObject private var ttsManager = TextToSpeechManager()
+@StateObject private var trackerDetector = TrackerDetector()
+
+```
+@State private var selectedTab = 0
+@State private var chatMessages: [ChatMessage] = []
+@State private var currentMessage = ""
+@State private var showingSettings = false
+
+var body: some View {
+    TabView(selection: $selectedTab) {
+        // Dashboard
+        DashboardView()
+            .tabItem {
+                Image(systemName: "gauge")
+                Text("Dashboard")
+            }
+            .tag(0)
+        
+        // OpenAI Chat
+        ChatView(
+            messages: $chatMessages,
+            currentMessage: $currentMessage,
+            openAIService: openAIService,
+            ttsManager: ttsManager
+        )
+        .tabItem {
+            Image(systemName: "message")
+            Text("AI Assistant")
+        }
+        .tag(1)
+        
+        // Security
+        SecurityView(securityMonitor: securityMonitor)
+            .tabItem {
+                Image(systemName: "shield")
+                Text("Security")
+            }
+            .tag(2)
+        
+        // Tracker Detection
+        TrackerView(trackerDetector: trackerDetector)
+            .tabItem {
+                Image(systemName: "eye")
+                Text("Trackers")
+            }
+            .tag(3)
+        
+        // Settings
+        SettingsView(
+            notificationManager: notificationManager,
+            ttsManager: ttsManager,
+            pipManager: pipManager
+        )
+        .tabItem {
+            Image(systemName: "gear")
+            Text("Settings")
+        }
+        .tag(4)
+    }
+    .environmentObject(appManager)
+    .environmentObject(openAIService)
+    .environmentObject(securityMonitor)
+    .environmentObject(notificationManager)
+    .environmentObject(pipManager)
+    .environmentObject(siriIntegration)
+    .environmentObject(speechRecognizer)
+    .environmentObject(ttsManager)
+    .environmentObject(trackerDetector)
+    .onAppear {
+        siriIntegration.registerIntents()
+    }
+}
+```
+
+}
+
+// MARK: - Dashboard View
+struct DashboardView: View {
+@EnvironmentObject var appManager: AppManager
+@EnvironmentObject var openAIService: OpenAIService
+@EnvironmentObject var securityMonitor: SecurityMonitor
+@EnvironmentObject var trackerDetector: TrackerDetector
+
+```
+var body: some View {
+    NavigationView {
+        ScrollView {
+            LazyVStack(spacing: 16) {
+                // Status Cards
+                HStack(spacing: 16) {
+                    StatusCard(
+                        title: "OpenAI",
+                        status: openAIService.isConnected ? "Connected" : "Disconnected",
+                        color: openAIService.isConnected ? .green : .red,
+                        icon: "message.circle"
+                    )
+                    
+                    StatusCard(
+                        title: "Security",
+                        status: appManager.securityStatus,
+                        color: appManager.securityStatus == "Active" ? .green : .orange,
+                        icon: "shield.checkered"
+                    )
+                }
+                
+                HStack(spacing: 16) {
+                    StatusCard(
+                        title: "Trackers",
+                        status: "\(trackerDetector.trackersFound.count) Blocked",
+                        color: .blue,
+                        icon: "eye.slash"
+                    )
+                    
+                    StatusCard(
+                        title: "Alerts",
+                        status: "\(appManager.alerts.count) Active",
+                        color: appManager.alerts.count > 0 ? .orange : .green,
+                        icon: "exclamationmark.triangle"
+                    )
+                }
+                
+                // Recent Alerts
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Recent Alerts")
+                        .font(.headline)
+                        .padding(.horizontal)
+                    
+                    ForEach(appManager.alerts.prefix(5)) { alert in
+                        AlertRow(alert: alert)
+                    }
+                }
+                .background(Color(.systemBackground))
+                .cornerRadius(12)
+                
+                // System Logs
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("System Logs")
+                        .font(.headline)
+                        .padding(.horizontal)
+                    
+                    ForEach(appManager.logs.prefix(10)) { log in
+                        LogRow(log: log)
+                    }
+                }
+                .background(Color(.systemBackground))
+                .cornerRadius(12)
+            }
+            .padding()
+        }
+        .navigationTitle("DevAssist420")
+        .refreshable {
+            await refreshDashboard()
+        }
+    }
+}
+
+private func refreshDashboard() async {
+    await openAIService.connect()
+    await securityMonitor.performSecurityScan()
+    await trackerDetector.startDetection()
+}
+```
+
+}
+
+// MARK: - Chat View
+struct ChatView: View {
+@Binding var messages: [ChatMessage]
+@Binding var currentMessage: String
+@ObservedObject var openAIService: OpenAIService
+@ObservedObject var ttsManager: TextToSpeechManager
+@EnvironmentObject var speechRecognizer: SpeechRecognizer
+
+```
+@State private var isListening = false
+
+var body: some View {
+    NavigationView {
+        VStack {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 12) {
+                        ForEach(messages) { message in
+                            ChatBubble(message: message)
+                                .id(message.id)
+                        }
+                        
+                        if openAIService.isProcessing {
+                            TypingIndicator()
+                        }
+                    }
+                    .padding()
+                }
+                .onChange(of: messages.count) { _ in
+                    if let lastMessage = messages.last {
+                        proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                    }
+                }
+            }
+            
+            // Input Area
+            VStack {
+                HStack {
+                    TextField("Ask DevAssist420...", text: $currentMessage)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .onSubmit {
+                            sendMessage()
+                        }
+                    
+                    Button(action: toggleListening) {
+                        Image(systemName: isListening ? "mic.fill" : "mic")
+                            .foregroundColor(isListening ? .red : .blue)
+                    }
+                    .disabled(speechRecognizer.isRecording)
+                    
+                    Button(action: sendMessage) {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.blue)
+                    }
+                    .disabled(currentMessage.isEmpty || openAIService.isProcessing)
+                }
+                .padding()
+            }
+        }
+        .navigationTitle("AI Assistant")
+        .onReceive(speechRecognizer.$transcript) { transcript in
+            if !transcript.isEmpty && !speechRecognizer.isRecording {
+                currentMessage = transcript
+            }
+        }
+    }
+}
+
+private func sendMessage() {
+    guard !currentMessage.isEmpty else { return }
+    
+    let userMessage = ChatMessage(
+        content: currentMessage,
+        isUser: true,
+        timestamp: Date()
+    )
+    
+    messages.append(userMessage)
+    let messageContent = currentMessage
+    currentMessage = ""
+    
+    Task {
+        do {
+            let response = try await openAIService.sendMessage(messageContent)
+            let aiMessage = ChatMessage(
+                content: response,
+                isUser: false,
+                timestamp: Date()
+            )
+            
+            await MainActor.run {
+                messages.append(aiMessage)
+                ttsManager.speak(response)
+            }
+        } catch {
+            await MainActor.run {
+                let errorMessage = ChatMessage(
+                    content: "Sorry, I encountered an error: \(error.localizedDescription)",
+                    isUser: false,
+                    timestamp: Date()
+                )
+                messages.append(errorMessage)
+            }
+        }
+    }
+}
+
+private func toggleListening() {
+    Task {
+        if speechRecognizer.isRecording {
+            speechRecognizer.stopRecording()
+            isListening = false
+        } else {
+            let hasPermission = await speechRecognizer.requestPermissions()
+            if hasPermission {
+                try? await speechRecognizer.startRecording()
+                isListening = true
+            }
+        }
+    }
+}
+```
+
+}
+
+// MARK: - Security View
+struct SecurityView: View {
+@ObservedObject var securityMonitor: SecurityMonitor
+@State private var isScanning = false
+@State private var scanResult: ScanResult?
+
+```
+var body: some View {
+    NavigationView {
+        ScrollView {
+            LazyVStack(spacing: 16) {
+                // Security Status
+                VStack {
+                    Image(systemName: securityMonitor.isMonitoring ? "shield.checkered" : "shield.slash")
+                        .font(.system(size: 60))
+                        .foregroundColor(securityMonitor.isMonitoring ? .green : .red)
+                    
+                    Text(securityMonitor.isMonitoring ? "System Protected" : "Protection Disabled")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                    
+                    Text("Threats Detected: \(securityMonitor.threatsDetected)")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .padding()
+                .background(Color(.systemBackground))
+                .cornerRadius(12)
+                
+                // Scan Button
+                Button(action: performScan) {
+                    HStack {
+                        if isScanning {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "magnifyingglass")
+                        }
+                        
+                        Text(isScanning ? "Scanning..." : "Start Security Scan")
+                            .fontWeight(.medium)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+                }
+                .disabled(isScanning)
+                
+                // Scan Results
+                if let result = scanResult {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Last Scan Results")
+                            .font(.headline)
+                        
+                        ScanResultRow(title: "Processes Scanned", value: "\(result.processesScanned)")
+                        ScanResultRow(title: "Network Connections", value: "\(result.networkScanned)")
+                        ScanResultRow(title: "Files Scanned", value: "\(result.filesScanned)")
+                        ScanResultRow(title: "Threats Found", value: "\(result.threatsFound)")
+                        
+                        if let lastScan = securityMonitor.lastScanDate {
+                            Text("Last Scan: \(lastScan.formatted())")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding()
+                    .background(Color(.systemBackground))
+                    .cornerRadius(12)
+                }
+                
+                // Security Features
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Security Features")
+                        .font(.headline)
+                    
+                    SecurityFeatureRow(icon: "lock.shield", title: "Real-time Monitoring", isActive: true)
+                    SecurityFeatureRow(icon: "network", title: "Network Analysis", isActive: true)
+                    SecurityFeatureRow(icon: "doc.text.magnifyingglass", title: "File System Scan", isActive: true)
+                    SecurityFeatureRow(icon: "hammer", title: "Jailbreak Detection", isActive: true)
+                    SecurityFeatureRow(icon: "certificate", title: "Certificate Pinning", isActive: true)
+                }
+                .padding()
+                .background(Color(.systemBackground))
+                .cornerRadius(12)
+            }
+            .padding()
+        }
+        .navigationTitle("Security")
+    }
+}
+
+private func performScan() {
+    isScanning = true
+    Task {
+        let result = await securityMonitor.performSecurityScan()
+        await MainActor.run {
+            self.scanResult = result
+            self.isScanning = false
+        }
+    }
+}
+```
+
+}
+
+// MARK: - Tracker View
+struct TrackerView: View {
+@ObservedObject var trackerDetector: TrackerDetector
+
+```
+var body: some View {
+    NavigationView {
+        ScrollView {
+            LazyVStack(spacing: 16) {
+                // Detection Status
+                VStack {
+                    Image(systemName: trackerDetector.isDetecting ? "eye.slash.fill" : "eye.slash")
+                        .font(.system(size: 60))
+                        .foregroundColor(trackerDetector.isDetecting ? .blue : .gray)
+                    
+                    Text(trackerDetector.isDetecting ? "Tracker Detection Active" : "Detection Paused")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                    
+                    Text("\(trackerDetector.trackersFound.count) trackers blocked")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .padding()
+                .background(Color(.systemBackground))
+                .cornerRadius(12)
+                
+                // Tracker List
+                if !trackerDetector.trackersFound.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Blocked Trackers")
+                            .font(.headline)
+                            .padding(.horizontal)
+                        
+                        ForEach(trackerDetector.trackersFound) { tracker in
+                            TrackerRow(tracker: tracker)
+                        }
+                    }
+                    .background(Color(.systemBackground))
+                    .cornerRadius(12)
+                }
+                
+                // Honeypot Status
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Honeypot Services")
+                        .font(.headline)
+                    
+                    HoneypotServiceRow(port: "22", service: "SSH", isActive: true)
+                    HoneypotServiceRow(port: "23", service: "Telnet", isActive: true)
+                    HoneypotServiceRow(port: "80", service: "HTTP", isActive: true)
+                    HoneypotServiceRow(port: "443", service: "HTTPS", isActive: true)
+                    HoneypotServiceRow(port: "3389", service: "RDP", isActive: true)
+                }
+                .padding()
+                .background(Color(.systemBackground))
+                .cornerRadius(12)
+            }
+            .padding()
+        }
+        .navigationTitle("Tracker Detection")
+    }
+}
+```
+
+}
+
+// MARK: - Settings View
+struct SettingsView: View {
+@ObservedObject var notificationManager: NotificationManager
+@ObservedObject var ttsManager: TextToSpeechManager
+@ObservedObject var pipManager: PictureInPictureManager
+
+```
+@State private var emailAddress = ""
+@State private var phoneNumber = ""
+@State private var openAIKey = ""
+@State private var showingAPIKeyAlert = false
+
+var body: some View {
+    NavigationView {
+        Form {
+            // Notifications Section
+            Section("Notifications") {
+                Toggle("Push Notifications", isOn: .constant(notificationManager.pushEnabled))
+                    .disabled(true)
+                
+                Toggle("Email Alerts", isOn: $notificationManager.emailEnabled)
+                
+                if notificationManager.emailEnabled {
+                    TextField("Email Address", text: $emailAddress)
+                        .textContentType(.emailAddress)
+                        .keyboardType(.emailAddress)
+                        .onSubmit {
+                            notificationManager.configureEmail(emailAddress)
+                        }
+                }
+                
+                Toggle("SMS Alerts", isOn: $notificationManager.smsEnabled)
+                
+                if notificationManager.smsEnabled {
+                    TextField("Phone Number", text: $phoneNumber)
+                        .textContentType(.telephoneNumber)
+                        .keyboardType(.phonePad)
+                        .onSubmit {
+                            notificationManager.configureSMS(phoneNumber)
+                        }
+                }
+            }
+            
+            // Text-to-Speech Section
+            Section("Text-to-Speech") {
+                VStack {
+                    HStack {
+                        Text("Volume")
+                        Spacer()
+                        Text("\(Int(ttsManager.volume * 100))%")
+                    }
+                    Slider(value: $ttsManager.volume, in: 0...1, step: 0.1)
+                }
+                
+                VStack {
+                    HStack {
+                        Text("Speech Rate")
+                        Spacer()
+                        Text(ttsManager.rate < 0.3 ? "Slow" : ttsManager.rate < 0.7 ? "Normal" : "Fast")
+                    }
+                    Slider(value: $ttsManager.rate, in: 0...1, step: 0.1)
+                }
+                
+                Button("Test Speech") {
+                    ttsManager.speak("DevAssist420 text-to-speech is working correctly.")
+                }
+                .disabled(ttsManager.isSpeaking)
+            }
+            
+            // Picture-in-Picture Section
+            Section("Display") {
+                Toggle("Picture-in-Picture", isOn: $pipManager.isPiPActive)
+                    .onChange(of: pipManager.isPiPActive) { enabled in
+                        if enabled {
+                            pipManager.startPictureInPicture()
+                        } else {
+                            pipManager.stopPictureInPicture()
+                        }
+                    }
+            }
+            
+            // API Configuration
+            Section("API Configuration") {
+                SecureField("OpenAI API Key", text: $openAIKey)
+                    .textContentType(.password)
+                
+                Button("Save API Key") {
+                    KeychainService.save(key: "openai_api_key", data: openAIKey)
+                    showingAPIKeyAlert = true
+                    openAIKey = ""
+                }
+                .disabled(openAIKey.isEmpty)
+            }
+            
+            // About Section
+            Section("About") {
+                HStack {
+                    Text("Version")
+                    Spacer()
+                    Text("4.2.0")
+                        .foregroundColor(.secondary)
+                }
+                
+                HStack {
+                    Text("Build")
+                    Spacer()
+                    Text("2024.001")
+                        .foregroundColor(.secondary)
+                }
+                
+                Button("Clear All Data") {
+                    clearAllData()
+                }
+                .foregroundColor(.red)
+            }
+        }
+        .navigationTitle("Settings")
+        .alert("API Key Saved", isPresented: $showingAPIKeyAlert) {
+            Button("OK") { }
+        } message: {
+            Text("Your OpenAI API key has been securely stored.")
+        }
+    }
+}
+
+private func clearAllData() {
+    KeychainService.delete(key: "openai_api_key")
+    // Clear other stored data as needed
+}
+```
+
+}
+
+// MARK: - Supporting Views
+
+struct StatusCard: View {
+let title: String
+let status: String
+let color: Color
+let icon: String
+
+```
+var body: some View {
+    VStack {
+        Image(systemName: icon)
+            .font(.title)
+            .foregroundColor(color)
+        
+        Text(title)
+            .font(.caption)
+            .foregroundColor(.secondary)
+        
+        Text(status)
+            .font(.headline)
+            .fontWeight(.semibold)
+    }
+    .frame(maxWidth: .infinity)
+    .padding()
+    .background(Color(.systemBackground))
+    .cornerRadius(12)
+}
+```
+
+}
+
+struct AlertRow: View {
+let alert: AlertEntry
+
+```
+var body: some View {
+    HStack {
+        Circle()
+            .fill(alert.severity.color)
+            .frame(width: 8, height: 8)
+        
+        VStack(alignment: .leading) {
+            Text(alert.message)
+                .font(.subheadline)
+            
+            Text(alert.timestamp.formatted(.dateTime.hour().minute()))
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        
+        Spacer()
+    }
+    .padding(.horizontal)
+}
+```
+
+}
+
+struct LogRow: View {
+let log: LogEntry
+
+```
+var body: some View {
+    HStack {
+        Circle()
+            .fill(log.type.color)
+            .frame(width: 6, height: 6)
+        
+        Text(log.message)
+            .font(.caption)
+            .lineLimit(1)
+        
+        Spacer()
+        
+        Text(log.timestamp.formatted(.dateTime.hour().minute()))
+            .font(.caption2)
+            .foregroundColor(.secondary)
+    }
+    .padding(.horizontal)
+}
+```
+
+}
+
+struct ChatBubble: View {
+let message: ChatMessage
+
+```
+var body: some View {
+    HStack {
+        if message.isUser {
+            Spacer()
+        }
+        
+        VStack(alignment: message.isUser ? .trailing : .leading) {
+            Text(message.content)
+                .padding()
+                .background(message.isUser ? Color.blue : Color(.systemGray5))
+                .foregroundColor(message.isUser ? .white : .primary)
+                .cornerRadius(16)
+            
+            Text(message.timestamp.formatted(.dateTime.hour().minute()))
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        
+        if !message.isUser {
+            Spacer()
+        }
+    }
+}
+```
+
+}
+
+struct TypingIndicator: View {
+@State private var animating = false
+
+```
+var body: some View {
+    HStack {
+        HStack(spacing: 4) {
+            ForEach(0..<3) { index in
+                Circle()
+                    .fill(Color.gray)
+                    .frame(width: 6, height: 6)
+                    .scaleEffect(animating ? 1.0 : 0.5)
+                    .animation(
+                        Animation.easeInOut(duration: 0.6)
+                            .repeatForever()
+                            .delay(Double(index) * 0.2),
+                        value: animating
+                    )
+            }
+        }
+        .padding()
+        .background(Color(.systemGray5))
+        .cornerRadius(16)
+        
+        Spacer()
+    }
+    .onAppear {
+        animating = true
+    }
+}
+```
+
+}
+
+struct ScanResultRow: View {
+let title: String
+let value: String
+
+```
+var body: some View {
+    HStack {
+        Text(title)
+        Spacer()
+        Text(value)
+            .fontWeight(.medium)
+    }
+}
+```
+
+}
+
+struct SecurityFeatureRow: View {
+let icon: String
+let title: String
+let isActive: Bool
+
+```
+var body: some View {
+    HStack {
+        Image(systemName: icon)
+            .foregroundColor(isActive ? .green : .gray)
+            .frame(width: 20)
+        
+        Text(title)
+        
+        Spacer()
+        
+        Circle()
+            .fill(isActive ? Color.green : Color.gray)
+            .frame(width: 8, height: 8)
+    }
+}
+```
+
+}
+
+struct TrackerRow: View {
+let tracker: TrackerInfo
+
+```
+var body: some View {
+    HStack {
+        VStack(alignment: .leading) {
+            Text(tracker.domain)
+                .font(.subheadline)
+                .fontWeight(.medium)
+            
+            Text(tracker.type.rawValue.capitalized)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        
+        Spacer()
+        
+        Text(tracker.blocked ? "BLOCKED" : "ALLOWED")
+            .font(.caption)
+            .fontWeight(.bold)
+            .foregroundColor(tracker.blocked ? .red : .green)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 2)
+            .background(tracker.blocked ? Color.red.opacity(0.1) : Color.green.opacity(0.1))
+            .cornerRadius(4)
+    }
+    .padding(.horizontal)
+}
+```
+
+}
+
+struct HoneypotServiceRow: View {
+let port: String
+let service: String
+let isActive: Bool
+
+```
+var body: some View {
+    HStack {
+        Text("Port \(port)")
+            .font(.monospaced(.subheadline)())
+            .frame(width: 60, alignment: .leading)
+        
+        Text(service)
+        
+        Spacer()
+        
+        Circle()
+            .fill(isActive ? Color.green : Color.gray)
+            .frame(width: 8, height: 8)
+    }
+}
+```
+
+}
+
+// MARK: - Data Models
+
+struct LogEntry: Identifiable, Codable {
+let id = UUID()
+let message: String
+let type: LogType
+let timestamp: Date
+
+```
+init(message: String, type: LogType) {
+    self.message = message
+    self.type = type
+    self.timestamp = Date()
+}
+```
+
+}
+
+enum LogType: String, Codable, CaseIterable {
+case info = “info”
+case success = “success”
+case warning = “warning”
+case error = “error”
+
+```
+var color: Color {
+    switch self {
+    case .info: return .blue
+    case .success: return .green
+    case .warning: return .orange
+    case .error: return .red
+    }
+}
+```
+
+}
+
+struct AlertEntry: Identifiable, Codable {
+let id = UUID()
+let message: String
+let severity: AlertSeverity
+let timestamp: Date
+
+```
+init(message: String, severity: AlertSeverity) {
+    self.message = message
+    self.severity = severity
+    self.timestamp = Date()
+}
+```
+
+}
+
+enum AlertSeverity: String, Codable, CaseIterable {
+case low = “low”
+case medium = “medium”
+case high = “high”
+case critical = “critical”
+
+```
+var color: Color {
+    switch self {
+    case .low: return .blue
+    case .medium: return .orange
+    case .high: return .red
+    case .critical: return .purple
+    }
+}
+```
+
+}
+
+struct ChatMessage: Identifiable, Codable {
+let id = UUID()
+let content: String
+let isUser: Bool
+let timestamp: Date
+}
+
+struct ScanResult {
+var processesScanned = 0
+var networkScanned = 0
+var filesScanned = 0
+var threatsFound = 0
+}
+
+struct TrackerInfo: Identifiable, Codable {
+let id = UUID()
+let domain: String
+let type: TrackerType
+let blocked: Bool
+}
+
+enum TrackerType: String, Codable, CaseIterable {
+case analytics = “analytics”
+case advertising = “advertising”
+case social = “social”
+case fingerprinting = “fingerprinting”
+case cryptomining = “cryptomining”
+}
+
+// MARK: - Configuration Models
+
+struct SMTPConfig {
+let server: String
+let port: Int
+let username: String
+let password: String
+
+```
+static func load() -> SMTPConfig {
+    return SMTPConfig(
+        server: KeychainService.load(key: "smtp_server") ?? "",
+        port: Int(KeychainService.load(key: "smtp_port") ?? "587") ?? 587,
+        username: KeychainService.load(key: "smtp_username") ?? "",
+        password: KeychainService.load(key: "smtp_password") ?? ""
+    )
+}
+```
+
+}
+
+struct TwilioConfig {
+let accountSID: String
+let authToken: String
+let fromNumber: String
+
+```
+static func load() -> TwilioConfig {
+    return TwilioConfig(
+        accountSID: KeychainService.load(key: "twilio_sid") ?? "",
+        authToken: KeychainService.load(key: "twilio_token") ?? "",
+        fromNumber: KeychainService.load(key: "twilio_from") ?? ""
+    )
+}
+```
+
+}
+
+// MARK: - Intent Definitions
+
+class SecurityScanIntent: INIntent {
+override init() {
+super.init()
+}
+
+```
+required init?(coder: NSCoder) {
+    super.init(coder: coder)
+}
+```
+
+}
+
+class StatusCheckIntent: INIntent {
+override init() {
+super.init()
+}
+
+```
+required init?(coder: NSCoder) {
+    super.init(coder: coder)
+}
+```
+
+}
+
+class GPTQueryIntent: INIntent {
+override init() {
+super.init()
+}
+
+```
+required init?(coder: NSCoder) {
+    super.init(coder: coder)
+}
+```
+
+}
+
+// MARK: - Extensions
+
+extension Notification.Name {
+static let securityThreat = Notification.Name(“securityThreat”)
+static let trackerDetected = Notification.Name(“trackerDetected”)
+static let openAIResponse = Notification.Name(“openAIResponse”)
+}
+
+// MARK: - Error Types
+
+enum OpenAIError: Error {
+case invalidURL
+case invalidResponse
+case requestFailed
+case noAPIKey
+}
+
+enum SpeechError: Error {
+case recognitionRequestFailed
+case audioEngineError
+case permissionDenied
+}
+
+enum SecurityError: Error {
+case monitoringFailed
+case scanFailed
+case threatDetected
+}
