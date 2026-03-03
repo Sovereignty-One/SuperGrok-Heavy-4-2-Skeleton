@@ -140,3 +140,5 @@ vite.config.ts.timestamp-*
 
 # Archive files
 *.zip
+__pycache__/
+*.pyc

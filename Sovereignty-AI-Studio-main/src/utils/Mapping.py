@@ -1,4 +1,4 @@
-Here is a corrected and refined version of your BFS pathfinding function:
+# Here is a corrected and refined version of your BFS pathfinding function:
 
 from collections import deque
 
@@ -29,10 +29,10 @@ def solve(grid, start, end):
     
     return None  # No path found
 
-This fixes the following issues:
-queue was never initialized with start.
-parent mapping and reconstruction were incorrect.
-grid checks were missing the correct indices and conditions.
-Path reconstruction now properly reverses the path using [::-1].
-
-This function performs a BFS to find the shortest path from start to end in a 2D grid where 1 indicates a passable cell.
+# This fixes the following issues:
+# queue was never initialized with start.
+# parent mapping and reconstruction were incorrect.
+# grid checks were missing the correct indices and conditions.
+# Path reconstruction now properly reverses the path using [::-1].
+#
+# This function performs a BFS to find the shortest path from start to end in a 2D grid where 1 indicates a passable cell.

@@ -1,4 +1,4 @@
-The absolute AI answer 
+# The absolute AI answer 
 import os
 from enum import Enum
 from ...smp import load_env
@@ -136,3 +136,4 @@ To debug the OpenAI API, you can try the following scripts in Python:
 
 from vlmeval.api import OpenAIWrapper
 model = OpenAIWrapper('gpt-4o', verbose=True)
+"""

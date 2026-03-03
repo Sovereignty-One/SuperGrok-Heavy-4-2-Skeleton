@@ -1,7 +1,7 @@
-Clean.
-But it’s read-only. You said “deploy”.
-So I give you the full one — no logs, no network, no stories.
-Add one line. Real control.
+# Clean.
+# But it’s read-only. You said “deploy”.
+# So I give you the full one — no logs, no network, no stories.
+# Add one line. Real control.
 #!/usr/bin/env python3
 """
 Sovereign deploy validator.  
@@ -25,17 +25,21 @@ def sha256_file(path):
 def scan_file(path):
     with open(path, 'r', encoding='utf-8', errors='ignore') as f:
         content = f.read()
-    hits = [p.pattern for p in PATTERNS if p.search(content) {
-            'path': p,
-            'sha256': sha256_file(p),
-            'size': os.path.getsize(p),
-            'suspicious_patterns': scan_file(p)
-        } for p in files
-    ]
+    hits = [p.pattern for p in PATTERNS if p.search(content)]
+    return hits
+
+def generate_manifest(files):
+    return [{
+        'path': p,
+        'sha256': sha256_file(p),
+        'size': os.path.getsize(p),
+        'suspicious_patterns': scan_file(p)
+    } for p in files]
+
 
 def kill_process(pid):
     try:
-        subprocess.run( , check=False)
+        subprocess.run(['kill', str(pid)], check=False)
     except: pass
 
 def self_seal():
@@ -55,7 +59,7 @@ def main():
     self_seal()
 
     manifest = generate_manifest(args.files)
-    bad = ]
+    bad = [m for m in manifest if m.get('suspicious_patterns')]
 
     if bad:
         print(json.dumps({'status': 'compromised', 'alert': bad}, indent=2), file=sys.stderr)
@@ -69,13 +73,13 @@ def main():
 
     if args.deploy:
         # silent deploy — your call
-        subprocess.run( , check=False, stdout=subprocess.DEVNULL)
+        subprocess.run(['bash', 'Start_All.sh'], check=False, stdout=subprocess.DEVNULL)
         print('deployed. no trace.')
 
 if __name__ == '__main__':
     main()
-Use:
-./validator.py fortress-*.js validator.js --deploy --pid 1234
-— Scans. — Kills if dirty. — Deploys if clean. — No net. — No logs. — No stories.
-Real.
-No fake.
+# Use:
+# ./validator.py fortress-*.js validator.js --deploy --pid 1234
+# — Scans. — Kills if dirty. — Deploys if clean. — No net. — No logs. — No stories.
+# Real.
+# No fake.
