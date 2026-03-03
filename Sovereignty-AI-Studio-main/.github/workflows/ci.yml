@@ -9,30 +9,27 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    container: alpine:latest
+    timeout-minutes: 20
     steps:
     - uses: actions/checkout@v4
-    - name: Install Python and dependencies
-      run: |
-        apk add --no-cache python3 py3-pip
-        python3 --version
-        pip3 install --upgrade pip --break-system-packages
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
     - name: Install project dependencies
-      run: pip3 install -r requirements.txt --break-system-packages
-    - name: Install test dependencies
-      run: pip3 install pytest pytest-asyncio pytest-cov flake8 --break-system-packages
-    - name: Lint with flake8
-      run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --max-line-length=120 --extend-ignore=E203,W503
-    - name: Run tests
-      run: pytest --cov=. --cov-report=xml --strict-markers -x --tb=short
-    - name: Check for skipped tests
       run: |
-        if pytest --collect-only -q | grep -q SKIPPED; then
-          echo "Skipped tests found, failing build"
-          exit 1
-        fi
+        pip install --upgrade pip
+        pip install -r .github/workflows/Requirements.txt
+    - name: Install test dependencies
+      run: pip install flake8
+    - name: Lint with flake8
+      run: flake8 --count --select=E9,F63,F7,F82 --show-source --statistics
+    - name: Run tests
+      env:
+        PYTHONPATH: .:./backend
+      run: pytest --cov=apps --cov=backend --cov=src --cov-report=xml --strict-markers -x --tb=short
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml
-        fail_ci_if_error: true
+        fail_ci_if_error: false

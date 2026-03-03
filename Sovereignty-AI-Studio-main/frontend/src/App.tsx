@@ -7,6 +7,10 @@ import SocialCampaign from './pages/SocialCampaign';
 import PresentationBuilder from './pages/PresentationBuilder';
 import PodcastGenerator from './pages/PodcastGenerator';
 import WritingAssistant from './pages/WritingAssistant';
+import MediaGenerator from './pages/MediaGenerator';
+import VoiceChat from './pages/VoiceChat';
+import AvatarCompanion from './pages/AvatarCompanion';
+import GameBuilder from './pages/GameBuilder';
 
 function App() {
   return (
@@ -19,6 +23,10 @@ function App() {
           <Route path="/presentation-builder" element={<PresentationBuilder />} />
           <Route path="/podcast-generator" element={<PodcastGenerator />} />
           <Route path="/writing-assistant" element={<WritingAssistant />} />
+          <Route path="/media-generator" element={<MediaGenerator />} />
+          <Route path="/voice-chat" element={<VoiceChat />} />
+          <Route path="/avatar-companion" element={<AvatarCompanion />} />
+          <Route path="/game-builder" element={<GameBuilder />} />
         </Routes>
       </Layout>
     </Router>

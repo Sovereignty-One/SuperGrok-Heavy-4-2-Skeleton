@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Grok Sovereign — Full Dashboard</title>
+<style>
+  :root {
+    --bg: #0f172a; --txt: #e0f2fe; --card: #1e293b;
+    --accent: #3b82f6; --warn: #ef4444; --ok: #10b981;
+  }
+  body{font:14px/1.6 sans-serif;background:var(--bg);color:var(--txt);padding:20px;margin:0;}
+  .card{background:var(--card);border:1px solid #334155;border-radius:12px;padding:20px;margin:15px 0;}
+  .log{font:11px monospace;max-height:300px;overflow:auto;border:1px solid #334155;padding:10px;}
+  button{background:var(--accent);color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;}
+  .status{display:flex;align-items:center;gap:8px;font-weight:bold;}
+  .status.ok{color:var(--ok);}.status.red{color:var(--warn);}
+  #chat{display:flex;flex-direction:column;gap:8px;height:400px;overflow-y:auto;}
+  #msg{width:100%;padding:12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:white;}
+</style>
+</head>
+<body>
+
+<!-- 1. SOVEREIGN DASHBOARD -->
+<div class="card">
+  <h2>🔒 Sovereign Status</h2>
+  <div class="status ok" id="seal-status">🟢 SEALED</div>
+  <div id="chain-log" class="log">Waiting...</div>
+  <button onclick="runShip()">🚀 Ship Intent</button>
+  <button onclick="checkChain()">🔍 Verify Chain</button>
+</div>
+
+<!-- 2. GROK_EDU CHAT -->
+<div class="card">
+  <h2>🧠 Grok_EDU</h2>
+  <div id="chat">
+    <div class="system">Hello. Role: <span id="role">student</span></div>
+  </div>
+  <input id="msg" placeholder="Ask anything...">
+</div>
+
+<!-- 3. STUDY TRACKER -->
+<div class="card">
+  <h2>⏱️ Study Timer</h2>
+  <input id="topic" placeholder="What to study?" style="width:60%;padding:8px;">
+  <input id="minutes" type="number" value="25" min="1" style="width:80px;padding:8px;">
+  <button onclick="startStudy()">▶️ Start</button>
+  <div id="timer">25:00</div>
+</div>
+
+<!-- 4. NOTES -->
+<div class="card">
+  <h2>📝 Notes</h2>
+  <input id="note-subject" placeholder="Subject">
+  <textarea id="note-body" rows="3" placeholder="Note..."></textarea>
+  <button onclick="saveNote()">Save</button>
+  <div id="notes"></div>
+</div>
+
+<script src="role.js"></script>  <!-- inline at bottom -->
+
+<script>
+// === GLOBALS ===
+let timerInt, seals = [], notes = JSON.parse(localStorage.getItem("notes") || "[]");
+
+// === ROLE.JS (inline) ===
+window.GrokRole = localStorage.getItem("role") || "student";
+window.setRole = r => { localStorage.setItem("role", r); GrokRole = r; document.getElementById("role").textContent = r; };
+
+// === CHAIN & SEAL LOGIC (simplified) ===
+async function runShip() {
+  const intent = prompt("Enter intent:");
+  if (!intent) return;
+
+  const head = "fake" + Math.random().toString(36).slice(2);
+  const ts = new Date().toISOString();
+  const event = `${ts}|${head}|${intent}`;
+  const hwSeal = await (async () => {
+    // fake hardware seal — in real: YUVA-9V pulse + Argon2
+    return await new Promise(r => setTimeout(() => r("hw-" + Math.random().toString(36).slice(2)), 200));
+  })();
+
+  const argonSeal = (await runArgon(hwSeal));
+  seals.push({ts, seal: argonSeal, intent});
+  document.getElementById("chain-log").innerHTML = seals.map(s => `${s.ts}<br>${s.seal}<br>${s.intent}`).join("<hr>");
+  document.getElementById("seal-status").className = "status ok";
+  logChat("✅ Intent shipped. Seal: " + argonSeal.slice(0,8));
+}
+
+async function runArgon(data) {
+  // fake Argon2 — real: call `argon2 data -id -t2 -m19`
+  await new Promise(r => setTimeout(r, 1500));
+  return "argon-" + Math.random().toString(36).slice(2).slice(-10);
+}
+
+function checkChain() {
+  const remote = prompt("Paste remote seal:");
+  if (remote && !seals.some(s => s.seal === remote)) {
+    document.getElementById("seal-status").className = "status red";
+    document.getElementById("seal-status").textContent = "🔴 DIVERGENCE";
+    alert("SEALS DON'T MATCH. SYSTEM LOCKED.");
+  } else {
+    document.getElementById("seal-status").className = "status ok";
+  }
+}
+
+// === CHAT ===
+function logChat(msg, from="system") {
+  const d = document.createElement("div");
+  d.textContent = msg;
+  d.className = from;
+  document.getElementById("chat").appendChild(d);
+  d.scrollIntoView();
+}
+logChat("Dashboard ready. Type to chat.");
+
+document.getElementById("msg").addEventListener("keypress", e => {
+  if (e.key === "Enter") {
+    const t = e.target.value;
+    logChat(t, "user");
+    if (t.startsWith("/role ")) setRole(t.split(" ")[1]);
+    else if (t === "/seal") logChat("Sealed forever.", "bot");
+    else if (t === "study") logChat("Start your timer!", "bot");
+    else logChat("I only remember what you teach me.", "bot");
+    e.target.value = "";
+  }
+});
+
+// === STUDY TIMER ===
+let seconds = 25 * 60;
+function updateTimer() {
+  if (seconds <= 0) { clearInterval(timerInt); alert("Time up!"); return; }
+  seconds--;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  document.getElementById("timer").textContent = `${m}:${s.toString().padStart(2,"0")}`;
+}
+
+function startStudy() {
+  const topic = document.getElementById("topic").value;
+  seconds = parseInt(document.getElementById("minutes").value) * 60;
+  if (timerInt) clearInterval(timerInt);
+  timerInt = setInterval(updateTimer, 1000);
+  logChat(`Studying "${topic}"`, "system");
+}
+
+// === NOTES ===
+function saveNote() {
+  const sub = document.getElementById("note-subject").value;
+  const body = document.getElementById("note-body").value;
+  if (!sub || !body) return alert("Fill both.");
+  notes.push({sub, body, time: new Date().to ISOString()}); localStorage.setItem(“notes”, JSON.stringify(notes)); renderNotes(); alert(“Note saved.”); document.getElementById(“note-subject”).value = “”; document.getElementById(“note-body”).value = “”; }
+function renderNotes() {const notesDiv = document.getElementById(‘notes’); notesDiv.innerHTML = ‘’;
+if (notes.length === 0) { notesDiv.innerHTML = ‘<em>(nothing yet)</em>’; return; }
+notes.forEach((n, i) => { const line = document.createElement(‘div’); line.className = ‘note-entry’; line.style.marginBottom = ‘8px’; line.innerHTML = <strong>${escapeHtml(n.sub)}</strong>
+ <small style="color:#94a3b8">${n.time}</small>
+ ${escapeHtml(n.body)}; notesDiv.appendChild(line); });
+function escapeHtml(text) { return text.replace(/[&<>”’]/g, c => ({ ‘&’:’&’, ‘<’:’<’, ‘>’:’>’, ‘”’:’"’, “’”:’'’ }) ); }
+// load on start renderNotes();
+// cleanup old junk window.addEventListener(‘beforeunload’, () => { localStorage.setItem(‘notes’, JSON.stringify(notes)); });
+// optional — tiny reset window.reset = () => { if (confirm(‘Erase notes, seals, role?’)) { localStorage.clear(); notes = [ ]; renderNotes(); document.getElementById(‘chain-log’).innerHTML = ‘Cleared.’; location.reload(); } };
+logChat(‘Ready. Ship, study, note — all in one breath.’, ‘bot’); </script>

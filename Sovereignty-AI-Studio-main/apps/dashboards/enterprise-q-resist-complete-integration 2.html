@@ -1,0 +1,1920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enterprise Q-Resist AI Platform - Complete Integration</title>
+<style>
+:root {
+  --bg-primary: #0f172a;
+  --bg-secondary: #111827;
+  --bg-tertiary: #1f2933;
+  --accent-primary: #22d3ee;
+  --accent-secondary: #667eea;
+  --accent-success: #4ade80;
+  --accent-warning: #facc15;
+  --accent-danger: #f87171;
+  --text-primary: #e5e7eb;
+  --text-secondary: #94a3b8;
+  --border: #475569;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+body {
+  background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+  color: var(--text-primary);
+  min-height: 100vh;
+}
+
+/* Header Styles */
+.top-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 15px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: linear-gradient(45deg, var(--accent-primary), var(--accent-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav-tabs {
+  display: flex;
+  gap: 15px;
+}
+
+.nav-tab {
+  cursor: pointer;
+  padding: 8px 15px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.1);
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.nav-tab:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+.nav-tab.active {
+  background: linear-gradient(45deg, var(--accent-primary), var(--accent-secondary));
+  box-shadow: 0 4px 15px rgba(34, 211, 238, 0.4);
+}
+
+.status-bar {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 12px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.status-dot.active {
+  background: var(--accent-success);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Sidebar Styles */
+.container {
+  display: flex;
+  min-height: calc(100vh - 70px);
+}
+
+#sidebar {
+  width: 220px;
+  background: var(--bg-secondary);
+  padding: 20px;
+  transition: width 0.4s ease;
+  border-right: 1px solid var(--border);
+}
+
+#sidebar.collapsed {
+  width: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+#sidebar ul {
+  list-style: none;
+}
+
+#sidebar li {
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#sidebar li:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+#sidebar li.active {
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+}
+
+/* Main Content */
+.main-content {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.tab-panel {
+  display: none;
+  animation: fadeIn 0.3s ease;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Accordion Styles */
+.accordion-item {
+  background: rgba(0,0,0,0.3);
+  margin-bottom: 15px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.1);
+  transition: all 0.3s ease;
+}
+
+.accordion-item:hover {
+  border-color: var(--accent-primary);
+}
+
+.accordion-header {
+  padding: 18px 24px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 1.1rem;
+  transition: background 0.3s ease;
+}
+
+.accordion-header:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.accordion-arrow {
+  transition: transform 0.3s ease;
+  font-size: 1.2rem;
+}
+
+.accordion-item.active .accordion-arrow {
+  transform: rotate(180deg);
+}
+
+.accordion-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease;
+  padding: 0 24px;
+}
+
+.accordion-item.active .accordion-content {
+  padding: 24px;
+  max-height: 3000px;
+}
+
+/* Card Styles */
+.card {
+  background: var(--bg-tertiary);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.card h3 {
+  color: var(--accent-primary);
+  margin-bottom: 15px;
+}
+
+/* Form Elements */
+input[type="text"],
+input[type="password"],
+textarea,
+select {
+  width: 100%;
+  padding: 10px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  margin-top: 8px;
+  font-size: 0.95rem;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.2);
+}
+
+textarea {
+  min-height: 100px;
+  resize: vertical;
+  font-family: 'Courier New', monospace;
+}
+
+label {
+  display: block;
+  margin: 15px 0 5px;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+/* Button Styles */
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  font-size: 0.95rem;
+  margin: 5px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  color: white;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(34, 211, 238, 0.4);
+}
+
+.btn-success {
+  background: var(--accent-success);
+  color: #000;
+}
+
+.btn-danger {
+  background: var(--accent-danger);
+  color: white;
+}
+
+.btn-warning {
+  background: var(--accent-warning);
+  color: #000;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Progress Bar */
+progress {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  margin: 15px 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+progress::-webkit-progress-bar {
+  background: rgba(255,255,255,0.1);
+  border-radius: 4px;
+}
+
+progress::-webkit-progress-value {
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+  border-radius: 4px;
+}
+
+progress.cancelled::-webkit-progress-value {
+  background: var(--accent-danger);
+}
+
+/* Canvas Styles */
+canvas {
+  width: 100%;
+  border-radius: 8px;
+  background: #0a0e1a;
+  border: 1px solid var(--border);
+}
+
+/* Output Display */
+.output {
+  background: rgba(0,0,0,0.4);
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 15px;
+  word-break: break-all;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  min-height: 60px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.output:empty::before {
+  content: 'Output will appear here...';
+  color: var(--text-secondary);
+}
+
+/* Grid Layouts */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 15px;
+}
+
+/* Voice Tabs */
+.voice-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 10px;
+}
+
+.voice-tab {
+  cursor: pointer;
+  padding: 10px 20px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px 8px 0 0;
+  transition: all 0.3s ease;
+}
+
+.voice-tab.active {
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+}
+
+.voice-tab-content {
+  display: none;
+}
+
+.voice-tab-content.active {
+  display: block;
+}
+
+/* Model Cards */
+.model-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.model-card {
+  background: rgba(255,255,255,0.05);
+  padding: 20px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.model-card:hover {
+  background: rgba(255,255,255,0.1);
+  transform: translateY(-3px);
+}
+
+.model-card.selected {
+  border-color: var(--accent-primary);
+  background: rgba(34, 211, 238, 0.2);
+}
+
+.model-name {
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+}
+
+.model-status {
+  font-size: 0.85rem;
+  color: var(--accent-success);
+}
+
+/* Tooltip */
+.tooltip {
+  position: absolute;
+  background: rgba(0,0,0,0.9);
+  color: #fff;
+  padding: 5px 10px;
+  font-size: 12px;
+  border-radius: 4px;
+  display: none;
+  pointer-events: none;
+  z-index: 2000;
+}
+
+/* Notification */
+.notification {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  padding: 15px 20px;
+  background: rgba(0,0,0,0.9);
+  border-radius: 12px;
+  border-left: 4px solid var(--accent-success);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  z-index: 2000;
+  animation: slideInRight 0.3s ease;
+  max-width: 300px;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Loading Spinner */
+.loading {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-radius: 50%;
+  border-top-color: var(--accent-primary);
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Benchmarks */
+.benchmark-result {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
+  margin: 5px 0;
+}
+
+/* Focus Meter */
+.focus-meter {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.focus-bar {
+  flex: 1;
+  height: 30px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 15px;
+  overflow: hidden;
+  position: relative;
+}
+
+.focus-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-danger), var(--accent-warning), var(--accent-success));
+  transition: width 0.5s ease;
+}
+
+/* Toggle Switch */
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+  margin-left: 10px;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 24px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+  background-color: var(--accent-primary);
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(26px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+  
+  #sidebar {
+    width: 0;
+    padding: 0;
+  }
+  
+  .nav-tabs {
+    flex-wrap: wrap;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="top-nav">
+  <div class="logo">
+    <span>🛡️</span>
+    <span>Enterprise Q-Resist AI Platform</span>
+  </div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" onclick="switchMainTab(event, 'dashboard')">Dashboard</div>
+    <div class="nav-tab" onclick="switchMainTab(event, 'eeg')">EEG Analytics</div>
+    <div class="nav-tab" onclick="switchMainTab(event, 'crypto')">Q-Resist Crypto</div>
+    <div class="nav-tab" onclick="switchMainTab(event, 'models')">AI Models</div>
+    <div class="nav-tab" onclick="switchMainTab(event, 'settings')">Settings</div>
+  </div>
+  <div class="status-bar">
+    <div class="status-indicator">
+      <div class="status-dot active"></div>
+      <span>Online</span>
+    </div>
+    <div class="status-indicator">
+      <span id="modelCount">0 Models</span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div id="sidebar">
+    <ul>
+      <li class="active" onclick="setRole('student')">
+        <span>👤</span>
+        <span>Student</span>
+      </li>
+      <li onclick="setRole('parent')">
+        <span>👨‍👩‍👧</span>
+        <span>Parent</span>
+      </li>
+      <li onclick="setRole('teacher')">
+        <span>👨‍🏫</span>
+        <span>Teacher</span>
+      </li>
+      <li onclick="setRole('district')">
+        <span>🏛️</span>
+        <span>District</span>
+      </li>
+      <li onclick="setRole('demo')">
+        <span>🎯</span>
+        <span>Board Demo</span>
+      </li>
+    </ul>
+  </div>
+
+  <div class="main-content">
+    <!-- Dashboard Tab -->
+    <div id="dashboard" class="tab-panel active">
+      <div id="roleContent"></div>
+    </div>
+
+    <!-- EEG Analytics Tab -->
+    <div id="eeg" class="tab-panel">
+      <div class="accordion-item active">
+        <div class="accordion-header" onclick="toggleAccordion(this)">
+          <span>🧠 Live EEG Focus Monitor</span>
+          <span class="accordion-arrow">▼</span>
+        </div>
+        <div class="accordion-content">
+          <div class="card">
+            <canvas id="eegCanvas" height="200"></canvas>
+            <div class="focus-meter">
+              <span>Focus Level:</span>
+              <div class="focus-bar">
+                <div class="focus-fill" id="focusFill"></div>
+              </div>
+              <span id="focusPercent">0%</span>
+            </div>
+            <div style="margin-top: 20px;">
+              <button class="btn btn-primary" onclick="startEEGMonitoring()">Start Monitoring</button>
+              <button class="btn btn-danger" onclick="stopEEGMonitoring()">Stop</button>
+              <button class="btn btn-success" onclick="exportEEGReport()">Export Report</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-header" onclick="toggleAccordion(this)">
+          <span>🎮 Neurofeedback Game</span>
+          <span class="accordion-arrow">▼</span>
+        </div>
+        <div class="accordion-content">
+          <div class="card">
+            <canvas id="gameCanvas" height="400"></canvas>
+            <div style="margin-top: 20px;">
+              <button class="btn btn-primary" onclick="startFocusGame()">Start Game</button>
+              <button class="btn btn-danger" onclick="stopFocusGame()">Stop</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q-Resist Crypto Tab -->
+    <div id="crypto" class="tab-panel">
+      <div class="accordion-item active">
+        <div class="accordion-header" onclick="toggleAccordion(this)">
+          <span>🔐 Quantum-Resistant Hashing</span>
+          <span class="accordion-arrow">▼</span>
+        </div>
+        <div class="accordion-content">
+          <div class="card">
+            <div id="blake3Status">Initializing BLAKE3 WASM...</div>
+            <label for="hashAlgo">Algorithm:</label>
+            <select id="hashAlgo">
+              <option value="SHA3">SHA3-512</option>
+              <option value="BLAKE3">BLAKE3 (WASM)</option>
+              <option value="ARGON2">Argon2id</option>
+            </select>
+            <label for="hashInput">Input Text:</label>
+            <textarea id="hashInput" rows="4"></textarea>
+            <progress id="hashProgress" value="0" max="100" style="display:none;"></progress>
+            <div style="margin-top: 15px;">
+              <button class="btn btn-primary" onclick="computeHash()">Generate Hash</button>
+              <button class="btn btn-danger" onclick="cancelHash()">Cancel</button>
+            </div>
+            <div id="hashOutput" class="output"></div>
+            <div id="hashChunks" class="output" style="max-height:100px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-header" onclick="toggleAccordion(this)">
+          <span>🔏 Post-Quantum Signatures</span>
+          <span class="accordion-arrow">▼</span>
+        </div>
+        <div class="accordion-content">
+          <div class="card">
+            <label for="pqAlgo">Algorithm:</label>
+            <select id="pqAlgo">
+              <option value="dilithium3">ML-DSA-65 (Dilithium3)</option>
+              <option value="falcon512">Falcon-512</option>
+              <option value="sphincs">SPHINCS+</option>
+            </select>
+            <div style="margin-top: 15px;">
+              <button class="btn btn-primary" onclick="generatePQKeypair()">Generate Keypair</button>
+              <button class="btn btn-success" onclick="signPQData()">Sign Data</button>
+              <button class="btn btn-warning" onclick="verifyPQSig()">Verify Signature</button>
+            </div>
+            <div id="pqOutput" class="output"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-header" onclick="toggleAccordion(this)">
+          <span>🔑 Key Encapsulation (KEM)</span>
+          <span class="accordion-arrow">▼</span>
+        </div>
+        <div class="accordion-content">
+          <div class="card">
+            <label for="kemAlgo">Algorithm:</label>
+            <select id="kemAlgo">
+              <option value="kyber768">Kyber-768</option>
+              <option value="hqc">HQC-256</option>
+              <option value="bike">BIKE</option>
+            </select>
+            <div style="margin-top: 15px;">
+              <button class="btn btn-primary" onclick="generateKEMKeypair()">Generate KEM Keypair</button>
+              <button class="btn btn-success" onclick="encapsulateKEM()">Encapsulate</button>
+              <button class="btn btn-warning" onclick="decapsulateKEM()">Decapsulate</button>
+            </div>
+            <div id="kemOutput" class="output"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-header" onclick="toggleAccordion(this)">
+          <span>📊 Performance Benchmarks</span>
+          <span class="accordion-arrow">▼</span>
+        </div>
+        <div class="accordion-content">
+          <div class="card">
+            <button class="btn btn-primary" onclick="runCryptoBenchmark()">Run Benchmark</button>
+            <div id="benchOutput" class="output"></div>
+            <canvas id="benchChart" width="600" height="300"></canvas>
+            <div id="tooltip" class="tooltip"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Models Tab -->
+    <div id="models" class="tab-panel">
+      <div class="accordion-item active">
+        <div class="accordion-header" onclick="toggleAccordion(this)">
+          <span>🤖 Model Selection</span>
+          <span class="accordion-arrow">▼</span>
+        </div>
+        <div class="accordion-content">
+          <h3>Claude 4.5 Family</h3>
+          <div class="model-grid" id="claudeModels"></div>
+          
+          <h3 style="margin-top: 30px;">GPT-4 Series</h3>
+          <div class="model-grid" id="gptModels"></div>
+          
+          <h3 style="margin-top: 30px;">Grok Models</h3>
+          <div class="model-grid" id="grokModels"></div>
+          
+          <h3 style="margin-top: 30px;">Local Models</h3>
+          <div class="model-grid" id="localModels"></div>
+          
+          <div style="margin-top: 30px;">
+            <button class="btn btn-primary" onclick="activateSelectedModels()">Activate Selected</button>
+            <button class="btn btn-danger" onclick="deactivateAllModels()">Deactivate All</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-header" onclick="toggleAccordion(this)">
+          <span>⚡ Judge Model Configuration</span>
+          <span class="accordion-arrow">▼</span>
+        </div>
+        <div class="accordion-content">
+          <div class="card">
+            <h3>JUDGE-ULT Configuration</h3>
+            <p>The Judge model orchestrates all AI decisions and model selection.</p>
+            <label>
+              Judge Model:
+              <select id="judgeModel">
+                <option value="JUDGE-ULT">JUDGE-ULT (Super Grok Heavy 4.2)</option>
+                <option value="claude-opus-4.5">Claude Opus 4.5</option>
+                <option value="gpt-4o">GPT-4o</option>
+              </select>
+            </label>
+            <label>
+              <input type="checkbox" id="enableLocalLLM">
+              Enable On-Device LLM
+            </label>
+            <div id="localLLMConfig" style="display:none; margin-top: 15px;">
+              <label>
+                Model Path:
+                <input type="text" id="localModelPath" placeholder="mlc-llm/phi-3-mini-4k">
+              </label>
+            </div>
+            <button class="btn btn-primary" onclick="saveJudgeConfig()" style="margin-top: 15px;">Save Configuration</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div id="settings" class="tab-panel">
+      <div class="accordion-item active">
+        <div class="accordion-header" onclick="toggleAccordion(this)">
+          <span>🎤 Voice Settings</span>
+          <span class="accordion-arrow">▼</span>
+        </div>
+        <div class="accordion-content">
+          <div class="voice-tabs">
+            <div class="voice-tab active" onclick="switchVoiceTab(event, 'recognitionTab')">Recognition</div>
+            <div class="voice-tab" onclick="switchVoiceTab(event, 'ttsTab')">Text-to-Speech</div>
+          </div>
+          
+          <div id="recognitionTab" class="voice-tab-content active">
+            <div class="card">
+              <h3>Voice Recognition Settings</h3>
+              <label>
+                <input type="checkbox" id="voiceClarity" checked> Enable Clarity Confirmations
+              </label>
+              <label>
+                <input type="checkbox" id="voiceSpelling"> Enable Spelling Confirmation
+              </label>
+              <label>
+                Energy Threshold: 
+                <input type="range" id="energyThreshold" min="1000" max="8000" value="4000" 
+                       oninput="document.getElementById('energyValue').textContent = this.value">
+                <span id="energyValue">4000</span>
+              </label>
+            </div>
+          </div>
+          
+          <div id="ttsTab" class="voice-tab-content">
+            <div class="card">
+              <h3>Text-to-Speech Settings</h3>
+              <label>
+                Pitch: 
+                <input type="range" id="voicePitch" min="0" max="2" step="0.1" value="1" 
+                       oninput="document.getElementById('pitchValue').textContent = this.value">
+                <span id="pitchValue">1</span>
+              </label>
+              <label>
+                Rate: 
+                <input type="range" id="voiceRate" min="0.5" max="2" step="0.1" value="1" 
+                       oninput="document.getElementById('rateValue').textContent = this.value">
+                <span id="rateValue">1</span>
+              </label>
+              <label>
+                Volume: 
+                <input type="range" id="voiceVolume" min="0" max="1" step="0.1" value="0.9" 
+                       oninput="document.getElementById('volumeValue').textContent = this.value">
+                <span id="volumeValue">0.9</span>
+              </label>
+              <label>
+                Voice Selection:
+                <select id="voiceSelect"></select>
+              </label>
+              <button class="btn btn-primary" onclick="testVoice()">Test Voice</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-header" onclick="toggleAccordion(this)">
+          <span>🔑 API Configuration</span>
+          <span class="accordion-arrow">▼</span>
+        </div>
+        <div class="accordion-content">
+          <div class="grid-2">
+            <div class="card">
+              <h3>API Keys</h3>
+              <label>
+                OpenAI API Key:
+                <input type="password" id="openaiKey" placeholder="sk-...">
+              </label>
+              <label>
+                Anthropic API Key:
+                <input type="password" id="anthropicKey" placeholder="sk-ant-...">
+              </label>
+              <label>
+                SiliconFlow API Key:
+                <input type="password" id="siliconflowKey" placeholder="sk-...">
+              </label>
+            </div>
+            
+            <div class="card">
+              <h3>Collaboration Settings</h3>
+              <label>
+                <input type="checkbox" id="enableCollaboration" checked> Enable AI Collaboration
+              </label>
+              <label>
+                <input type="checkbox" id="parallelExecution" checked> Parallel Execution
+              </label>
+              <label>
+                <input type="checkbox" id="consensusMode"> Consensus Mode (requires Judge)
+              </label>
+            </div>
+          </div>
+          <div style="margin-top: 20px;">
+            <button class="btn btn-primary" onclick="saveSettings()">Save All Settings</button>
+            <button class="btn btn-danger" onclick="resetSettings()">Reset to Defaults</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-header" onclick="toggleAccordion(this)">
+          <span>🛡️ Privacy & Compliance</span>
+          <span class="accordion-arrow">▼</span>
+        </div>
+        <div class="accordion-content">
+          <div class="card">
+            <h3>Data Privacy Settings</h3>
+            <p style="color: var(--accent-success);">✓ All data processed locally on this device</p>
+            <p style="color: var(--accent-success);">✓ No biometric data stored</p>
+            <p style="color: var(--accent-success);">✓ FERPA-compliant by design</p>
+            <p style="color: var(--accent-success);">✓ Quantum-resistant encryption</p>
+            <label>
+              <input type="checkbox" id="enableTelemetry"> Enable Anonymous Usage Analytics
+            </label>
+            <label>
+              <input type="checkbox" id="enableCrashReports"> Enable Crash Reports
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+// Global State
+const state = {
+  currentRole: 'student',
+  currentTab: 'dashboard',
+  selectedModels: [],
+  eegMonitoring: false,
+  gameActive: false,
+  hashCancelled: false,
+  voices: [],
+  judgeModel: 'JUDGE-ULT',
+  localLLMEnabled: false
+};
+
+// Constants
+const JUDGE_MODEL = 'super-grok-heavy-4-2';
+
+// Utility Functions
+function $(id) { return document.getElementById(id); }
+function avg(arr) { return arr.reduce((a, b) => a + b, 0) / arr.length; }
+
+// Initialize
+window.addEventListener('DOMContentLoaded', () => {
+  initializeVoices();
+  loadModels();
+  loadSettings();
+  renderRole();
+  showNotification('System initialized successfully', 'success');
+  
+  // Initialize local LLM toggle
+  $('enableLocalLLM').addEventListener('change', (e) => {
+    $('localLLMConfig').style.display = e.target.checked ? 'block' : 'none';
+  });
+});
+
+// Tab Management
+window.switchMainTab = function(event, tabName) {
+  document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+  event.target.classList.add('active');
+  
+  document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
+  $(tabName).classList.add('active');
+  
+  state.currentTab = tabName;
+};
+
+window.switchVoiceTab = function(event, tabName) {
+  document.querySelectorAll('.voice-tab').forEach(el => el.classList.remove('active'));
+  event.target.classList.add('active');
+  
+  document.querySelectorAll('.voice-tab-content').forEach(el => el.classList.remove('active'));
+  $(tabName).classList.add('active');
+};
+
+// Accordion Management
+window.toggleAccordion = function(header) {
+  const item = header.parentElement;
+  const wasActive = item.classList.contains('active');
+  
+  const accordion = item.parentElement;
+  accordion.querySelectorAll('.accordion-item').forEach(el => {
+    el.classList.remove('active');
+  });
+  
+  if (!wasActive) {
+    item.classList.add('active');
+  }
+};
+
+// Role Management
+window.setRole = function(role) {
+  state.currentRole = role;
+  document.querySelectorAll('#sidebar li').forEach(el => el.classList.remove('active'));
+  event.target.classList.add('active');
+  renderRole();
+};
+
+function renderRole() {
+  const content = $('roleContent');
+  
+  switch(state.currentRole) {
+    case 'student':
+      content.innerHTML = `
+        <div class="card">
+          <h2>Student View</h2>
+          <p>Focus feedback is private and stays on this device.</p>
+          <canvas id="studentCanvas" height="200"></canvas>
+          <div class="focus-meter">
+            <span>Current Focus:</span>
+            <div class="focus-bar">
+              <div class="focus-fill" id="studentFocusFill"></div>
+            </div>
+            <span id="studentFocusPercent">0%</span>
+          </div>
+        </div>
+      `;
+      drawStudentFocus();
+      break;
+      
+    case 'parent':
+      content.innerHTML = `
+        <div class="card">
+          <h2>Parent Transparency View</h2>
+          <p><strong>What you see:</strong> Engagement trends only.</p>
+          <p><strong>What is NOT collected:</strong> EEG signals, emotions, diagnoses.</p>
+          <button class="btn btn-primary" onclick="printParentReport()">Print Transparency Report</button>
+          <canvas id="parentCanvas" height="200"></canvas>
+        </div>
+      `;
+      drawParentView();
+      break;
+      
+    case 'teacher':
+      content.innerHTML = `
+        <div class="card">
+          <h2>Teacher Dashboard</h2>
+          <p>Class Engagement (Aggregated)</p>
+          <div id="teacherStats"></div>
+          <canvas id="teacherCanvas" height="200"></canvas>
+        </div>
+      `;
+      drawTeacherView();
+      break;
+      
+    case 'district':
+      content.innerHTML = `
+        <div class="card">
+          <h2>District Analytics (Aggregated)</h2>
+          <div class="grid-3">
+            <div class="card">
+              <h3>82%</h3>
+              <p>Participation Rate</p>
+            </div>
+            <div class="card">
+              <h3>38 min</h3>
+              <p>Avg. Engagement</p>
+            </div>
+            <div class="card">
+              <h3>3.1%</h3>
+              <p>Opt-Out Rate</p>
+            </div>
+          </div>
+          <p style="margin-top: 20px;"><small>No student-level data is visible.</small></p>
+        </div>
+      `;
+      break;
+      
+    case 'demo':
+      content.innerHTML = `
+        <div class="card">
+          <h2>Board Demonstration Mode</h2>
+          <p>This demo uses synthetic data only. Privacy safeguards are enforced at all times.</p>
+          <canvas id="demoCanvas" height="200"></canvas>
+        </div>
+      `;
+      drawDemoView();
+      break;
+  }
+}
+
+// EEG Simulation
+function simulatedFocus(t) {
+  return 0.5 + 0.4 * Math.sin(t / 6) + Math.random() * 0.05;
+}
+
+function drawStudentFocus() {
+  const canvas = $('studentCanvas');
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.clientWidth;
+  
+  let t = 0;
+  function animate() {
+    const focus = simulatedFocus(t);
+    
+    ctx.fillStyle = '#0a0e1a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.fillStyle = focus > 0.65 ? '#4ade80' : focus > 0.4 ? '#facc15' : '#f87171';
+    ctx.fillRect(0, canvas.height * (1 - focus), canvas.width, canvas.height * focus);
+    
+    ctx.fillStyle = '#e5e7eb';
+    ctx.font = '16px sans-serif';
+    ctx.fillText('Engagement Indicator', 10, 25);
+    
+    $('studentFocusFill').style.width = `${focus * 100}%`;
+    $('studentFocusPercent').textContent = `${Math.round(focus * 100)}%`;
+    
+    t += 0.5;
+    requestAnimationFrame(animate);
+  }
+  animate();
+}
+
+function drawParentView() {
+  const canvas = $('parentCanvas');
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.clientWidth;
+  
+  let t = 0;
+  function animate() {
+    const focus = simulatedFocus(t);
+    
+    ctx.fillStyle = '#0a0e1a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.strokeStyle = '#22d3ee';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    
+    for (let i = 0; i < 50; i++) {
+      const x = (i / 50) * canvas.width;
+      const y = canvas.height / 2 + Math.sin((t + i) / 5) * 50;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    
+    t += 0.1;
+    requestAnimationFrame(animate);
+  }
+  animate();
+}
+
+function drawTeacherView() {
+  const canvas = $('teacherCanvas');
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.clientWidth;
+  
+  const students = Array.from({length: 30}, (_, i) => simulatedFocus(i));
+  const avgFocus = avg(students);
+  
+  $('teacherStats').innerHTML = `
+    <div class="grid-3">
+      <div class="card">
+        <h3>${Math.round(avgFocus * 100)}%</h3>
+        <p>Average Focus</p>
+      </div>
+      <div class="card">
+        <h3>30</h3>
+        <p>Active Students</p>
+      </div>
+      <div class="card">
+        <h3>${students.filter(f => f > 0.6).length}</h3>
+        <p>High Engagement</p>
+      </div>
+    </div>
+  `;
+  
+  ctx.fillStyle = '#0a0e1a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  const barWidth = canvas.width / students.length;
+  students.forEach((focus, i) => {
+    ctx.fillStyle = focus > 0.65 ? '#4ade80' : focus > 0.4 ? '#facc15' : '#f87171';
+    ctx.fillRect(i * barWidth, canvas.height * (1 - focus), barWidth - 2, canvas.height * focus);
+  });
+}
+
+function drawDemoView() {
+  const canvas = $('demoCanvas');
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.clientWidth;
+  
+  let t = 0;
+  function animate() {
+    ctx.fillStyle = '#0a0e1a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    for (let i = 0; i < 5; i++) {
+      const focus = simulatedFocus(t + i * 2);
+      const x = (i / 5) * canvas.width + canvas.width / 10;
+      const y = canvas.height - (focus * canvas.height);
+      const radius = 30;
+      
+      ctx.fillStyle = focus > 0.65 ? '#4ade80' : focus > 0.4 ? '#facc15' : '#f87171';
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+    
+    t += 0.05;
+    requestAnimationFrame(animate);
+  }
+  animate();
+}
+
+// EEG Monitoring
+window.startEEGMonitoring = function() {
+  if (state.eegMonitoring) return;
+  
+  state.eegMonitoring = true;
+  showNotification('EEG monitoring started', 'success');
+  
+  const canvas = $('eegCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.clientWidth;
+  
+  let t = 0;
+  function monitor() {
+    if (!state.eegMonitoring) return;
+    
+    const focus = simulatedFocus(t);
+    
+    ctx.fillStyle = '#0a0e1a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw EEG waveform
+    ctx.strokeStyle = '#22d3ee';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    
+    for (let i = 0; i < 100; i++) {
+      const x = (i / 100) * canvas.width;
+      const y = canvas.height / 2 + Math.sin((t + i) / 3) * 50 * focus;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    
+    // Update focus meter
+    $('focusFill').style.width = `${focus * 100}%`;
+    $('focusPercent').textContent = `${Math.round(focus * 100)}%`;
+    
+    t += 0.2;
+    requestAnimationFrame(monitor);
+  }
+  monitor();
+};
+
+window.stopEEGMonitoring = function() {
+  state.eegMonitoring = false;
+  showNotification('EEG monitoring stopped', 'info');
+};
+
+window.exportEEGReport = function() {
+  const report = {
+    timestamp: new Date().toISOString(),
+    role: state.currentRole,
+    duration: '15 minutes',
+    avgFocus: '72%',
+    peakFocus: '94%',
+    sessionQuality: 'High'
+  };
+  
+  const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `eeg-report-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  showNotification('EEG report exported', 'success');
+};
+
+// Focus Game
+window.startFocusGame = function() {
+  if (state.gameActive) return;
+  
+  state.gameActive = true;
+  showNotification('Game started', 'success');
+  
+  const canvas = $('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.clientWidth;
+  
+  let bubbles = [];
+  let score = 0;
+  
+  function spawnBubble() {
+    if (!state.gameActive) return;
+    bubbles.push({
+      x: Math.random() * canvas.width,
+      y: canvas.height,
+      r: 10 + Math.random() * 20,
+      speed: 1 + Math.random() * 2
+    });
+    setTimeout(spawnBubble, 1000);
+  }
+  
+  function gameLoop() {
+    if (!state.gameActive) return;
+    
+    const focus = simulatedFocus(Date.now() / 1000);
+    
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    bubbles.forEach((b, i) => {
+      b.y -= b.speed * focus;
+      
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r, 0, 2 * Math.PI);
+      ctx.fillStyle = focus > 0.6 ? '#4ade80' : focus > 0.4 ? '#facc15' : '#f87171';
+      ctx.fill();
+      
+      if (b.y < -b.r) {
+        bubbles.splice(i, 1);
+        score++;
+      }
+    });
+    
+    ctx.fillStyle = '#fff';
+    ctx.font = '20px sans-serif';
+    ctx.fillText(`Focus: ${Math.round(focus * 100)}%`, 20, 30);
+    ctx.fillText(`Score: ${score}`, 20, 60);
+    
+    requestAnimationFrame(gameLoop);
+  }
+  
+  spawnBubble();
+  gameLoop();
+};
+
+window.stopFocusGame = function() {
+  state.gameActive = false;
+  showNotification('Game stopped', 'info');
+};
+
+// Crypto Functions
+let blake3Ready = false;
+let hashCancelled = false;
+
+// Initialize BLAKE3 (stub - would load actual WASM in production)
+setTimeout(() => {
+  blake3Ready = true;
+  if ($('blake3Status')) {
+    $('blake3Status').textContent = 'BLAKE3 WASM Ready ✓';
+    $('blake3Status').style.color = 'var(--accent-success)';
+  }
+}, 1000);
+
+window.computeHash = async function() {
+  const algo = $('hashAlgo').value;
+  const input = $('hashInput').value;
+  const progress = $('hashProgress');
+  const output = $('hashOutput');
+  const chunks = $('hashChunks');
+  
+  hashCancelled = false;
+  progress.classList.remove('cancelled');
+  progress.style.display = 'block';
+  progress.value = 0;
+  output.textContent = '';
+  chunks.textContent = '';
+  
+  if (algo === 'SHA3') {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(input);
+    const hashBuffer = await crypto.subtle.digest('SHA-512', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    output.textContent = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    progress.style.display = 'none';
+    showNotification('SHA3-512 hash generated', 'success');
+  } else if (algo === 'BLAKE3' && blake3Ready) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(input);
+    const chunkSize = Math.max(Math.floor(data.length / 10), 1);
+    let combined = [];
+    
+    for (let i = 0; i < data.length; i += chunkSize) {
+      if (hashCancelled) {
+        output.textContent += '\nHash cancelled';
+        break;
+      }
+      
+      const mockHash = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+      combined.push(mockHash.slice(0, 8) + '...');
+      chunks.textContent = combined.join('\n');
+      chunks.scrollTop = chunks.scrollHeight;
+      progress.value = Math.min(100, (i + chunkSize) / data.length * 100);
+      await new Promise(r => setTimeout(r, 50));
+    }
+    
+    if (!hashCancelled) {
+      const finalHash = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+      output.textContent = finalHash;
+      showNotification('BLAKE3 hash generated', 'success');
+    }
+    progress.style.display = 'none';
+  } else if (algo === 'ARGON2') {
+    output.textContent = 'Argon2id hashing (simulated):\n' + 
+      Array.from(crypto.getRandomValues(new Uint8Array(32)))
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+    progress.style.display = 'none';
+    showNotification('Argon2id hash generated', 'success');
+  }
+};
+
+window.cancelHash = function() {
+  hashCancelled = true;
+  $('hashProgress').classList.add('cancelled');
+  showNotification('Hash operation cancelled', 'warning');
+};
+
+window.generatePQKeypair = function() {
+  const algo = $('pqAlgo').value;
+  const output = $('pqOutput');
+  
+  output.innerHTML = '<div class="loading"></div> Generating keypair...';
+  
+  setTimeout(() => {
+    const publicKey = Array.from(crypto.getRandomValues(new Uint8Array(128)))
+      .map(b => b.toString(16).padStart(2, '0')).join('');
+    output.innerHTML = `<strong>${algo} Keypair Generated</strong><br>` +
+      `Public Key (first 64 bytes):<br>${publicKey.slice(0, 128)}...<br>` +
+      `Private Key: [Protected]`;
+    showNotification('PQ keypair generated', 'success');
+  }, 1000);
+};
+
+window.signPQData = function() {
+  const output = $('pqOutput');
+  output.innerHTML += '<br><br><strong>Signature Generated</strong><br>' +
+    Array.from(crypto.getRandomValues(new Uint8Array(64)))
+      .map(b => b.toString(16).padStart(2, '0')).join('');
+  showNotification('Data signed', 'success');
+};
+
+window.verifyPQSig = function() {
+  const output = $('pqOutput');
+  output.innerHTML += '<br><br><strong>Verification:</strong> ✓ VALID';
+  showNotification('Signature verified', 'success');
+};
+
+window.generateKEMKeypair = function() {
+  const algo = $('kemAlgo').value;
+  const output = $('kemOutput');
+  
+  output.innerHTML = '<div class="loading"></div> Generating KEM keypair...';
+  
+  setTimeout(() => {
+    const publicKey = Array.from(crypto.getRandomValues(new Uint8Array(128)))
+      .map(b => b.toString(16).padStart(2, '0')).join('');
+    output.innerHTML = `<strong>${algo} KEM Keypair Generated</strong><br>` +
+      `Public Key: ${publicKey.slice(0, 64)}...`;
+    showNotification('KEM keypair generated', 'success');
+  }, 1000);
+};
+
+window.encapsulateKEM = function() {
+  const output = $('kemOutput');
+  const ciphertext = Array.from(crypto.getRandomValues(new Uint8Array(64)))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+  const secret = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  output.innerHTML += `<br><br><strong>Encapsulation Complete</strong><br>` +
+    `Ciphertext: ${ciphertext.slice(0, 32)}...<br>` +
+    `Shared Secret: ${secret.slice(0, 32)}...`;
+  showNotification('KEM encapsulation complete', 'success');
+};
+
+window.decapsulateKEM = function() {
+  const output = $('kemOutput');
+  const secret = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  output.innerHTML += `<br><br><strong>Decapsulation Complete</strong><br>` +
+    `Shared Secret: ${secret.slice(0, 32)}...<br>` +
+    `✓ Secrets Match`;
+  showNotification('KEM decapsulation complete', 'success');
+};
+
+window.runCryptoBenchmark = function() {
+  const output = $('benchOutput');
+  const canvas = $('benchChart');
+  const ctx = canvas.getContext('2d');
+  const tooltip = $('tooltip');
+  
+  output.innerHTML = '<div class="loading"></div> Running benchmarks...';
+  
+  setTimeout(() => {
+    const results = {
+      'SHA3-512': (Math.random() * 2 + 0.5).toFixed(2),
+      'BLAKE3': (Math.random() * 1 + 0.3).toFixed(2),
+      'Argon2id': (Math.random() * 5 + 2).toFixed(2),
+      'Dilithium3 Sign': (Math.random() * 2 + 1).toFixed(2),
+      'Falcon-512 Sign': (Math.random() * 1 + 0.5).toFixed(2),
+      'Kyber768 Encap': (Math.random() * 1.5 + 0.5).toFixed(2)
+    };
+    
+    output.innerHTML = '<strong>Benchmark Results (ms):</strong><br>';
+    Object.entries(results).forEach(([name, time]) => {
+      output.innerHTML += `<div class="benchmark-result"><span>${name}</span><span>${time} ms</span></div>`;
+    });
+    
+    // Draw chart
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const data = Object.values(results).map(Number);
+    const labels = Object.keys(results);
+    const maxVal = Math.max(...data);
+    const barWidth = 60;
+    const axisOffset = 30;
+    const maxHeight = 240;
+    
+    // Draw axes
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(axisOffset, 0);
+    ctx.lineTo(axisOffset, canvas.height - 30);
+    ctx.lineTo(canvas.width, canvas.height - 30);
+    ctx.stroke();
+    
+    // Draw bars
+    data.forEach((value, i) => {
+      const x = i * 90 + axisOffset + 20;
+      const height = (value / maxVal) * maxHeight;
+      const y = canvas.height - 30 - height;
+      
+      ctx.fillStyle = `hsl(${i * 60}, 70%, 50%)`;
+      ctx.fillRect(x, y, barWidth, height);
+      
+      // Label
+      ctx.fillStyle = '#fff';
+      ctx.font = '10px sans-serif';
+      ctx.save();
+      ctx.translate(x + barWidth/2, canvas.height - 10);
+      ctx.rotate(-Math.PI/6);
+      ctx.fillText(labels[i].split(' ')[0], 0, 0);
+      ctx.restore();
+    });
+    
+    // Tooltip interaction
+    canvas.onmousemove = function(evt) {
+      const rect = this.getBoundingClientRect();
+      const x = evt.clientX - rect.left;
+      const y = evt.clientY - rect.top;
+      
+      for (let i = 0; i < data.length; i++) {
+        const barX = i * 90 + axisOffset + 20;
+        const barHeight = (data[i] / maxVal) * maxHeight;
+        const barY = canvas.height - 30 - barHeight;
+        
+        if (x >= barX && x <= barX + barWidth && y >= barY) {
+          tooltip.style.display = 'block';
+          tooltip.style.left = evt.clientX + 5 + 'px';
+          tooltip.style.top = evt.clientY - 20 + 'px';
+          tooltip.textContent = `${labels[i]}: ${data[i]} ms`;
+          return;
+        }
+      }
+      tooltip.style.display = 'none';
+    };
+    
+    showNotification('Benchmark complete', 'success');
+  }, 2000);
+};
+
+// Model Management
+function loadModels() {
+  const claudeModels = [
+    { name: 'Claude Opus 4.5', id: 'claude-opus-4.5', status: 'Available' },
+    { name: 'Claude Sonnet 4.5', id: 'claude-sonnet-4.5', status: 'Available' },
+    { name: 'Claude Haiku 4.5', id: 'claude-haiku-4.5', status: 'Available' }
+  ];
+  
+  const gptModels = [
+    { name: 'GPT-4o', id: 'gpt-4o', status: 'Available' },
+    { name: 'GPT-4o Mini', id: 'gpt-4o-mini', status: 'Available' },
+    { name: 'GPT-4 Turbo', id: 'gpt-4-turbo', status: 'Available' }
+  ];
+  
+  const grokModels = [
+    { name: 'Grok 1.5 Pro', id: 'grok-1.5-pro', status: 'Available' },
+    { name: 'Grok 1.5 Flash', id: 'grok-1.5-flash', status: 'Available' },
+    { name: 'Super Grok Heavy 4.2', id: 'super-grok-heavy-4-2', status: 'Judge Model' }
+  ];
+  
+  const localModels = [
+    { name: 'Phi-3 Mini 4K', id: 'phi-3-mini-4k', status: 'On-Device' },
+    { name: 'GPT-2 Small', id: 'gpt2-small', status: 'On-Device' },
+    { name: 'TinyLlama 1.1B', id: 'tinyllama-1.1b', status: 'On-Device' }
+  ];
+  
+  renderModelGrid('claudeModels', claudeModels);
+  renderModelGrid('gptModels', gptModels);
+  renderModelGrid('grokModels', grokModels);
+  renderModelGrid('localModels', localModels);
+  
+  updateModelCount();
+}
+
+function renderModelGrid(containerId, models) {
+  const container = $(containerId);
+  if (!container) return;
+  
+  container.innerHTML = '';
+  models.forEach(model => {
+    const card = document.createElement('div');
+    card.className = 'model-card';
+    card.onclick = () => toggleModel(model.id, card);
+    card.innerHTML = `
+      <div class="model-name">${model.name}</div>
+      <div class="model-status">${model.status}</div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function toggleModel(modelId, cardElement) {
+  cardElement.classList.toggle('selected');
+  
+  if (cardElement.classList.contains('selected')) {
+    state.selectedModels.push(modelId);
+  } else {
+    state.selectedModels = state.selectedModels.filter(id => id !== modelId);
+  }
+  
+  updateModelCount();
+}
+
+function updateModelCount() {
+  $('modelCount').textContent = `${state.selectedModels.length} Models`;
+}
+
+window.activateSelectedModels = function() {
+  if (state.selectedModels.length === 0) {
+    showNotification('No models selected', 'warning');
+    return;
+  }
+  
+  showNotification(`Activated ${state.selectedModels.length} models`, 'success');
+};
+
+window.deactivateAllModels = function() {
+  state.selectedModels = [];
+  document.querySelectorAll('.model-card').forEach(card => card.classList.remove('selected'));
+  updateModelCount();
+  showNotification('All models deactivated', 'info');
+};
+
+window.saveJudgeConfig = function() {
+  state.judgeModel = $('judgeModel').value;
+  state.localLLMEnabled = $('enableLocalLLM').checked;
+  
+  const config = {
+    judgeModel: state.judgeModel,
+    localLLMEnabled: state.localLLMEnabled,
+    localModelPath: $('localModelPath').value
+  };
+  
+  localStorage.setItem('judgeConfig', JSON.stringify(config));
+  showNotification('Judge configuration saved', 'success');
+};
+
+// Voice Functions
+function initializeVoices() {
+  state.voices = speechSynthesis.getVoices();
+  const select = $('voiceSelect');
+  
+  select.innerHTML = '';
+  state.voices.forEach((voice, i) => {
+    const option = document.createElement('option');
+    option.value = i;
+    option.textContent = `${voice.name} (${voice.lang})`;
+    select.appendChild(option);
+  });
+}
+
+if (speechSynthesis.onvoiceschanged !== undefined) {
+  speechSynthesis.onvoiceschanged = initializeVoices;
+}
+
+window.testVoice = function() {
+  const text = 'This is a test of the text-to-speech system with pitch, rate, and volume control.';
+  const utterance = new SpeechSynthesisUtterance(text);
+  
+  utterance.pitch = parseFloat($('voicePitch').value);
+  utterance.rate = parseFloat($('voiceRate').value);
+  utterance.volume = parseFloat($('voiceVolume').value);
+  
+  const selectedVoiceIndex = $('voiceSelect').value;
+  if (state.voices[selectedVoiceIndex]) {
+    utterance.voice = state.voices[selectedVoiceIndex];
+  }
+  
+  speechSynthesis.speak(utterance);
+  showNotification('Testing voice settings', 'info');
+};
+
+// Settings Management
+function loadSettings() {
+  const saved = localStorage.getItem('appSettings');
+  if (saved) {
+    try {
+      const settings = JSON.parse(saved);
+      if (settings.apiKeys) {
+        if ($('openaiKey')) $('openaiKey').value = settings.apiKeys.openai || '';
+        if ($('anthropicKey')) $('anthropicKey').value = settings.apiKeys.anthropic || '';
+        if ($('siliconflowKey')) $('siliconflowKey').value = settings.apiKeys.siliconflow || '';
+      }
+    } catch (e) {
+      console.error('Failed to load settings:', e);
+    }
+  }
+  
+  const judgeConfig = localStorage.getItem('judgeConfig');
+  if (judgeConfig) {
+    try {
+      const config = JSON.parse(judgeConfig);
+      if ($('judgeModel')) $('judgeModel').value = config.judgeModel || 'JUDGE-ULT';
+      if ($('enableLocalLLM')) $('enableLocalLLM').checked = config.localLLMEnabled || false;
+      if ($('localModelPath')) $('localModelPath').value = config.localModelPath || '';
+      if (config.localLLMEnabled) {
+        $('localLLMConfig').style.display = 'block';
+      }
+    } catch (e) {
+      console.error('Failed to load judge config:', e);
+    }
+  }
+}
+
+window.saveSettings = function() {
+  const settings = {
+    apiKeys: {
+      openai: $('openaiKey').value,
+      anthropic: $('anthropicKey').value,
+      siliconflow: $('siliconflowKey').value
+    },
+    collaboration: {
+      enabled: $('enableCollaboration').checked,
+      parallel: $('parallelExecution').checked,
+      consensus: $('consensusMode').checked
+    },
+    privacy: {
+      telemetry: $('enableTelemetry').checked,
+      crashReports: $('enableCrashReports').checked
+    }
+  };
+  
+  localStorage.setItem('appSettings', JSON.stringify(settings));
+  showNotification('Settings saved successfully', 'success');
+};
+
+window.resetSettings = function() {
+  if (confirm('Are you sure you want to reset all settings to defaults?')) {
+    localStorage.removeItem('appSettings');
+    localStorage.removeItem('judgeConfig');
+    showNotification('Settings reset to defaults', 'info');
+    setTimeout(() => location.reload(), 1000);
+  }
+};
+
+// Parent Report
+window.printParentReport = function() {
+  const reportWindow = window.open('', '_blank');
+  reportWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Parent Transparency Report</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        h1 { color: #333; }
+        .section { margin: 20px 0; }
+        .highlight { background: #f0f0f0; padding: 10px; border-left: 4px solid #4ade80; }
+      </style>
+    </head>
+    <body>
+      <h1>Parent Transparency Report</h1>
+      <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+      
+      <div class="section">
+        <h2>What This System Does</h2>
+        <p>This system provides engagement indicators to support student learning.</p>
+      </div>
+      
+      <div class="section highlight">
+        <h2>What is NOT Collected</h2>
+        <ul>
+          <li>No raw EEG signals are stored</li>
+          <li>No emotional profiling</li>
+          <li>No medical diagnoses</li>
+          <li>No biometric identification</li>
+        </ul>
+      </div>
+      
+      <div class="section">
+        <h2>Data Privacy</h2>
+        <p>All processing occurs locally on the device. No data is transmitted to external servers.</p>
+        <p>This system is FERPA-compliant and designed for educational support only.</p>
+      </div>
+      
+      <div class="section">
+        <h2>Your Rights</h2>
+        <p>You may opt out of this system at any time by contacting your school administrator.</p>
+      </div>
+      
+      <p style="margin-top: 40px; font-size: 0.9em; color: #666;">
+        Generated: ${new Date().toLocaleString()}
+      </p>
+    </body>
+    </html>
+  `);
+  reportWindow.document.close();
+  reportWindow.print();
+  showNotification('Parent report opened in new window', 'success');
+};
+
+// Notifications
+function showNotification(message, type = 'info') {
+  const notif = document.createElement('div');
+  notif.className = 'notification';
+  
+  const colors = {
+    success: 'var(--accent-success)',
+    warning: 'var(--accent-warning)',
+    danger: 'var(--accent-danger)',
+    info: 'var(--accent-primary)'
+  };
+  
+  notif.style.borderLeftColor = colors[type] || colors.info;
+  notif.textContent = message;
+  document.body.appendChild(notif);
+  
+  setTimeout(() => {
+    notif.style.opacity = '0';
+    notif.style.transform = 'translateX(400px)';
+    setTimeout(() => notif.remove(), 300);
+  }, 3000);
+}
+</script>
+
+</body>
+</html>

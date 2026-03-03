@@ -1,0 +1,34 @@
+name: Node Bridge CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'node-bridge/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'node-bridge/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install dependencies
+      working-directory: node-bridge
+      run: npm ci
+
+    - name: Run tests
+      working-directory: node-bridge
+      run: npm test

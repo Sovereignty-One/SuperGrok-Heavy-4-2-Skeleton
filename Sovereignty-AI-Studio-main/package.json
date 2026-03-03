@@ -1,0 +1,19 @@
+{
+  "name": "sovereignty-ai-studio-bridge",
+  "version": "1.0.0",
+  "description": "SuperGrok AI Platform Bridge Server — port 9898",
+  "main": "server_9898.js",
+  "scripts": {
+    "start": "node server_9898.js",
+    "start:tls": "TLS_CERT=cert.pem TLS_KEY=key.pem node server_9898.js",
+    "test": "node --test test/server9898.test.js"
+  },
+  "keywords": ["supergrok", "bridge", "ai", "websocket"],
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
