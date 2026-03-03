@@ -7,6 +7,10 @@ import {
   PresentationChartBarIcon,
   MicrophoneIcon,
   PencilIcon,
+  PhotoIcon,
+  SpeakerWaveIcon,
+  UserCircleIcon,
+  CommandLineIcon,
 } from '@heroicons/react/24/outline';
 
 const navigation = [
@@ -16,6 +20,10 @@ const navigation = [
   { name: 'Presentation Builder', href: '/presentation-builder', icon: PresentationChartBarIcon },
   { name: 'Podcast Generator', href: '/podcast-generator', icon: MicrophoneIcon },
   { name: 'Writing Assistant', href: '/writing-assistant', icon: PencilIcon },
+  { name: 'Media Generator', href: '/media-generator', icon: PhotoIcon },
+  { name: 'Voice Chat', href: '/voice-chat', icon: SpeakerWaveIcon },
+  { name: 'Avatar Companion', href: '/avatar-companion', icon: UserCircleIcon },
+  { name: 'Game Builder', href: '/game-builder', icon: CommandLineIcon },
 ];
 
 const Sidebar: React.FC = () => {

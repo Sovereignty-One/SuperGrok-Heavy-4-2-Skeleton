@@ -1,0 +1,14 @@
+{
+“name”: “supergrok-unified”,
+“version”: “13.1.0”,
+“description”: “SuperGrok Enterprise — Unified Server”,
+“main”: “unified_server.js”,
+“scripts”: {
+“start”:   “node unified_server.js”,
+“dev”:     “VERBOSE=1 node unified_server.js”,
+“shell”:   “ALLOW_SHELL=1 node unified_server.js”,
+“check”:   “node –check unified_server.js && echo OK”
+},
+“engines”: { “node”: “>=18.0.0” },
+“dependencies”: { “ws”: “^8.18.0” }
+}

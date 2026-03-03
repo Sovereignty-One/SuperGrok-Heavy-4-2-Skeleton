@@ -21,7 +21,7 @@ class Generation(Base):
     # Generation type: text, image, audio, video
     generation_type = Column(String, nullable=False, index=True)
 
-    # AI service used: openai, elevenlabs, stability, etc.
+    # AI service used: piper, sovereign, stability, etc.
     ai_service = Column(String, nullable=False)
 
     # Generation status: pending, processing, completed, failed

@@ -1,0 +1,19 @@
+{
+  "name": "sovereignty-node-bridge",
+  "version": "1.0.0",
+  "description": "Node.js communication bridge between frontend, Python backends, and iSH/Code Pad",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/bridge.test.js"
+  },
+  "keywords": ["bridge", "api", "websocket", "ish"],
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.0",
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

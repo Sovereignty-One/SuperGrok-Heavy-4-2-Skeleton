@@ -1,0 +1,229 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                    SOVEREIGNTY AI STUDIO - LIVE ALERTS SYSTEM                 ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           FRONTEND (React/TypeScript)                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│  ┌──────────────────────────────────────────────────────────────┐          │
+│  │  Header Component                                             │          │
+│  │  ┌──────────────────────┐  ┌──────────────────────────────┐  │          │
+│  │  │  🔔 Bell Icon         │  │  Badge (Unread Count)       │  │          │
+│  │  │  onClick: openAlerts  │  │  Shows: 99+ or actual count │  │          │
+│  │  └──────────────────────┘  └──────────────────────────────┘  │          │
+│  └──────────────────────────────────────────────────────────────┘          │
+│                                                                               │
+│  ┌──────────────────────────────────────────────────────────────┐          │
+│  │  Layout Component (Main Container)                            │          │
+│  │  ┌────────────────────────────────────────────────────────┐  │          │
+│  │  │  useAlertWebSocket Hook                                 │  │          │
+│  │  │  • Connects to ws://backend/alerts/ws/{userId}         │  │          │
+│  │  │  • Auto-reconnects on disconnect                       │  │          │
+│  │  │  • Handles: onAlert, onSystemAlert, onAlertUpdate     │  │          │
+│  │  └────────────────────────────────────────────────────────┘  │          │
+│  └──────────────────────────────────────────────────────────────┘          │
+│                                                                               │
+│  ┌────────────────────────┐      ┌──────────────────────────────┐          │
+│  │  AlertContainer         │      │  AlertCenter (Slide-out)     │          │
+│  │  (Toast Notifications)  │      │  • Full alert history        │          │
+│  │  ┌──────────────────┐  │      │  • Filter: all/unread       │          │
+│  │  │ AlertNotification│  │      │  • Mark all as read         │          │
+│  │  │ • Title          │  │      │  • Individual actions       │          │
+│  │  │ • Message        │  │      │  • Scrollable list          │          │
+│  │  │ • Severity badge │  │      │  • Close button             │          │
+│  │  │ • Auto-dismiss   │  │      └──────────────────────────────┘          │
+│  │  └──────────────────┘  │                                                 │
+│  │  Top-right corner      │                                                 │
+│  │  Max 5 visible         │                                                 │
+│  └────────────────────────┘                                                 │
+│                                                                               │
+│  ┌──────────────────────────────────────────────────────────────┐          │
+│  │  AlertAPI Service                                             │          │
+│  │  • getAlerts()                                                │          │
+│  │  • createAlert()                                              │          │
+│  │  • markAsRead()                                               │          │
+│  │  • dismissAlert()                                             │          │
+│  │  • getAlertStats()                                            │          │
+│  └──────────────────────────────────────────────────────────────┘          │
+│                                                                               │
+└───────────────────────────┬─────────────────────────────────────────────────┘
+                            │
+                    ┌───────┴────────┐
+                    │  WebSocket     │
+                    │  REST API      │
+                    └───────┬────────┘
+                            │
+┌───────────────────────────┴─────────────────────────────────────────────────┐
+│                          BACKEND (Python/FastAPI)                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│  ┌──────────────────────────────────────────────────────────────┐          │
+│  │  WebSocket Manager (alert_manager)                            │          │
+│  │  • active_connections: Dict[user_id, Set[WebSocket]]         │          │
+│  │  • system_connections: Set[WebSocket]                        │          │
+│  │  • connect(websocket, user_id)                               │          │
+│  │  • disconnect(websocket, user_id)                            │          │
+│  │  • send_personal_alert(user_id, alert_data)                  │          │
+│  │  • send_system_alert(alert_data)                             │          │
+│  │  • broadcast_alert_update(user_id, alert_id, action)         │          │
+│  └──────────────────────────────────────────────────────────────┘          │
+│                                                                               │
+│  ┌──────────────────────────────────────────────────────────────┐          │
+│  │  API Endpoints (/api/v1/alerts)                               │          │
+│  │  ┌────────────────────────────────────────────────────────┐  │          │
+│  │  │  POST   /                     Create alert             │  │          │
+│  │  │  GET    /                     List alerts              │  │          │
+│  │  │  GET    /stats                Get statistics           │  │          │
+│  │  │  GET    /{id}                 Get alert                │  │          │
+│  │  │  PATCH  /{id}/read            Mark as read             │  │          │
+│  │  │  PATCH  /{id}/dismiss         Dismiss alert            │  │          │
+│  │  │  POST   /mark-read            Bulk mark as read        │  │          │
+│  │  │  WS     /ws/{user_id}         WebSocket connection     │  │          │
+│  │  └────────────────────────────────────────────────────────┘  │          │
+│  └──────────────────────────────────────────────────────────────┘          │
+│                                                                               │
+│  ┌──────────────────────────────────────────────────────────────┐          │
+│  │  AlertService                                                 │          │
+│  │  • create_alert(db, alert)                                    │          │
+│  │  • get_alert(db, alert_id)                                    │          │
+│  │  • get_user_alerts(db, user_id, filters)                     │          │
+│  │  • get_system_alerts(db)                                      │          │
+│  │  • count_unread_alerts(db, user_id)                          │          │
+│  │  • mark_as_read(db, alert_id)                                │          │
+│  │  • mark_multiple_as_read(db, alert_ids)                      │          │
+│  │  • dismiss_alert(db, alert_id)                               │          │
+│  │  • get_alert_stats(db, user_id)                              │          │
+│  └──────────────────────────────────────────────────────────────┘          │
+│                                                                               │
+│  ┌──────────────────────────────────────────────────────────────┐          │
+│  │  PiperTTSService (Optional Audio)                             │          │
+│  │  • text_to_speech(text, output_file)                         │          │
+│  │  • speak_alert(title, message, severity)                     │          │
+│  │  • _play_audio(audio_file)                                   │          │
+│  │  Integration with piper-tts repository                        │          │
+│  └──────────────────────────────────────────────────────────────┘          │
+│                                                                               │
+└───────────────────────────┬─────────────────────────────────────────────────┘
+                            │
+                    ┌───────┴────────┐
+                    │  SQLAlchemy    │
+                    │  ORM           │
+                    └───────┬────────┘
+                            │
+┌───────────────────────────┴─────────────────────────────────────────────────┐
+│                          DATABASE (PostgreSQL)                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│  ┌──────────────────────────────────────────────────────────────┐          │
+│  │  alerts table                                                 │          │
+│  │  ┌────────────────────────────────────────────────────────┐  │          │
+│  │  │  id                 INTEGER PRIMARY KEY                │  │          │
+│  │  │  user_id            INTEGER FOREIGN KEY (users.id)     │  │          │
+│  │  │  type               ENUM (AlertType)                   │  │          │
+│  │  │  title              VARCHAR(255)                       │  │          │
+│  │  │  message            TEXT                               │  │          │
+│  │  │  is_read            BOOLEAN                            │  │          │
+│  │  │  is_dismissed       BOOLEAN                            │  │          │
+│  │  │  source             VARCHAR(100)                       │  │          │
+│  │  │  severity           VARCHAR(20)                        │  │          │
+│  │  │  action_url         VARCHAR(500)                       │  │          │
+│  │  │  metadata           TEXT                               │  │          │
+│  │  │  created_at         TIMESTAMP                          │  │          │
+│  │  │  read_at            TIMESTAMP                          │  │          │
+│  │  │  dismissed_at       TIMESTAMP                          │  │          │
+│  │  └────────────────────────────────────────────────────────┘  │          │
+│  │  Indexes: id, user_id, type, is_read, created_at             │          │
+│  └──────────────────────────────────────────────────────────────┘          │
+│                                                                               │
+│  ┌──────────────────────────────────────────────────────────────┐          │
+│  │  users table (existing)                                       │          │
+│  │  • New relationship: alerts = relationship("Alert", ...)     │          │
+│  └──────────────────────────────────────────────────────────────┘          │
+│                                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          INTEGRATION POINTS                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│  ┌─────────────────────┐    ┌─────────────────────┐    ┌───────────────┐  │
+│  │  Security Modules   │───▶│  HTTP POST          │───▶│  Alerts API   │  │
+│  │  (Rust/C++)         │    │  /api/v1/alerts/    │    │               │  │
+│  │  • Alerts.Rust      │    └─────────────────────┘    └───────────────┘  │
+│  │  • Fortress-Protocol│                                                    │
+│  └─────────────────────┘                                                    │
+│                                                                               │
+│  ┌─────────────────────┐    ┌─────────────────────┐    ┌───────────────┐  │
+│  │  AI Agents          │───▶│  AlertService       │───▶│  Database     │  │
+│  │  (Python)           │    │  .create_alert()    │    │               │  │
+│  │  • AI-Lie-Detector  │    └─────────────────────┘    └───────────────┘  │
+│  │  • eeg_agent        │                                                    │
+│  │  • Voice_Guard      │                                                    │
+│  └─────────────────────┘                                                    │
+│                                                                               │
+│  ┌─────────────────────┐    ┌─────────────────────┐    ┌───────────────┐  │
+│  │  System Monitors    │───▶│  Alert Creation     │───▶│  WebSocket    │  │
+│  │  • CPU/Memory       │    │  with TTS option    │    │  Broadcast    │  │
+│  │  • Security Scans   │    │  ?speak=true        │    │               │  │
+│  │  • Health Checks    │    └─────────────────────┘    └───────────────┘  │
+│  └─────────────────────┘                                                    │
+│                                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                              ALERT TYPES & SEVERITY                           ║
+╠═══════════════════════════════════════════════════════════════════════════════╣
+║                                                                               ║
+║  Standard Types:              Security Types:                                ║
+║  ┌──────────────────┐          ┌────────────────────────┐                   ║
+║  │ info             │          │ debugger_touch         │ 🚨               ║
+║  │ warning          │          │ chain_break            │ 🚨               ║
+║  │ error            │          │ lie_detected           │ 🚨               ║
+║  │ security         │          │ override_spoken        │ 🚨               ║
+║  │ system           │          │ yuva9v_tripped         │ 🚨               ║
+║  └──────────────────┘          └────────────────────────┘                   ║
+║                                                                               ║
+║  Severity Levels:                                                            ║
+║  ┌─────────┬────────────────────────┬────────────────────────────────┐     ║
+║  │ low     │ ℹ️ Blue border          │ Auto-dismiss 5s                │     ║
+║  │ medium  │ ⚠️ Yellow border        │ Auto-dismiss 10s               │     ║
+║  │ high    │ 🔥 Orange border        │ Manual dismiss                 │     ║
+║  │ critical│ 🚨 Red + pulse          │ Manual dismiss + audio         │     ║
+║  └─────────┴────────────────────────┴────────────────────────────────┘     ║
+║                                                                               ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                              DATA FLOW                                        ║
+╠═══════════════════════════════════════════════════════════════════════════════╣
+║                                                                               ║
+║  1. Alert Creation:                                                          ║
+║     Security Module → HTTP POST → Backend API → Database → WebSocket → UI   ║
+║                                                ↓                              ║
+║                                            (Optional)                         ║
+║                                          Piper TTS → Audio                    ║
+║                                                                               ║
+║  2. User Opens Alert Center:                                                 ║
+║     Click Bell → HTTP GET /alerts → Database Query → Display in Panel       ║
+║                                                                               ║
+║  3. Mark as Read:                                                            ║
+║     User Action → HTTP PATCH → Database Update → WebSocket Broadcast        ║
+║                                                                               ║
+║  4. Real-Time Update:                                                        ║
+║     New Alert → Database → WebSocket Manager → All Connected Clients         ║
+║                                                                               ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+Legend:
+─────  Data flow
+───▶   Direction
+┌───┐  Component/Module
+│   │  Container
+═════  Section border
+║   ║  Major section
+🔔     Notification bell
+🚨     Critical alert
+⚠️     Warning
+ℹ️     Information
+🔥     High priority

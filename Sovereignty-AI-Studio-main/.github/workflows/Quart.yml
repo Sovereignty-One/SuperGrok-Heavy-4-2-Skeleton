@@ -14,18 +14,28 @@ jobs:
         python-version: '3.11'
     - name: Install dependencies
       run: |
-        pip install -r requirements.txt
+        pip install -r .github/workflows/Requirements.txt
     - name: Test with pytest
+      env:
+        PYTHONPATH: .:./backend
       run: |
         pip install pytest
         pytest
     - name: Run Quart App for Testing
       run: |
-        # Start the Quart app in the background
-        uvicorn weather_dashboard:app --host 0.0.0.0 --port 9898 &
-        # Wait for the app to start
+        # Install hypercorn for running Quart apps
+        pip install hypercorn
+        # Start the Quart app in the background using hypercorn
+        hypercorn weather_dashboard:app --bind 0.0.0.0:9898 &
+        APP_PID=$!
+        echo "Started hypercorn with PID: $APP_PID"
+        # Wait for the app to start and verify it's running
         sleep 5
+        if ! kill -0 $APP_PID 2>/dev/null; then
+          echo "Error: Hypercorn process failed to start"
+          exit 1
+        fi
         # Test the endpoint
         curl -f http://localhost:9898/api/weather?city=London || exit 1
-        # Kill the background process
-        pkill -f uvicorn
+        # Kill the background process using specific PID
+        kill $APP_PID

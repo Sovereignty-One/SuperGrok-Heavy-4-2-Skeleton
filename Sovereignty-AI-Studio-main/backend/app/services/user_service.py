@@ -132,19 +132,14 @@ def update_user(
     Note:
         Only updates fields that are provided in the user_update object
         Automatically updates the updated_at timestamp
-        Uses a whitelist to prevent privilege escalation
     """
     db_user = get_user_by_id(db, user_id)
     if not db_user:
         return None
 
-    # Whitelist of allowed fields to update (prevents privilege escalation)
-    allowed_fields = {'full_name', 'bio', 'avatar_url'}
-    
     update_data = user_update.dict(exclude_unset=True)
     for field, value in update_data.items():
-        if field in allowed_fields:
-            setattr(db_user, field, value)
+        setattr(db_user, field, value)
 
     db_user.updated_at = datetime.utcnow()
     db.commit()

@@ -7,6 +7,10 @@ import {
   MicrophoneIcon,
   PencilIcon,
   SparklesIcon,
+  PhotoIcon,
+  SpeakerWaveIcon,
+  UserCircleIcon,
+  CommandLineIcon,
 } from '@heroicons/react/24/outline';
 
 const features = [
@@ -44,6 +48,34 @@ const features = [
     icon: PencilIcon,
     href: '/writing-assistant',
     color: 'bg-yellow-500',
+  },
+  {
+    name: 'Media Generator',
+    description: 'Generate images, videos, audio, and music with AI',
+    icon: PhotoIcon,
+    href: '/media-generator',
+    color: 'bg-indigo-500',
+  },
+  {
+    name: 'Voice Chat',
+    description: 'Talk to Ara — AI voice interaction powered by Piper TTS',
+    icon: SpeakerWaveIcon,
+    href: '/voice-chat',
+    color: 'bg-teal-500',
+  },
+  {
+    name: 'Avatar Companion',
+    description: 'Customize your AI companion with EEG-linked mood',
+    icon: UserCircleIcon,
+    href: '/avatar-companion',
+    color: 'bg-violet-500',
+  },
+  {
+    name: 'Game Builder',
+    description: 'Build games, apps, and projects with AI assistance',
+    icon: CommandLineIcon,
+    href: '/game-builder',
+    color: 'bg-orange-500',
   },
 ];
 

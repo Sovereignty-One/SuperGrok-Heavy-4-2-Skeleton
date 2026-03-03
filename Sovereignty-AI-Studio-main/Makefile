@@ -5,7 +5,7 @@ install:
 	pip install -r backend/requirements.txt
 
 test:
-	PYTHONPATH=./backend pytest
+	PYTHONPATH=.:./backend pytest
 
 lint:
 	PYTHONPATH=./backend flake8 src/ --max-line-length=100

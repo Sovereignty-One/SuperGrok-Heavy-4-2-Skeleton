@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grok EDU — Quantum-Secure Sovereign Dashboard</title>
+  <style>
+    body {
+      background: #0a0f1e;
+      color: #e5e7eb;
+      font-family: 'Inter', system-ui, sans-serif;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    header {
+      padding: 32px 0;
+      background: linear-gradient(90deg, #00ffc6, #008cff);
+      color: #0a0f1e;
+      font-family: 'Courier New', monospace;
+      text-align: center;
+      border-bottom: 4px solid #00ffc6;
+    }
+    header h1 { margin: 0; font-size: 2.6em; letter-spacing: 2px; text-transform: uppercase; }
+    header p { margin: 8px 0 0; font-size: 1.15em; opacity: 0.85; }
+
+    main { flex: 1; padding: 32px 20px; max-width: 1280px; margin: 0 auto; position: relative; }
+
+    .tabs {
+      display: flex; gap: 12px; padding: 16px;
+      background: #111827; border-bottom: 2px solid #00ffc6; justify-content: center;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .tab-button {
+      background: #1f2937; color: #e5e7eb; border: 1px solid #374151;
+      border-radius: 8px; padding: 12px 16px; cursor: pointer; font-weight: 600;
+      transition: background 0.3s, color 0.3s;
+    }
+    .tab-button:hover { background: #00ffc6; color: #0a0f1e; }
+    .tab-button.active { background: #00ffc6; color: #0a0f1e; border-color: #00ffc6; }
+
+    .tab-content { opacity: 0; max-height: 0; overflow: hidden; transition: all 0.4s ease; }
+    .tab-content.show { opacity: 1; max-height: 5000px; }
+
+    .card {
+      background: rgba(2, 6, 23, 0.9);
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    .countries-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .country {
+      background: #1f2937;
+      border-radius: 6px;
+      padding: 8px 12px;
+      text-align: center;
+      border: 1px solid #374151;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+    }
+    .country img {
+      width: 24px;
+      height: 16px;
+      object-fit: cover;
+      border: 1px solid #374151;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Quantum-Secure Sovereign Dashboard</h1>
+    <p>Now Compliant in 83 Countries</p>
+  </header>
+  <main>
+    <div class="tabs">
+      <button class="tab-button active">Overview</button>
+      <button class="tab-button">Global Compliance</button>
+      <button class="tab-button">Collaboration Tools</button>
+    </div>
+    <div class="tab-content show">
+      <div class="card">
+        <h2>Global Coverage</h2>
+        <p>Our platform now ensures compliance across 83 countries, meeting top standards for quantum-secure digital operations.</p>
+      </div>
+    </div>
+    <div class="tab-content show">
+      <div class="card">
+        <h2>Global Compliance</h2>
+        <p>Compliant in the following 83 countries:</p>
+        <div class="countries-grid">
+          <div class="country"><img src="https://flagcdn.com/us.svg" alt="USA">USA</div>
+          <div class="country"><img src="https://flagcdn.com/ca.svg" alt="Canada">Canada</div>
+          <div class="country"><img src="https://flagcdn.com/gb.svg" alt="United Kingdom">United Kingdom</div>
+          <div class="country"><img src="https://flagcdn.com/de.svg" alt="Germany">Germany</div>
+          <div class="country"><img src="https://flagcdn.com/fr.svg" alt="France">France</div>
+          <div class="country"><img src="https://flagcdn.com/jp.svg" alt="Japan">Japan</div>
+          <div class="country"><img src="https://flagcdn.com/au.svg" alt="Australia">Australia</div>
+          <div class="country"><img src="https://flagcdn.com/br.svg" alt="Brazil">Brazil</div>
+          <div class="country"><img src="https://flagcdn.com/in.svg" alt="India">India</div>
+          <div class="country"><img src="https://flagcdn.com/kr.svg" alt="South Korea">South Korea</div>
+          <!-- ... Continue list with flags until 83 countries ... -->
+        </div>
+      </div>
+    </div>
+    <div class="tab-content show">
+      <div class="card">
+        <h2>Live Features</h2>
+        <ul>
+          <li>Real-time thumbnail previews for remote uploads before full transfer completes.</li>
+          <li>Colored cursors for each active user with smooth fade-out for inactive users.</li>
+          <li>Integrated chat sidebar for media and drawing collaboration.</li>
+        </ul>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

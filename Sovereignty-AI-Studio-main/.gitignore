@@ -23,6 +23,7 @@ parts/
 sdist/
 var/
 wheels/
+*.whl
 *.egg-info/
 .installed.cfg
 *.egg
@@ -63,3 +64,18 @@ media/
 
 # Docker
 docker-compose.override.yml
+
+# Bridge server runtime data
+data/
+
+# Piper TTS
+piper-tts/.git/
+piper-tts/build/
+piper-tts/*.onnx
+piper-tts/*.onnx.json
+piper-tts/*.tar.gz
+*.wav
+*.mp3
+.pytest_cache/
+.coverage
+coverage.xml
