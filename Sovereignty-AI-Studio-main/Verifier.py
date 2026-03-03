@@ -12,7 +12,7 @@ RULES = {
 }
 
 # override log – user owns risk
-overrides =
+overrides = {}
 
 def verify(expr, value, context="literal"):
     if expr == "1*1" and value != 1 and context != "symbolic":

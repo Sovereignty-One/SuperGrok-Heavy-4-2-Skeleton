@@ -83,116 +83,116 @@ class QuantumLayer(nn.Module):
             "totalparameters": self.nlayers * self.n_qubits,
         }
 
-# QuantumLayer Module
-
-This module provides a `QuantumLayer` class implemented using [PennyLane](https://pennylane.ai/) and [PyTorch](https://pytorch.org/). It can be integrated into deep learning models as a differentiable quantum layer.
-
-## Installation
-
-pip install torch pennylane pytest
-
-## Usage
-
-### Basic Usage
-
-from quantum_layer import QuantumLayer
-import torch
-
-Create a quantum layer
-layer = QuantumLayer(nqubits=2, nlayers=1)
-
-Forward pass with a single input
-x = torch.rand(2)
-output = layer(x)
-print("Output:", output)
-
-Get circuit info
-print(layer.get_circuit_info())
-
-Save and load weights
-layer.save_weights(“quantum_weights.pth")
-layer.load_weights(“quantum_weights.pth")
-
-### Example: Using QuantumLayer in a Full PyTorch Model
-
-import torch
-import torch.nn as nn
-from quantum_layer import QuantumLayer
-
-class HybridModel(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.fc1 = nn.Linear(4, 2)
-        self.quantum = QuantumLayer(nqubits=2, nlayers=1)
-        self.fc2 = nn.Linear(2, 1)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = torch.relu(self.fc1(x))
-        x = self.quantum(x)
-        return torch.sigmoid(self.fc2(x))
-
-Instantiate model and optimizer
-model = HybridModel()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-criterion = nn.BCELoss()
-
-Dummy training loop
-for epoch in range(5):
-    inputs = torch.rand(8, 4)
-    labels = torch.randint(0, 2, (8, 1)).float()
-    optimizer.zero_grad()
-    outputs = model(inputs)
-    loss = criterion(outputs, labels)
-    loss.backward()
-    optimizer.step()
-    print(f"Epoch {epoch+1}, Loss: {loss.item():.4f}")
-
-### CI/CD: Automated Testing with PyTest
-
-Include the following in your CI/CD pipeline (e.g., GitHub Actions):
-
-name: Python package
-
-on: [push, pull_request]
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-	⁃	uses: actions/checkout@v3
-	⁃	name: Set up Python 3.10
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-	⁃	name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install torch pennylane pytest
-	⁃	name: Run tests
-      run: |
-        pytest --maxfail=1 --disable-warnings -q
-
-## API Reference
-
-### `QuantumLayer` Class
-
-#### `__init__(self, nqubits: int, nlayers: int, device_name: str = None) -> None`
-Initializes the quantum layer with the specified number of qubits and layers.
-
-#### `forward(self, x: torch.Tensor) -> torch.Tensor`
-Performs a forward pass through the quantum layer.
-
-#### `get_circuit_info(self) -> Dict[str, int]`
-Returns metadata for the quantum circuit including number of qubits, layers, device name, and total parameters.
-
-#### `save_weights(self, path: str) -> None`
-Saves the quantum layer's weights to a file.
-
-#### `load_weights(self, path: str) -> None`
-Loads the quantum layer's weights from a file.
-
----
-
-See the `tests/` folder for end-to-end unit tests and gradient checks.
-
+# # QuantumLayer Module
+# 
+# This module provides a `QuantumLayer` class implemented using [PennyLane](https://pennylane.ai/) and [PyTorch](https://pytorch.org/). It can be integrated into deep learning models as a differentiable quantum layer.
+# 
+# ## Installation
+# 
+# pip install torch pennylane pytest
+# 
+# ## Usage
+# 
+# ### Basic Usage
+# 
+# from quantum_layer import QuantumLayer
+# import torch
+# 
+# Create a quantum layer
+# layer = QuantumLayer(nqubits=2, nlayers=1)
+# 
+# Forward pass with a single input
+# x = torch.rand(2)
+# output = layer(x)
+# print("Output:", output)
+# 
+# Get circuit info
+# print(layer.get_circuit_info())
+# 
+# Save and load weights
+# layer.save_weights("quantum_weights.pth")
+# layer.load_weights("quantum_weights.pth")
+# 
+# ### Example: Using QuantumLayer in a Full PyTorch Model
+# 
+# import torch
+# import torch.nn as nn
+# from quantum_layer import QuantumLayer
+# 
+# class HybridModel(nn.Module):
+#     def __init__(self):
+#         super().__init__()
+#         self.fc1 = nn.Linear(4, 2)
+#         self.quantum = QuantumLayer(nqubits=2, nlayers=1)
+#         self.fc2 = nn.Linear(2, 1)
+# 
+#     def forward(self, x: torch.Tensor) -> torch.Tensor:
+#         x = torch.relu(self.fc1(x))
+#         x = self.quantum(x)
+#         return torch.sigmoid(self.fc2(x))
+# 
+# Instantiate model and optimizer
+# model = HybridModel()
+# optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+# criterion = nn.BCELoss()
+# 
+# Dummy training loop
+# for epoch in range(5):
+#     inputs = torch.rand(8, 4)
+#     labels = torch.randint(0, 2, (8, 1)).float()
+#     optimizer.zero_grad()
+#     outputs = model(inputs)
+#     loss = criterion(outputs, labels)
+#     loss.backward()
+#     optimizer.step()
+#     print(f"Epoch {epoch+1}, Loss: {loss.item():.4f}")
+# 
+# ### CI/CD: Automated Testing with PyTest
+# 
+# Include the following in your CI/CD pipeline (e.g., GitHub Actions):
+# 
+# name: Python package
+# 
+# on: [push, pull_request]
+# 
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
+# 
+#     steps:
+# 	⁃	uses: actions/checkout@v3
+# 	⁃	name: Set up Python 3.10
+#       uses: actions/setup-python@v4
+#       with:
+#         python-version: '3.10'
+# 	⁃	name: Install dependencies
+#       run: |
+#         python -m pip install --upgrade pip
+#         pip install torch pennylane pytest
+# 	⁃	name: Run tests
+#       run: |
+#         pytest --maxfail=1 --disable-warnings -q
+# 
+# ## API Reference
+# 
+# ### `QuantumLayer` Class
+# 
+# #### `__init__(self, nqubits: int, nlayers: int, device_name: str = None) -> None`
+# Initializes the quantum layer with the specified number of qubits and layers.
+# 
+# #### `forward(self, x: torch.Tensor) -> torch.Tensor`
+# Performs a forward pass through the quantum layer.
+# 
+# #### `get_circuit_info(self) -> Dict[str, int]`
+# Returns metadata for the quantum circuit including number of qubits, layers, device name, and total parameters.
+# 
+# #### `save_weights(self, path: str) -> None`
+# Saves the quantum layer's weights to a file.
+# 
+# #### `load_weights(self, path: str) -> None`
+# Loads the quantum layer's weights from a file.
+# 
+# ---
+# 
+# See the `tests/` folder for end-to-end unit tests and gradient checks.
+# 

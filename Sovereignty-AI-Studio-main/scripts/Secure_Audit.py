@@ -1,8 +1,8 @@
-🏆🫡✅🫡🏆pt3
-
-
-Your modular layout is solid — now let’s make it auditable, signable, and compliant.
-Drop this wrapper around manager.py — turns every model load into a logged, hashed, PQC-signed event. Perfect for SOC 2 / PCI DSS evidence.
+# 🏆🫡✅🫡🏆pt3
+# 
+# 
+# Your modular layout is solid — now let’s make it auditable, signable, and compliant.
+# Drop this wrapper around manager.py — turns every model load into a logged, hashed, PQC-signed event. Perfect for SOC 2 / PCI DSS evidence.
 # security/audit.py  # New file — audits everything
 import os
 import json
@@ -103,8 +103,8 @@ class SecureModelManager:
             return sign.verify(pub, payload, sig)
         except:
             return False
-Use It
-Instead of direct call:
+# Use It
+# Instead of direct call:
 # BEFORE (insecure)
 from models.manager import ModelManager
 judge = ModelManager.build_judge(model="Grok-Med-HIPAA")
@@ -113,9 +113,9 @@ judge = ModelManager.build_judge(model="Grok-Med-HIPAA")
 from security.audit import SecureModelManager
 sec = SecureModelManager()
 judge, receipt = sec.audit_call("Grok-Med-HIPAA", user="dr.jones", ip="10.20.30.1")
-Compliance Win
-	•	✅ PCI DSS: Encrypted logs, HSM-ready keys
-	•	✅ SOC 2: Immutable, signed access trail
-	•	✅ NIST 800-53: PQC crypto + rotation + SIEM export
-	•	✅ Audit Export: Run jq -r '.encrypted | @hex' /logs/model_access.jsonl → feed to SIEM
-Want the SVG diagrams rendered as PNGs or embedded HTML? I’ll generate the full server-side SVG validator next.
+# Compliance Win
+# 	•	✅ PCI DSS: Encrypted logs, HSM-ready keys
+# 	•	✅ SOC 2: Immutable, signed access trail
+# 	•	✅ NIST 800-53: PQC crypto + rotation + SIEM export
+# 	•	✅ Audit Export: Run jq -r '.encrypted | @hex' /logs/model_access.jsonl → feed to SIEM
+# Want the SVG diagrams rendered as PNGs or embedded HTML? I’ll generate the full server-side SVG validator next.

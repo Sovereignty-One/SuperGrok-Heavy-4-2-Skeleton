@@ -253,188 +253,188 @@ if __name__ == "__main__":
         logger.info("Future: TPM/Dilithium integration, continuous EEG streaming, and advanced audit logs.")
     except Exception as e:
         logger.error(f"Execution error: {e}\n{traceback.format_exc()}")
-Got it.
-You want me to do the heavy lifting now — no more hand-holding.
-So here’s what I’m doing for you:
-	•	Add EAG agent (assuming EEG + Authentication Guard)
-	•	Hook in classification output (the 0–3 states from TinyEEGNet)
-	•	Lock down features with login gated by classification
-	•	Secure it: state 0 = locked, state 1 = read-only, state 2 = partial access, state 3 = full (or override/kill)
-	•	Commit to the repo as QResist-Dash-Live
-	•	Push
-I’ll write the patch, not just talk about it.
-# Add this after the existing Security class
-
-class EAG:
-    """EEG Authentication Guard – classification-based access control"""
-    
-    STATES = {
-        0: "locked",        # rest / no auth
-        1: "read_only",     # observe logs only
-        2: "partial",       # run classify, no seal
-        3: "full"           # everything + override
-    }
-    
-    @staticmethod
-    def get_access_level(raw_signal: np.ndarray) -> str:
-        state = eeg_classify(raw_signal)
-        return EAG.STATES.get(state, "unknown")
-    
-    @staticmethod
-    def require_level(min_level: int):
-        def decorator(func):
-            def wrapper(*args, **kwargs):
-                # Live check from mic or last buffer (you'd hook this)
-                # For now: simulate with last classification
-                current = eeg_classify(fake)  # ← replace with real stream later
-                if current < min_level:
-                    logger.warning(f"Access denied: need {min_level}, got {current}")
-                    raise PermissionError("Insufficient EEG state")
-                return func(*args, **kwargs)
-            return wrapper
-        return decorator
-
-
-# Example secured functions
-@EAG.require_level(2)
-def run_seal(payload: bytes):
-    return Security.Seal.seal_in_hardware(payload)
-
-
-@EAG.require_level(3)
-def override_killswitch():
-    logger.critical("7.887 override accepted – full control granted")
-    # Add your kill / unlock logic here
-Next steps I’m handling:
-	•	Integrate this into main loop
-	•	Replace fake with live mic buffer (using pyaudio or sounddevice — I’ll pick sounddevice)
-	•	Add simple login prompt: “Speak your passphrase or hit 7.887 tone”
-	•	Commit message: “Add EAG classification auth guard – state-based feature lock”
-	•	Push to QResist-Dash-Live
-You just say: “Commit it.”
-I’ll do the rest.
-No more you typing code.
-Your turn.
-Here’s how you can integrate your eeg_agent_qresist.py logic into a minimal Flask API so you can classify EEG signals and enforce EAG access over HTTP:
-
----
-
-1. Install Flask
-pip install flask
-
----
-
-2. Create app.py
-from flask import Flask, request, jsonify
-import numpy as np
-import json
-from eeg_agent_qresist import eeg_classify, EAG, Security
-
-app = Flask(__name__)
-
-@app.route('/classify', methods=['POST'])
-def classify_signal():
-    try:
-        # Expect JSON with a 2D array: [[ch1..ch8], ...]
-        data = request.get_json(force=True)
-        raw_signal = np.array(data['signal'], dtype=np.float32)
-        state = eeg_classify(raw_signal)
-        access = EAG.STATES.get(state, "unknown")
-
-        return jsonify({
-            'state': state,
-            'access_level': access
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/seal', methods=['POST'])
-@EAG.require_level(2)  # Requires at least partial EEG auth
-def seal_payload():
-    try:
-        payload = request.data
-        seal_result = Security.Seal.seal_in_hardware(payload)
-        return jsonify(seal_result.as_dict())
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/override', methods=['POST'])
-@EAG.require_level(3)  # Full access required
-def override():
-    try:
-        EAG.override_killswitch()
-        return jsonify({'status': 'override triggered'})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-if __name__ == '__main__':
-	•	    app.run(host='0.0.0.0', port=5000, debug=True)
-	•	
----
-
-3. Run Flask API
-python app.py
-
-	⁃	Service runs at: http://localhost:5000
-	⁃	Endpoints:
-	1.	POST /classify → { "signal": [[...], [...]] }
-	2.	POST /seal → binary payload (requires EEG state ≥2)
-	3.	POST /override → triggers full access (requires EEG state ≥3)
-	•	
----
-
-4. Example Request
-curl -X POST http://localhost:5000/classify \
-     -H "Content-Type: application/json" \
-     -d '{"signal": [[0.1,0.2,0.3,0.1,0.2,0.0,0.1,0.2], ...]}'
-
-Response:
-{
-  "state": 1,
-  "access_level": "read_only"
-}
-
----
-
-I can now extend this to stream EEG data live via WebSockets for a real-time dashboard if you want.
-
-Do you want me to add WebSocket streaming with live EAG access updates next?🔐 Enclave Encryption Quick Cheat-Sheet
-
-1️⃣ Python: Encrypt + Decrypt in One Snippet
-from eeg_agent_qresist import Security
-import secrets
-
-# Step 1: Generate a 32-byte key
-key = Security.KDF.qresist_kdf("SuperSecretPass", secrets.token_bytes(16))
-
-# Step 2: Encrypt + Decrypt in one flow
-payload = b"Sensitive EEG Logs"
-enc = Security.Enclave.enclave_encrypt(payload, key)
-print("Encrypted (hex):", enc.hex()[:64], "...")
-
-plain = Security.Enclave.enclave_decrypt(enc, key)
-print("Decrypted:", plain)
-Notes:
-	⁃	Step 1 derives a unique session key securely.
-	⁃	Step 2 encrypts and immediately decrypts to confirm functionality.
-
----
-
-2️⃣ Quick API Test with cURL
-	•	# Step 1: POST data to enclave_encrypt endpoint (EEG state ≥3 required)
-curl -X POST http://localhost:9898/enclave_encrypt \
-     --data-binary "Sensitive EEG Logs"
-Sample Response:
-{
-  "encrypted_hex": "a1b2c3d4e5f6a7b8c9d0e1f2..."
-}
-Notes:
-	⁃	POST raw binary or plaintext to /enclave_encrypt.
-	⁃	Response is the encrypted payload in hex.
-	⁃	Use the same key to decrypt locally via Python snippet.
-
----
-
-✅ Step 1: Derive secure key  
-✅ Step 2: Encrypt & decrypt quickly in Python  
-✅ Step 3: Test encryption endpoint using cURL
+# Got it.
+# You want me to do the heavy lifting now -- no more hand-holding.
+# So here’s what I’m doing for you:
+# 	•	Add EAG agent (assuming EEG + Authentication Guard)
+# 	•	Hook in classification output (the 0–3 states from TinyEEGNet)
+# 	•	Lock down features with login gated by classification
+# 	•	Secure it: state 0 = locked, state 1 = read-only, state 2 = partial access, state 3 = full (or override/kill)
+# 	•	Commit to the repo as QResist-Dash-Live
+# 	•	Push
+# I’ll write the patch, not just talk about it.
+# # Add this after the existing Security class
+# 
+# class EAG:
+#     """EEG Authentication Guard – classification-based access control"""
+#     
+#     STATES = {
+#         0: "locked",        # rest / no auth
+#         1: "read_only",     # observe logs only
+#         2: "partial",       # run classify, no seal
+#         3: "full"           # everything + override
+#     }
+#     
+#     @staticmethod
+#     def get_access_level(raw_signal: np.ndarray) -> str:
+#         state = eeg_classify(raw_signal)
+#         return EAG.STATES.get(state, "unknown")
+#     
+#     @staticmethod
+#     def require_level(min_level: int):
+#         def decorator(func):
+#             def wrapper(*args, **kwargs):
+#                 # Live check from mic or last buffer (you'd hook this)
+#                 # For now: simulate with last classification
+#                 current = eeg_classify(fake)  # ← replace with real stream later
+#                 if current < min_level:
+#                     logger.warning(f"Access denied: need {min_level}, got {current}")
+#                     raise PermissionError("Insufficient EEG state")
+#                 return func(*args, **kwargs)
+#             return wrapper
+#         return decorator
+# 
+# 
+# # Example secured functions
+# @EAG.require_level(2)
+# def run_seal(payload: bytes):
+#     return Security.Seal.seal_in_hardware(payload)
+# 
+# 
+# @EAG.require_level(3)
+# def override_killswitch():
+#     logger.critical("7.887 override accepted – full control granted")
+#     # Add your kill / unlock logic here
+# Next steps I’m handling:
+# 	•	Integrate this into main loop
+# 	•	Replace fake with live mic buffer (using pyaudio or sounddevice -- I’ll pick sounddevice)
+# 	•	Add simple login prompt: “Speak your passphrase or hit 7.887 tone”
+# 	•	Commit message: “Add EAG classification auth guard – state-based feature lock”
+# 	•	Push to QResist-Dash-Live
+# You just say: “Commit it.”
+# I’ll do the rest.
+# No more you typing code.
+# Your turn.
+# Here’s how you can integrate your eeg_agent_qresist.py logic into a minimal Flask API so you can classify EEG signals and enforce EAG access over HTTP:
+# 
+# ---
+# 
+# 1. Install Flask
+# pip install flask
+# 
+# ---
+# 
+# 2. Create app.py
+# from flask import Flask, request, jsonify
+# import numpy as np
+# import json
+# from eeg_agent_qresist import eeg_classify, EAG, Security
+# 
+# app = Flask(__name__)
+# 
+# @app.route('/classify', methods=['POST'])
+# def classify_signal():
+#     try:
+#         # Expect JSON with a 2D array: [[ch1..ch8], ...]
+#         data = request.get_json(force=True)
+#         raw_signal = np.array(data['signal'], dtype=np.float32)
+#         state = eeg_classify(raw_signal)
+#         access = EAG.STATES.get(state, "unknown")
+# 
+#         return jsonify({
+#             'state': state,
+#             'access_level': access
+#         })
+#     except Exception as e:
+#         return jsonify({'error': str(e)}), 500
+# 
+# @app.route('/seal', methods=['POST'])
+# @EAG.require_level(2)  # Requires at least partial EEG auth
+# def seal_payload():
+#     try:
+#         payload = request.data
+#         seal_result = Security.Seal.seal_in_hardware(payload)
+#         return jsonify(seal_result.as_dict())
+#     except Exception as e:
+#         return jsonify({'error': str(e)}), 500
+# 
+# @app.route('/override', methods=['POST'])
+# @EAG.require_level(3)  # Full access required
+# def override():
+#     try:
+#         EAG.override_killswitch()
+#         return jsonify({'status': 'override triggered'})
+#     except Exception as e:
+#         return jsonify({'error': str(e)}), 500
+# 
+# if __name__ == '__main__':
+# 	•	    app.run(host='0.0.0.0', port=5000, debug=True)
+# 	•	
+# ---
+# 
+# 3. Run Flask API
+# python app.py
+# 
+# 	⁃	Service runs at: http://localhost:5000
+# 	⁃	Endpoints:
+# 	1.	POST /classify → { "signal": [[...], [...]] }
+# 	2.	POST /seal → binary payload (requires EEG state ≥2)
+# 	3.	POST /override → triggers full access (requires EEG state ≥3)
+# 	•	
+# ---
+# 
+# 4. Example Request
+# curl -X POST http://localhost:5000/classify \
+#      -H "Content-Type: application/json" \
+#      -d '{"signal": [[0.1,0.2,0.3,0.1,0.2,0.0,0.1,0.2], ...]}'
+# 
+# Response:
+# {
+#   "state": 1,
+#   "access_level": "read_only"
+# }
+# 
+# ---
+# 
+# I can now extend this to stream EEG data live via WebSockets for a real-time dashboard if you want.
+# 
+# Do you want me to add WebSocket streaming with live EAG access updates next?🔐 Enclave Encryption Quick Cheat-Sheet
+# 
+# 1️⃣ Python: Encrypt + Decrypt in One Snippet
+# from eeg_agent_qresist import Security
+# import secrets
+# 
+# # Step 1: Generate a 32-byte key
+# key = Security.KDF.qresist_kdf("SuperSecretPass", secrets.token_bytes(16))
+# 
+# # Step 2: Encrypt + Decrypt in one flow
+# payload = b"Sensitive EEG Logs"
+# enc = Security.Enclave.enclave_encrypt(payload, key)
+# print("Encrypted (hex):", enc.hex()[:64], "...")
+# 
+# plain = Security.Enclave.enclave_decrypt(enc, key)
+# print("Decrypted:", plain)
+# Notes:
+# 	⁃	Step 1 derives a unique session key securely.
+# 	⁃	Step 2 encrypts and immediately decrypts to confirm functionality.
+# 
+# ---
+# 
+# 2️⃣ Quick API Test with cURL
+# 	•	# Step 1: POST data to enclave_encrypt endpoint (EEG state ≥3 required)
+# curl -X POST http://localhost:9898/enclave_encrypt \
+#      --data-binary "Sensitive EEG Logs"
+# Sample Response:
+# {
+#   "encrypted_hex": "a1b2c3d4e5f6a7b8c9d0e1f2..."
+# }
+# Notes:
+# 	⁃	POST raw binary or plaintext to /enclave_encrypt.
+# 	⁃	Response is the encrypted payload in hex.
+# 	⁃	Use the same key to decrypt locally via Python snippet.
+# 
+# ---
+# 
+# ✅ Step 1: Derive secure key  
+# ✅ Step 2: Encrypt & decrypt quickly in Python  
+# ✅ Step 3: Test encryption endpoint using cURL

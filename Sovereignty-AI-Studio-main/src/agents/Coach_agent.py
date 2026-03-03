@@ -23,33 +23,30 @@ class Coach:
 
     def step(self):
         now = time.time() - self.start
-        cmd = then grab the step dict 
-step = cmd ```
-
-and feed `step ` to `engine.say()`.  
-
-Also, if you want missed-checks, store last tick and compare, don't just guess.
-        if now < cmd : 
+        if self.next >= len(script):
+            return None
+        cmd = script[self.next]
+        if now < cmd.get('time', 0): 
             return None
 
         # run alert if missed
         if cmd.get("missed"):
-            engine.say(f"Missed. Do {cmd }. Now.")
+            engine.say(f"Missed. Do {cmd.get('text', '')}. Now.")
             engine.runAndWait()
 
         # run on sync
         if cmd.get("only_on_7_887"):
             if is_7_887():
-                engine.say(cmd )
+                engine.say(cmd.get('text', ''))
                 engine.runAndWait()
             return
 
-        engine.say(cmd )
+        engine.say(cmd.get('text', ''))
         engine.runAndWait()
 
         # bump pointer
         self.next += 1
-        if self.next >= len(script ):
+        if self.next >= len(script):
             self.next = 0  # loop
 
 coach = Coach()

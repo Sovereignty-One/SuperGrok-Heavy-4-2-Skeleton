@@ -457,7 +457,7 @@ def main():
 if __name__ == "__main__":
     main()
 
-This version:
-	1.	Separates CLI parsing (parse_cli), engine instantiation (init_engine), and reporting (write_log and generate_json_output).
-	2.	Collects JSON output generation in generate_json_output.
-	3.	Logging writes the summary first, then cluster groups, followed by detailed per-source results.
+# This version:
+# 	1.	Separates CLI parsing (parse_cli), engine instantiation (init_engine), and reporting (write_log and generate_json_output).
+# 	2.	Collects JSON output generation in generate_json_output.
+# 	3.	Logging writes the summary first, then cluster groups, followed by detailed per-source results.

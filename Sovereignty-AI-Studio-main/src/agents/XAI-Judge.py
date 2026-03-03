@@ -12,40 +12,8 @@ def build_judge(**kwargs):
     LOCAL_LLM = os.environ.get('LOCAL_LLM', None)
     if LOCAL_LLM is None:
         model_map = {
-          Grok-1.5-314B<br>Grok-1.5-Code<br>Grok-Beta-Med<br>Grok-Defense<br>Grok-2-Preview<br>Grok-1.5-Flash<br>Grok-1.5-Pro<br>Grok-Ultra-Internal<br>Grok-Med-HIPAA<br>Grok-Defense-IL6<br>Grok-AU-Health<br>Grok-EU-GDPR<br>Grok-JP<br>Grok-IN<br>Grok-UK-NHS<br>Grok-2-Experimental<br>Grok-Black-Canary<br>Grok-1.5                         Grok-1.5-314B<br>Grok-1.5-Code<br>Grok-Beta-Med<br>Grok-Defense<br>Grok-2-Preview<br>Grok-1.5-Flash<br>Grok-1.5-Pro<br>Grok-Ultra-Internal<br>Grok-Med-HIPAA<br>Grok-Defense-IL6<br>Grok-AU-Health<br>Grok-EU-GDPR<br>Grok-JP<br>Grok-IN<br>Grok-UK-NHS<br>Grok-2-Experimental<br>Grok-Black-Canary<br>Grok-1.5-Preview<br>Grok-Med-Nurse<br>Grok-HomeCare<br>Grok-FedRAMP<br>Grok-DoD-IL5<br>Grok-IL6-Black<br>Grok-Regional-AU<br>Grok-Regional-EU<br>Grok-Regional-JP<br>Grok-Regional-IN<br>Grok-Regional-UK<br>Grok-Canary                         Grok-1.5-314B<br>
-                        Grok-1.5-Code<br>
-                        Grok-Beta-Med<br>
-                        Grok-Defense<br>
-                        Grok-2-Preview<br>
-                        Grok-1.5-Flash<br>
-                        Grok-1.5-Pro<br>
-                        Grok-Ultra-Internal<br>
-                        Grok-Med-HIPAA<br>
-                        Grok-Defense-IL6<br>
-                        Grok-AU-Health<br>
-                        Grok-EU-GDPR<br>
-                        Grok-JP<br>
-                        Grok-IN<br>
-                        Grok-UK-NHS<br>
-                        Grok-2-Experimental<br>
-                        Grok-Black-Canary<br>
-                        Grok-1.5-Preview<br>
-                        Grok-Med-Nurse<br>
-                        Grok-HomeCare<br>
-                        Grok-FedRAMP<br>
-                        Grok-DoD-IL5<br>
-                        Grok-IL6-Black<br>
-                        Grok-Regional-AU<br>
-                        Grok-Regional-EU<br>
-                        Grok-Regional-JP<br>
-                        Grok-Regional-IN<br>
-                        Grok-Regional-UK<br>
-                        Grok-Canary-Internal<br>
-                        Grok-HealthPlus-MyHealthRecord<br>
-                        Grok-GDPR-Compliant<br>
-                        Grok-MHLW-Japan<br>
-                        Grok-NDHM-India<br>
-                        Grok-NHS-ePHI-UK<br> 'super-grok-heavy-4-2' 'gpt-4-turbo': 'gpt-4-1106-preview',
+          'super-grok-heavy-4-2': 'super-grok-heavy-4-2',
+          'gpt-4-turbo': 'gpt-4-1106-preview',
             'gpt-4-0613': 'gpt-4-0613',
             'gpt-4-0125': 'gpt-4-0125-preview',
             'gpt-4-0409': 'gpt-4-turbo-2024-04-09',

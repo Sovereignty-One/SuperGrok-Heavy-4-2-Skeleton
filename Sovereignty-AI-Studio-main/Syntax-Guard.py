@@ -39,13 +39,13 @@ if not guard.is_valid(raw):
         # q_resist()
 # 7.887 rule: no cloud. no exec. no eval. no os.system. no subprocess.
 BLACKLIST = [
-    m.Call(func=m.Name('eval'), ...),
-    m.Call(func=m.Name('exec'), ...),
+    m.Call(func=m.Name('eval')),
+    m.Call(func=m.Name('exec')),
     m.Call(func=m.Name('subprocess')),
     m.Call(func=m.Name('os.system')),
     m.Call(func=m.Name('requests')),
     m.Call(func=m.Name('urllib')),
-    m.Assign(targets= , ...),
+    m.Assign(targets=[m.DoNotCare()]),
     m.Import(alias=m.Alias(value=m.Name('socket'))),
     m.Import(alias=m.Alias(value=m.Name('base64'))),  # if + eval → boom
 ]
