@@ -234,8 +234,8 @@ async function sgGuardPanel(panelId){
     return false;
   }
 
-  // Server-side double check (async, non-blocking on success)
-  if(navigator.onLine && SGS.token){
+  // Server-side double check — skip for offline/profile tokens
+  if(navigator.onLine && SGS.token && !String(SGS.token).startsWith('offline_')){
     try{
       const res = await fetch(SG_API+'/api/auth/verify-panel',{
         method:'POST',
@@ -1196,7 +1196,7 @@ teacher:{lbl:'Teacher',icon:'📚',lvl:3,color:'#059669',cat:'edu',
   desc:'FERPA · Curriculum · Classroom AI',
   ranks:['Lead Educator','Department Head','Senior Teacher','Teacher','Associate Teacher'],
   nav:[
-    {g:'Classroom',i:[{id:'dashboard',ic:'📊',lb:'Dashboard'},{id:'class_dash',ic:'🏫',lb:'Class Dashboard'},{id:'grades',ic:'📊',lb:'Grades'},{id:'attendance',ic:'✅',lb:'Attendance'},{id:'eeg_classroom',ic:'🧠',lb:'Focus Monitor'},{id:'curriculum',ic:'📚',lb:'Curriculum Builder'}]},
+    {g:'Classroom',i:[{id:'dashboard',ic:'📊',lb:'Dashboard'},{id:'class_dash',ic:'🏫',lb:'Class Dashboard'},{id:'grades',ic:'📊',lb:'Grades'},{id:'attendance',ic:'✅',lb:'Attendance'},{id:'eeg_classroom',ic:'🧠',lb:'Focus Monitor'},{id:'curriculum',ic:'📚',lb:'Curriculum Builder'},{id:'stream_studio',ic:'🎬',lb:'Stream Studio'}]},
     {g:'AI Tools',i:[{id:'ai_chat',ic:'🤖',lb:'Lesson AI'},{id:'ai_games',ic:'🎮',lb:'Brain Games'},{id:'project_builder',ic:'🛠️',lb:'Project Builder'}]},
     {g:'System',i:[{id:'audit_trail',ic:'🔐',lb:'FERPA Audit'},{id:'profile',ic:'👤',lb:'Profile'}]}
   ]},
@@ -1204,7 +1204,7 @@ student:{lbl:'Student',icon:'🎒',lvl:1,color:'#0ea5e9',cat:'edu',
   desc:'K-12 · COPPA/FERPA Safe',
   ranks:['Honor Roll','Advanced','Academic','General'],
   nav:[
-    {g:'Learning',i:[{id:'dashboard',ic:'📊',lb:'Dashboard'},{id:'learning_hub',ic:'📚',lb:'Learning Hub'},{id:'ai_games',ic:'🎮',lb:'Brain Games'},{id:'ai_chat',ic:'🤖',lb:'AI Tutor'},{id:'project_builder',ic:'🛠️',lb:'My Projects'}]},
+    {g:'Learning',i:[{id:'dashboard',ic:'📊',lb:'Dashboard'},{id:'learning_hub',ic:'📚',lb:'Learning Hub'},{id:'ai_games',ic:'🎮',lb:'Brain Games'},{id:'ai_chat',ic:'🤖',lb:'AI Tutor'},{id:'project_builder',ic:'🛠️',lb:'My Projects'},{id:'stream_studio',ic:'🎬',lb:'Stream Studio'}]},
     {g:'Focus',i:[{id:'eeg_student',ic:'🧠',lb:'My Focus'},{id:'rewards',ic:'💎',lb:'Rewards'}]},
     {g:'System',i:[{id:'audit_trail',ic:'🔐',lb:'Activity Log'},{id:'profile',ic:'👤',lb:'Profile'}]}
   ]},
@@ -1246,7 +1246,7 @@ developer:{lbl:'Developer',icon:'💻',lvl:4,color:'#8b5cf6',cat:'tech',
   ranks:['Principal Engineer','Staff Engineer','Senior Engineer','Engineer','Junior Engineer'],
   nav:[
     {g:'Development',i:[{id:'dashboard',ic:'📊',lb:'Dashboard'},{id:'api_console',ic:'🔌',lb:'API Console'},{id:'terminal',ic:'⌨️',lb:'Quantum Terminal'},{id:'github_panel',ic:'🐙',lb:'GitHub'},{id:'cicd',ic:'🚀',lb:'CI/CD'},{id:'project_builder',ic:'🛠️',lb:'Project Builder'}]},
-    {g:'AI Tools',i:[{id:'ai_chat',ic:'🤖',lb:'Code AI'},{id:'ddg_browser',ic:'🦆',lb:'Dev Search'}]},
+    {g:'AI Tools',i:[{id:'ai_chat',ic:'🤖',lb:'Code AI'},{id:'ddg_browser',ic:'🦆',lb:'Dev Search'},{id:'stream_studio',ic:'🎬',lb:'Stream Studio'}]},
     {g:'System',i:[{id:'audit_trail',ic:'🔐',lb:'Audit Chain'},{id:'key_mgmt',ic:'🔑',lb:'Key Mgmt'},{id:'memory',ic:'🧠',lb:'Memory Cards'},{id:'profile',ic:'👤',lb:'Profile'}]}
   ]},
 superadmin:{lbl:'Super Administrator',icon:'🕹️',lvl:5,color:'#0891b2',cat:'tech',
@@ -1254,7 +1254,7 @@ superadmin:{lbl:'Super Administrator',icon:'🕹️',lvl:5,color:'#0891b2',cat:'
   ranks:['Super Admin','Root Admin'],
   nav:[
     {g:'Super Control',i:[{id:'dashboard',ic:'📊',lb:'Dashboard'},{id:'system_ctrl',ic:'⚙️',lb:'System Control'},{id:'role_editor',ic:'🎭',lb:'Role Editor'},{id:'error_console',ic:'🪲',lb:'Error Console'},{id:'user_mgmt',ic:'👥',lb:'User Mgmt'},{id:'key_mgmt',ic:'🔑',lb:'Key Mgmt'}]},
-    {g:'Dev Tools',i:[{id:'terminal',ic:'⌨️',lb:'Quantum Terminal'},{id:'github_panel',ic:'🐙',lb:'GitHub'},{id:'cicd',ic:'🚀',lb:'CI/CD'},{id:'bridge',ic:'⚡',lb:'Bridge Config'},{id:'ai_chat',ic:'🤖',lb:'Unified AI'}]},
+    {g:'Dev Tools',i:[{id:'terminal',ic:'⌨️',lb:'Quantum Terminal'},{id:'github_panel',ic:'🐙',lb:'GitHub'},{id:'cicd',ic:'🚀',lb:'CI/CD'},{id:'bridge',ic:'⚡',lb:'Bridge Config'},{id:'ai_chat',ic:'🤖',lb:'Unified AI'},{id:'stream_studio',ic:'🎬',lb:'Stream Studio'}]},
     {g:'Audit',i:[{id:'audit_trail',ic:'🔐',lb:'Full Audit'},{id:'memory',ic:'🧠',lb:'Memory Cards'},{id:'profile',ic:'👤',lb:'Profile'}]}
   ]},
 root:{lbl:'Root / Superuser',icon:'🔱',lvl:6,color:'#dc2626',cat:'tech',
@@ -1278,7 +1278,7 @@ witness_prot:{lbl:'Witness Protection',icon:'🔒',lvl:5,color:'#1f2937',cat:'te
   nav:[
     {g:'WITSEC',i:[{id:'dashboard',ic:'📊',lb:'Dashboard'},{id:'identity_vault',ic:'🔒',lb:'Identity Vault'},{id:'location_shield',ic:'📍',lb:'Location Shield'},{id:'checkin',ic:'✅',lb:'Check-In'}]},
     {g:'AI Tools',i:[{id:'ai_chat',ic:'🤖',lb:'Secure AI'},{id:'comms_secure',ic:'📡',lb:'Secure Comms'}]},
-    {g:'System',i:[{id:'audit_trail',ic:'🔐',lb:'Sealed Audit'},{id:'profile',ic:'👤',lb:'Profile'}]}
+    {g:'System',i:[{id:'audit_trail',ic:'🔐',lb:'Sealed Audit'},{id:'profile',ic:'👤',lb:'Profile'},{id:'stream_studio',ic:'🎬',lb:'Stream Studio'}]}
   ]},
 // COMMERCIAL
 driver:{lbl:'Rideshare Driver',icon:'🚗',lvl:1,color:'#f97316',cat:'commercial',
@@ -1334,8 +1334,8 @@ corrections:{lbl:'Corrections Officer / Warden',icon:'🔒',lvl:2,color:'#374151
   ranks:['Warden','Deputy Warden','Captain','Sergeant','Corrections Officer'],
   nav:[
     {g:'Facility',i:[{id:'dashboard',ic:'📊',lb:'Dashboard'},{id:'inmate_roster',ic:'📋',lb:'Inmate Roster'},{id:'incidents',ic:'⚠️',lb:'Incidents'},{id:'programs',ic:'📚',lb:'Programs'}]},
-    {g:'AI Tools',i:[{id:'ai_chat',ic:'🤖',lb:'Facility AI'}]},
-    {g:'System',i:[{id:'sos_panel',ic:'🆘',lb:'SOS'},{id:'audit_trail',ic:'🔐',lb:'Audit Chain'},{id:'profile',ic:'👤',lb:'Profile'}]}
+    {g:'AI Tools',i:[{id:'ai_chat',ic:'🤖',lb:'Facility AI'},{id:'stream_studio',ic:'🎬',lb:'Stream Studio'}]},
+    {g:'System',i:[{id:'sos_panel',ic:'🆘',lb:'SOS'},{id:'audit_trail',ic:'🔐',lb:'Audit Chain'},{id:'profile',ic:'👤',lb:'Profile'},{id:'stream_studio',ic:'🎬',lb:'Stream Studio'}]}
   ]},
 auditor:{lbl:'Compliance Auditor',icon:'📊',lvl:3,color:'#1f2937',cat:'legal',
   desc:'SOC2 · ISO27001 · HIPAA · Financial Audit',
@@ -1343,7 +1343,7 @@ auditor:{lbl:'Compliance Auditor',icon:'📊',lvl:3,color:'#1f2937',cat:'legal',
   nav:[
     {g:'Audit',i:[{id:'dashboard',ic:'📊',lb:'Dashboard'},{id:'soc2',ic:'🔐',lb:'SOC2'},{id:'iso27001',ic:'📋',lb:'ISO27001'},{id:'hipaa_audit',ic:'🏥',lb:'HIPAA Review'},{id:'financial_audit',ic:'💰',lb:'Financial'}]},
     {g:'AI Tools',i:[{id:'ai_chat',ic:'🤖',lb:'Audit AI'},{id:'audit_trail',ic:'🔐',lb:'Audit Chain'}]},
-    {g:'System',i:[{id:'profile',ic:'👤',lb:'Profile'}]}
+    {g:'System',i:[{id:'profile',ic:'👤',lb:'Profile'},{id:'stream_studio',ic:'🎬',lb:'Stream Studio'}]}
   ]},
 // AVIATION
 pilot:{lbl:'Pilot — Commercial / Military',icon:'✈️',lvl:3,color:'#0369a1',cat:'aviation',
@@ -1457,32 +1457,32 @@ child:{lbl:'Child (Ages 5–12)',icon:'🧒',lvl:1,color:'#f59e0b',cat:'family',
   desc:'COPPA Compliant · Age-Gated · Safe Learning',
   ranks:['Advanced Learner','Standard Learner','Emerging Learner'],
   nav:[
-    {g:'Learning',i:[{id:'dashboard',ic:'📊',lb:'My Dashboard'},{id:'story_time',ic:'📖',lb:'Story Time'},{id:'learning_games',ic:'🎮',lb:'Learning Games'},{id:'drawing',ic:'🎨',lb:'Drawing'},{id:'ai_tutor',ic:'🤖',lb:'AI Helper'}]},
+    {g:'Learning',i:[{id:'dashboard',ic:'📊',lb:'My Dashboard'},{id:'story_time',ic:'📖',lb:'Story Time'},{id:'learning_games',ic:'🎮',lb:'Learning Games'},{id:'drawing',ic:'🎨',lb:'Drawing'},{id:'ai_tutor',ic:'🤖',lb:'AI Helper'},{id:'stream_studio',ic:'🎬',lb:'Stream Studio'}]},
     {g:'Rewards',i:[{id:'rewards',ic:'💎',lb:'My Gems'},{id:'profile',ic:'👤',lb:'My Profile'}]}
   ]},
 teen:{lbl:'Teen (Ages 13–17)',icon:'🧑',lvl:1,color:'#8b5cf6',cat:'family',
   desc:'COPPA/FERPA · School + Career Prep',
   ranks:['Honor Student','AP/Advanced','Standard'],
   nav:[
-    {g:'Learning',i:[{id:'dashboard',ic:'📊',lb:'Dashboard'},{id:'homework',ic:'📚',lb:'Homework Help'},{id:'college_prep',ic:'🎓',lb:'College Prep'},{id:'career',ic:'💼',lb:'Career Explore'},{id:'ai_games',ic:'🎮',lb:'Brain Games'}]},
+    {g:'Learning',i:[{id:'dashboard',ic:'📊',lb:'Dashboard'},{id:'homework',ic:'📚',lb:'Homework Help'},{id:'college_prep',ic:'🎓',lb:'College Prep'},{id:'career',ic:'💼',lb:'Career Explore'},{id:'ai_games',ic:'🎮',lb:'Brain Games'},{id:'stream_studio',ic:'🎬',lb:'Stream Studio'}]},
     {g:'AI Tools',i:[{id:'ai_chat',ic:'🤖',lb:'AI Tutor'},{id:'project_builder',ic:'🛠️',lb:'Projects'},{id:'github_panel',ic:'🐙',lb:'GitHub Intro'}]},
-    {g:'System',i:[{id:'rewards',ic:'💎',lb:'Rewards'},{id:'profile',ic:'👤',lb:'Profile'}]}
+    {g:'System',i:[{id:'rewards',ic:'💎',lb:'Rewards'},{id:'profile',ic:'👤',lb:'Profile'},{id:'stream_studio',ic:'🎬',lb:'Stream Studio'}]}
   ]},
 parent:{lbl:'Parent / Guardian',icon:'👨‍👩‍👧',lvl:1,color:'#f59e0b',cat:'family',
   desc:'COPPA/FERPA · Family Dashboard · Child Oversight',
   ranks:['Primary Guardian','Guardian','Parent','Legal Guardian'],
   nav:[
     {g:'Family',i:[{id:'dashboard',ic:'📊',lb:'Dashboard'},{id:'child_progress',ic:'📊',lb:"Child's Progress"},{id:'school_notices',ic:'📢',lb:'School Notices'},{id:'teacher_comms',ic:'💬',lb:'Teacher Comms'},{id:'eeg_classroom',ic:'🧠',lb:'Focus Reports'}]},
-    {g:'AI Tools',i:[{id:'ai_chat',ic:'🤖',lb:'Family AI'}]},
-    {g:'System',i:[{id:'audit_trail',ic:'🔐',lb:'Activity Log'},{id:'profile',ic:'👤',lb:'Profile'}]}
+    {g:'AI Tools',i:[{id:'ai_chat',ic:'🤖',lb:'Family AI'},{id:'stream_studio',ic:'🎬',lb:'Stream Studio'}]},
+    {g:'System',i:[{id:'audit_trail',ic:'🔐',lb:'Activity Log'},{id:'profile',ic:'👤',lb:'Profile'},{id:'stream_studio',ic:'🎬',lb:'Stream Studio'}]}
   ]},
 veteran:{lbl:'Military Veteran / Reserve',icon:'🎖️',lvl:1,color:'#92400e',cat:'family',
   desc:'DD-214 · VA Benefits · Transition Assist',
   ranks:['Retired General/Flag','Retired Senior Officer','Retired Officer','Retired NCO','Veteran'],
   nav:[
-    {g:'Benefits',i:[{id:'dashboard',ic:'📊',lb:'Dashboard'},{id:'va_benefits',ic:'🏅',lb:'VA Benefits'},{id:'service_record',ic:'📋',lb:'Service Record'},{id:'education',ic:'🎓',lb:'Education Benefits'}]},
-    {g:'AI Tools',i:[{id:'ai_chat',ic:'🤖',lb:'VA AI'},{id:'ddg_browser',ic:'🦆',lb:'Research'}]},
-    {g:'System',i:[{id:'audit_trail',ic:'🔐',lb:'Activity Log'},{id:'profile',ic:'👤',lb:'Profile'}]}
+    {g:'Benefits',i:[{id:'dashboard',ic:'📊',lb:'Dashboard'},{id:'va_benefits',ic:'🏅',lb:'VA Benefits'},{id:'service_record',ic:'📋',lb:'Service Record'},{id:'education',ic:'🎓',lb:'Education Benefits'},{id:'stream_studio',ic:'🎬',lb:'Stream Studio'}]},
+    {g:'AI Tools',i:[{id:'ai_chat',ic:'🤖',lb:'VA AI'},{id:'ddg_browser',ic:'🦆',lb:'Research'},{id:'stream_studio',ic:'🎬',lb:'Stream Studio'}]},
+    {g:'System',i:[{id:'audit_trail',ic:'🔐',lb:'Activity Log'},{id:'profile',ic:'👤',lb:'Profile'},{id:'stream_studio',ic:'🎬',lb:'Stream Studio'}]}
   ]},
 };
 
@@ -2101,6 +2101,193 @@ return h;
 // Keycloak panel
 PANELS.keycloak = PANELS.bridge;
 
+// ─── Ustream4Free Pro Studio v7.0 ────────────────────────────────────
+PANELS.stream_studio = function(){
+function usB(h){ return h; }
+var CSS=[
+‘.usS{background:rgba(8,8,20,.75);border:1px solid rgba(102,126,234,.3);border-radius:12px;overflow:hidden;margin-top:4px}’,
+‘.usHdr{background:rgba(0,0,0,.55);padding:13px 17px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid rgba(138,43,226,.4)}’,
+‘.usHl{display:flex;align-items:center;gap:9px}’,
+‘.usHic{width:34px;height:34px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;animation:usPulse 2s infinite}’,
+‘@keyframes usPulse{0%,100%{box-shadow:0 0 10px rgba(102,126,234,.5)}50%{box-shadow:0 0 20px rgba(102,126,234,.9)}}’,
+‘.usHt{font-size:14px;font-weight:700;background:linear-gradient(90deg,#667eea,#764ba2,#f093fb);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}’,
+‘.usHs{font-size:10px;color:#777}’,
+‘.usSbar{display:flex;gap:8px;flex-wrap:wrap}’,
+‘.usSI{display:flex;align-items:center;gap:5px;padding:5px 11px;background:rgba(255,255,255,.07);border-radius:18px;font-size:11px}’,
+‘.usDot{width:7px;height:7px;border-radius:50%;animation:usBlink 1.5s infinite}’,
+‘.usDot.live{background:#00ff00}.usDot.rec{background:#ff9500}’,
+‘@keyframes usBlink{0%,100%{opacity:1}50%{opacity:.3}}’,
+‘.usBod{padding:13px}’,
+‘.usGrd{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:11px;margin-bottom:12px}’,
+‘.usCard{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:13px;transition:all .3s}’,
+‘.usCard:hover{transform:translateY(-2px);box-shadow:0 5px 22px rgba(102,126,234,.2)}’,
+‘.usCT{font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:11px;color:#ccc}’,
+‘.usCic{width:22px;height:22px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px}’,
+‘.usMet{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:11px}’,
+‘.usMet:last-child{border-bottom:none}’,
+‘.usML{color:#777}.usMV{font-weight:700}.usMV.g{color:#00ff88}.usMV.w{color:#fa0}.usMV.r{color:#f44}’,
+‘.usPB{width:100%;height:4px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden;margin-top:4px}’,
+‘.usPF{height:100%;background:linear-gradient(90deg,#667eea,#764ba2);border-radius:2px;transition:width .4s}’,
+‘.usScn{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:11px}’,
+‘.usBox{aspect-ratio:16/9;background:rgba(0,0,0,.5);border:2px solid rgba(102,126,234,.25);border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .3s;position:relative;font-size:10px}’,
+‘.usBox:hover{border-color:rgba(102,126,234,.6);background:rgba(102,126,234,.1)}’,
+‘.usBox.usLv{border-color:#00ff88;background:rgba(0,255,136,.1)}’,
+‘.usSN{font-size:15px;font-weight:700;opacity:.4}.usSL{font-size:9px;opacity:.55;margin-top:2px}’,
+‘.usLvB{position:absolute;top:2px;right:2px;padding:1px 4px;background:#f00;border-radius:3px;font-size:7px;font-weight:700}’,
+‘.usTabRow{display:flex;gap:3px;border-bottom:2px solid rgba(255,255,255,.07);margin-bottom:11px}’,
+‘.usTabBtn{padding:6px 13px;background:transparent;border:none;color:#666;font-size:11px;font-weight:700;cursor:pointer;transition:all .3s;border-bottom:3px solid transparent}’,
+‘.usTabBtn:hover{color:#fff}.usTabBtn.on{color:#fff;border-bottom-color:#667eea}’,
+‘.usTabCt{display:none}.usTabCt.on{display:block}’,
+‘.usCP{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:7px;margin:7px 0}’,
+‘.usBt{padding:9px 6px;background:linear-gradient(135deg,rgba(102,126,234,.18),rgba(118,75,162,.18));border:1px solid rgba(102,126,234,.3);border-radius:8px;color:#fff;font-size:10px;font-weight:700;cursor:pointer;transition:all .3s;text-align:center}’,
+‘.usBt:hover{background:linear-gradient(135deg,rgba(102,126,234,.42),rgba(118,75,162,.42));transform:scale(1.03)}’,
+‘.usBt.on{background:linear-gradient(135deg,#00ff88,#00cc6a);border-color:#00ff88;color:#000}’,
+‘.usBt.dng{background:linear-gradient(135deg,rgba(255,68,68,.18),rgba(200,40,40,.18));border-color:rgba(255,68,68,.3)}’,
+‘.usBt.dng:hover{background:linear-gradient(135deg,rgba(255,68,68,.42),rgba(200,40,40,.42))}’,
+‘.usMDv{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:rgba(255,255,255,.04);border-radius:6px;margin-bottom:6px;font-size:11px}’,
+‘.usMDot{width:6px;height:6px;border-radius:50%;background:#00ff88}’,
+‘.usAlrt{padding:8px 11px;background:rgba(0,255,136,.09);border-left:3px solid #00ff88;border-radius:5px;margin-bottom:9px;font-size:11px}’,
+‘.usInp{width:100%;padding:6px 9px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.11);border-radius:5px;color:#fff;font-size:11px;margin-top:3px}’,
+‘.usInp:focus{outline:none;border-color:#667eea}’,
+‘.usSetG{margin-bottom:11px}.usSetL{font-size:10px;color:#777;margin-bottom:2px;display:block}’
+].join(’’);
+
+var h = ph(‘Stream Studio’,’// Ustream4Free Pro v7.0 \u00b7 Local Only \u00b7 Zero Cloud \u00b7 RTMP Ready’);
+h += comp([‘Local Only’,‘Zero Cloud’,‘RTMP Ready’,‘60FPS’,‘MIDI’,‘Screen Capture’]);
+h += ‘<style>’ + CSS + ‘</style>’;
+h += ‘<div class="usS">’;
+// Header
+h += ‘<div class="usHdr">’;
+h += ‘<div class="usHl"><div class="usHic">\u{1F3AC}</div>’;
+h += ‘<div><div class="usHt">Ustream4Free Pro Studio</div><div class="usHs">v7.0 \u00b7 Professional Local Streaming Dashboard</div></div></div>’;
+h += ‘<div class="usSbar">’;
+h += ‘<div class="usSI"><div class="usDot live"></div><span id="usLbl">LIVE</span></div>’;
+h += ‘<div class="usSI"><div class="usDot rec"></div><span>REC</span></div>’;
+h += ‘<div class="usSI"><span id="usTmr">\u23f1 0:00:00</span></div>’;
+h += ‘</div></div>’;
+// Body
+h += ‘<div class="usBod">’;
+// Metrics grid
+h += ‘<div class="usGrd">’;
+h += ‘<div class="usCard"><div class="usCT"><div class="usCic">\u{1F4E1}</div>Stream Status</div>’;
+h += ‘<div class="usMet"><span class="usML">Bitrate</span><span class="usMV g" id="usBr">6,245 kbps</span></div>’;
+h += ‘<div class="usMet"><span class="usML">FPS</span><span class="usMV g" id="usFps">60.00</span></div>’;
+h += ‘<div class="usMet"><span class="usML">Dropped</span><span class="usMV g">0.02%</span></div>’;
+h += ‘<div class="usMet"><span class="usML">CPU</span><span class="usMV" id="usCpu">24.5%</span></div>’;
+h += ‘<div class="usPB"><div class="usPF" id="usCpuB" style="width:24.5%"></div></div></div>’;
+
+h += ‘<div class="usCard"><div class="usCT"><div class="usCic">\u{1F310}</div>Network</div>’;
+h += ‘<div class="usMet"><span class="usML">Upload</span><span class="usMV g">8.2 Mbps</span></div>’;
+h += ‘<div class="usMet"><span class="usML">Latency</span><span class="usMV g" id="usLat">42ms</span></div>’;
+h += ‘<div class="usMet"><span class="usML">Jitter</span><span class="usMV g">3ms</span></div>’;
+h += ‘<div class="usMet"><span class="usML">Packet Loss</span><span class="usMV g">0.00%</span></div></div>’;
+
+h += ‘<div class="usCard"><div class="usCT"><div class="usCic">\u{1F3B5}</div>Audio</div>’;
+h += ‘<div class="usMet"><span class="usML">\u{1F3A4} Mic</span><span class="usMV g">-12 dB</span></div>’;
+h += ‘<div class="usPB"><div class="usPF" style="width:65%;background:linear-gradient(90deg,#00ff88,#00cc6a)"></div></div>’;
+h += ‘<div class="usMet" style="margin-top:6px"><span class="usML">\u{1F5A5} Desktop</span><span class="usMV">-18 dB</span></div>’;
+h += ‘<div class="usPB"><div class="usPF" style="width:45%"></div></div>’;
+h += ‘<div class="usMet" style="margin-top:6px"><span class="usML">\u{1F3B8} MIDI</span><span class="usMV">-24 dB</span></div>’;
+h += ‘<div class="usPB"><div class="usPF" style="width:25%;background:linear-gradient(90deg,#f093fb,#f5576c)"></div></div></div>’;
+
+h += ‘<div class="usCard"><div class="usCT"><div class="usCic">\u{1F3AF}</div>Stream Health</div>’;
+h += ‘<div class="usMet"><span class="usML">Score</span><span class="usMV g">98/100</span></div>’;
+h += ‘<div class="usMet"><span class="usML">Quality</span><span class="usMV g">Excellent</span></div>’;
+h += ‘<div class="usMet"><span class="usML">Stability</span><span class="usMV g">99.8%</span></div>’;
+h += ‘<div class="usMet"><span class="usML">RAM</span><span class="usMV">4.2/16 GB</span></div>’;
+h += ‘<div class="usPB"><div class="usPF" style="width:26%"></div></div></div>’;
+h += ‘</div>’;
+
+// Scene manager
+h += ‘<div class="usCard" style="margin-bottom:11px"><div class="usCT"><div class="usCic">\u{1F3AC}</div>Scene Manager \u2014 click to go LIVE</div>’;
+h += ‘<div class="usScn" id="usScenes">’;
+var labels=[‘Main Cam’,‘Screen’,‘Gaming’,‘Interview’,‘BRB’,‘Starting’];
+for(var si=0;si<6;si++){
+h += ‘<div class="usBox' + (si===0?' usLv':'') + '" onclick="usPickScene(this)">’;
+if(si===0) h += ‘<div class="usLvB">LIVE</div>’;
+h += ‘<div class="usSN">’ + (si+1) + ‘</div>’;
+h += ‘<div class="usSL">’ + labels[si] + ‘</div></div>’;
+}
+h += ‘</div></div>’;
+
+// Controls card with tabs
+h += ‘<div class="usCard">’;
+h += ‘<div class="usTabRow">’;
+h += ‘<button class="usTabBtn on" onclick="usTab(this,\'usCtrl\')">Controls</button>’;
+h += ‘<button class="usTabBtn" onclick="usTab(this,\'usMidi\')">MIDI</button>’;
+h += ‘<button class="usTabBtn" onclick="usTab(this,\'usAna\')">Analytics</button>’;
+h += ‘<button class="usTabBtn" onclick="usTab(this,\'usSet\')">Settings</button>’;
+h += ‘</div>’;
+
+// Controls tab
+h += ‘<div id="usCtrl" class="usTabCt on"><div class="usCP">’;
+var ctls=[[‘on’,‘▶ Start Stream’],[‘dng’,‘⏹ Stop’],[’’,‘⏺ Record’],[’’,‘⏸ Pause’],[’’,‘🔄 Switch Scene’],[’’,‘🎨 Filters’],[’’,‘💬 Chat Overlay’],[’’,‘📊 Stats’],[’’,‘🔇 Mute Mic’],[’’,‘🖥 Mute Desktop’],[’’,‘📸 Screenshot’],[’’,‘⚙ Quick Config’]];
+for(var ci=0;ci<ctls.length;ci++){
+h += ‘<button class="usBt ' + ctls[ci][0] + '" onclick="usTogBtn(this)">’ + ctls[ci][1] + ‘</button>’;
+}
+h += ‘</div></div>’;
+
+// MIDI tab
+h += ‘<div id="usMidi" class="usTabCt">’;
+h += ‘<div class="usAlrt">\u2713 3 MIDI devices connected</div>’;
+var midi=[[‘Akai MPK Mini MK3’,‘Input \u00b7 25 Keys’],[‘Stream Deck XL’,‘Control Surface \u00b7 32 Keys’],[‘Behringer X-Touch Mini’,‘MIDI \u00b7 16 Encoders’]];
+for(var mi=0;mi<midi.length;mi++){
+h += ‘<div class="usMDv"><div><div style="font-weight:700;font-size:11px">’ + midi[mi][0] + ‘</div>’;
+h += ‘<div style="font-size:10px;color:#777">’ + midi[mi][1] + ‘</div></div><div class="usMDot"></div></div>’;
+}
+h += ‘<div style="display:flex;gap:7px;margin-top:9px"><button class="usBt" onclick="toast(\'Scanning MIDI...\',\'ok\')">+ Add Device</button><button class="usBt" onclick="toast(\'MIDI mappings\',\'ok\')">🔧 Mappings</button></div>’;
+h += ‘</div>’;
+
+// Analytics tab
+h += ‘<div id="usAna" class="usTabCt">’;
+h += ‘<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:11px">’;
+h += ‘<div><div style="font-size:10px;color:#777">Stream Time</div><div style="font-size:15px;font-weight:700">24h 36m</div></div>’;
+h += ‘<div><div style="font-size:10px;color:#777">Peak Viewers</div><div style="font-size:15px;font-weight:700;color:#00ff88">1,247</div></div>’;
+h += ‘<div><div style="font-size:10px;color:#777">Avg Bitrate</div><div style="font-size:15px;font-weight:700">5,892 kbps</div></div>’;
+h += ‘</div>’;
+h += ‘<canvas id="usChart" style="width:100%;height:120px;border:1px solid rgba(102,126,234,.18);border-radius:7px"></canvas>’;
+h += ‘</div>’;
+
+// Settings tab
+h += ‘<div id="usSet" class="usTabCt">’;
+h += ‘<div class="usSetG"><label class="usSetL">Video Resolution</label><select class="usInp"><option>1920x1080 (Full HD)</option><option>2560x1440 (2K)</option><option>3840x2160 (4K)</option></select></div>’;
+h += ‘<div class="usSetG"><label class="usSetL">Frame Rate</label><select class="usInp"><option>30 FPS</option><option selected>60 FPS</option><option>120 FPS</option></select></div>’;
+h += ‘<div class="usSetG"><label class="usSetL">Video Bitrate (kbps)</label><input type="number" class="usInp" value="6000"></div>’;
+h += ‘<div class="usSetG"><label class="usSetL">Audio Bitrate</label><select class="usInp"><option>128</option><option>192</option><option selected>256</option><option>320</option></select></div>’;
+h += ‘<div class="usSetG"><label class="usSetL">Encoder</label><select class="usInp"><option>Software (x264)</option><option selected>NVIDIA NVENC</option><option>AMD AMF</option><option>Intel QSV</option></select></div>’;
+h += ‘<button class="usBt on" style="width:100%;margin-top:7px" onclick="toast(\'Stream settings saved\',\'ok\')">💾 Save Settings</button>’;
+h += ‘</div>’;
+h += ‘</div></div></div>’;
+
+// Init script — iife, scoped to this panel render
+h += ‘<scr’+‘ipt>(function(){’;
+h += ‘var _t=0,_ti=null;’;
+h += ‘function usStart(){if(_ti)return;_ti=setInterval(function(){_t++;var h2=Math.floor(_t/3600),m=Math.floor((_t%3600)/60),s=_t%60;var el=document.getElementById(“usTmr”);if(el)el.textContent=”\u23f1 “+h2+”:”+String(m).padStart(2,“0”)+”:”+String(s).padStart(2,“0”);},1000);}usStart();’;
+h += ‘setInterval(function(){’;
+h += ‘var b=document.getElementById(“usBr”);if(b)b.textContent=Math.round(5800+Math.random()*700)+” kbps”;’;
+h += ’var f=document.getElementById(“usFps”);if(f)f.textContent=(59.8+Math.random()*.4).toFixed(2);’;
+h += ‘var cv=20+Math.random()*12,c=document.getElementById(“usCpu”),cb=document.getElementById(“usCpuB”);if(c)c.textContent=cv.toFixed(1)+”%”;if(cb)cb.style.width=cv+”%”;’;
+h += ‘var l=document.getElementById(“usLat”);if(l)l.textContent=Math.round(36+Math.random()*14)+“ms”;’;
+h += ‘},1400);’;
+h += ‘var cv=document.getElementById(“usChart”);if(cv){cv.width=cv.offsetWidth||560;cv.height=120;var ctx=cv.getContext(“2d”);function draw(){ctx.clearRect(0,0,cv.width,cv.height);ctx.strokeStyle=”#667eea”;ctx.lineWidth=1.5;ctx.beginPath();for(var i=0;i<cv.width;i+=3){var y=cv.height/2+Math.sin(i/22)*22+Math.random()*10;i===0?ctx.moveTo(i,y):ctx.lineTo(i,y);}ctx.stroke();}draw();setInterval(draw,2500);}’;
+h += ‘})();</script>’;
+return h;
+};
+// Helper fns for stream studio (global scope, namespaced)
+function usPickScene(el){
+document.querySelectorAll(’.usBox’).forEach(function(b){b.classList.remove(‘usLv’);var x=b.querySelector(’.usLvB’);if(x)x.remove();});
+el.classList.add(‘usLv’);var badge=document.createElement(‘div’);badge.className=‘usLvB’;badge.textContent=‘LIVE’;el.appendChild(badge);
+}
+function usTab(btn,id){
+var row=btn.closest(’.usTabRow’)||btn.parentElement;
+row.querySelectorAll(’.usTabBtn’).forEach(function(t){t.classList.remove(‘on’);});
+btn.classList.add(‘on’);
+var card=btn.closest(’.usCard’);
+if(card)card.querySelectorAll(’.usTabCt’).forEach(function(t){t.classList.remove(‘on’);});
+var tc=document.getElementById(id);if(tc)tc.classList.add(‘on’);
+}
+function usTogBtn(btn){btn.classList.toggle(‘on’);}
+
 // Safe panel fallback — prevents ALL uncaught “undefined” errors
 var *origLoad = null; // will be set after D is defined
 window.safePanel = function(id){
@@ -2149,6 +2336,12 @@ var A={
   finalize:function(p){
     STATE.user={name:p.name,badge:p.badge,rank:p.rank};
     STATE.roleKey=p.roleKey;STATE.role=ROLES[p.roleKey];STATE.bioEnrolled=!!p.bio;
+    var _R=ROLES[p.roleKey]||{};
+    var _pnls=(_R.nav||[]).flatMap(function(g){return(g.i||[]).map(function(i){return i.id;});});
+    if(!_pnls.length)_pnls=['dashboard','profile','ai_chat','stream_studio'];
+    var _tok=sessionStorage.getItem('sg_jwt')||('offline_'+Date.now());
+    STATE.sgToken=_tok;STATE.sgPanels=_pnls;
+    if(window.SGS){SGS.token=_tok;SGS.role=p.roleKey;SGS.lvl=_R.lvl||1;SGS.panels=_pnls;}
     addAudit('LOGIN','Profile: '+p.name+' as '+p.roleKey);showDash();
   },
   clearReturn:function(){
@@ -2295,6 +2488,7 @@ var A={
       // Store security state
       STATE.sgToken = authRes.token;
       STATE.sgPanels = authRes.panels;
+      if(window.SGS){SGS.token=authRes.token;SGS.role=role;SGS.lvl=authRes.lvl||0;SGS.panels=authRes.panels||[];}
     }
     // ── END SECURITY GATE ──────────────────────────────
 
