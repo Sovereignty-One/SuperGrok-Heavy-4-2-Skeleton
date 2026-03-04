@@ -372,7 +372,6 @@ let body;
 try { body = await readBody(req); }
 catch (e) { json(400, { detail:'Bad request: '+e.message }); return; }
 
-```
 if (!checkRate(ip)) { json(429, { detail:'Rate limit exceeded' }); return; }
 
 if (url === '/api/auth/login') {
@@ -427,7 +426,6 @@ if (url === '/api/execute-command') {
   json(200,{output:'['+role+'] '+command+' -- ack '+new Date().toISOString()});
   return;
 }
-```
 
 }
 
@@ -475,7 +473,6 @@ const now = Date.now();
 if (now > rw.reset) { rw.n=0; rw.reset=now+60000; }
 if (++rw.n > 80) { ws.send(JSON.stringify({type:'error',code:'RATE_LIMIT'})); return; }
 
-```
 let msg; try { msg = JSON.parse(raw); } catch { ws.send(JSON.stringify({type:'error',code:'PARSE'})); return; }
 const { type } = msg;
 audit('WS', type, {wsId});
@@ -557,7 +554,6 @@ if (type === 'kc_save') { const sessions = (memStore['__kc']||{}); sessions[wsId
 if (type === 'kc_load') { const sessions = (memStore['__kc']||{}); ws.send(JSON.stringify({type:'kc_session',session:sessions[wsId]||null})); return; }
 
 ws.send(JSON.stringify({type:'error',code:'UNKNOWN',received:type}));
-```
 
 });
 
