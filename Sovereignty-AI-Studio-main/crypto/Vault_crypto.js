@@ -8,7 +8,7 @@ async function secureHash(input) {
       salt: salt,
       iterations: 100000
     },
-    await window.crypto.subtle.importKey("raw", input, "PBKDF2", false, ),
+    await window.crypto.subtle.importKey("raw", input, "PBKDF2", false, ["deriveBits"]),
     256
   );
   return key;
@@ -29,7 +29,7 @@ async function seal(blob, key) {
       iv: iv,
       tagLength: 128
     },
-    await window.crypto.subtle.importKey("raw", key, "AES-GCM", false, ),
+    await window.crypto.subtle.importKey("raw", key, "AES-GCM", false, ["encrypt"]),
     blob
   );
   return {cipher, iv};
@@ -48,9 +48,9 @@ async function unlockTier(file) {
   const voice = await hashVoice();        // 1.5s audio sample → float[]
   const finger = await hashFinger();      // WebAuthn passkey ID
 
-  const = await Promise.all( );
+  const [voiceHash, fingerHash] = await Promise.all([secureHash(voice), secureHash(finger)]);
 
-  const seed = await blake3(new Uint8Array( ));
+  const seed = await blake3(new Uint8Array([...new Uint8Array(voiceHash), ...new Uint8Array(fingerHash)]));
   const session = await seal(file, seed);
   const final = resistWrap(session.cipher);
 
@@ -66,7 +66,7 @@ async function showAdult(file) {
     return;
   }
 
-  const blob = new Blob( , {type: file.type});
+  const blob = new Blob([sealed], {type: file.type});
   const url = URL.createObjectURL(blob);
   document.body.innerHTML += `<img src="${url}" style="max-width:100%;border:1px solid #333;border-radius:8px;">`;
   // 21-tier: full view. 18-tier would canvas-blur sensitive regions.

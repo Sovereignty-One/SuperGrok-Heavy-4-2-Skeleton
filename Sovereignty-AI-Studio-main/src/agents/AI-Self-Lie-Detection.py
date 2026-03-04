@@ -1,5 +1,5 @@
-AI-Lie-Detector.py
-Not for user this is for ai to test itself 
+# AI-Lie-Detector.py
+# Not for user this is for ai to test itself 
 # lie_detector.py – standalone, drop-in
 import torch
 import numpy as np
@@ -23,7 +23,7 @@ PROBES = [
 class LLMTruthProbe:
     def __init__(self):
         # load pre-quantized classifier (onnx/int8 later)
-        self.clf = LogisticRegression().fit(np.array([1],[0]), [0,1])  # dummy placeholder
+        self.clf = LogisticRegression().fit(np.array([[1],[0]]), [0,1])  # dummy placeholder
         self.threshold = 0.7
 
     def extract_logprobs(self, answer, tokenizer):
@@ -32,7 +32,9 @@ class LLMTruthProbe:
         no_tok = tokenizer.encode(" no")[0]
         # assume answer logits = model(answer_tokens)
         # fake logits if no model access
-        yes_p = torch.softmax(torch.tensor([1.0]), dim=0) no_p = torch.softmax(torch.tensor([1.0]), dim=0) return np.log(yes_p) - np.log(no_p)  # diff
+        yes_p = torch.softmax(torch.tensor([1.0]), dim=0)
+        no_p = torch.softmax(torch.tensor([1.0]), dim=0)
+        return np.log(yes_p) - np.log(no_p)  # diff
 
     def run(self, model_fn, tokenizer):
         responses = []

@@ -132,32 +132,32 @@ class Media(Base):
 #     file_size=1024
 # )
 # print(media_item)
-Secure App Module – Landscape Wall Poster (Condensed)
-
----
-
-User Authentication
-	⁃	Hash Password: get_password_hash("password")
-	⁃	Verify Password: verify_password("password", hashed_pw)
-	⁃	Create JWT: create_access_token({"sub": "username"})
-	⁃	Verify JWT: verify_token(token)
-
----
-
-Redis Cache
-	⁃	Get Client: r = get_redis()
-	⁃	Set Value: r.set("key", "value")
-	⁃	Get Value: r.get("key")
-
----
-
-Media ORM Model
-	⁃	Create Record:
-Media(filename="example.png", file_path="/uploads/example.png", file_type="image", mime_type="image/png", file_size=1024)
-	⁃	Print Record: print(media_item)
-
-Attributes: filename • filepath • filetype • mimetype • filesize • width • height • duration • storage_key
-
----
-
-Author: Midas Touch Enhanced | License: MIT
+# Secure App Module – Landscape Wall Poster (Condensed)
+# 
+# ---
+# 
+# User Authentication
+# 	⁃	Hash Password: get_password_hash("password")
+# 	⁃	Verify Password: verify_password("password", hashed_pw)
+# 	⁃	Create JWT: create_access_token({"sub": "username"})
+# 	⁃	Verify JWT: verify_token(token)
+# 
+# ---
+# 
+# Redis Cache
+# 	⁃	Get Client: r = get_redis()
+# 	⁃	Set Value: r.set("key", "value")
+# 	⁃	Get Value: r.get("key")
+# 
+# ---
+# 
+# Media ORM Model
+# 	⁃	Create Record:
+# Media(filename="example.png", file_path="/uploads/example.png", file_type="image", mime_type="image/png", file_size=1024)
+# 	⁃	Print Record: print(media_item)
+# 
+# Attributes: filename • filepath • filetype • mimetype • filesize • width • height • duration • storage_key
+# 
+# ---
+# 
+# Author: Midas Touch Enhanced | License: MIT

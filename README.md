@@ -1,39 +1,11 @@
-# copilot/update-remote-repo-url
-# SuperGrok-Hevy-Skeleton-
-The entire skeleton 
-
-<<<<<< copilot/update-remote-repo-url-again
-## Repository Migration Instructions
-
-To migrate the Sovereignty-AI-Studio repository to the new organization, follow these steps:
-
-```bash
-# Clone the current repo
-git clone https://github.com/Appel420/Sovereignty-AI-Studio.git
-
-# Navigate into the directory
-cd Sovereignty-AI-Studio
-
-# Change the remote to point to the new org repo
-git remote set-url origin https://github.com/sovereignty-one/Sovereignty-AI-Studio.git
-
-# Push all branches and tags
-git push --all
-git push --tags
-```
-
-## Documentation
-
-- [Migration Guide](MIGRATION.md) - Instructions for migrating the Sovereignty-AI-Studio repository from the old organization to the new organization
-
-# SuperGrok-Hevy-Skeleton
+# SuperGrok-Heavy-4-2-Skeleton
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 **Private Sovereign AI Research and Development Platform**  
 **Core Model:** Super Grok Heavy 4.2  
 (xAI) – Locked, Sealed, Sovereign  
-**Last Updated:** February 11, 2026
+**Last Updated:** March 4, 2026
 
 ## 📋 Overview
 
@@ -52,8 +24,13 @@ All components are designed for **complete operational independence**, **end-to-
 ## 🏗️ Project Structure
 
 
-SuperGrok-Hevy-Skeleton/
-├── Sovereignty-AI-Studio-main/      # Main project source code
+SuperGrok-Heavy-4-2-Skeleton/
+├── security_sentinel.py              # Active safety agent (always-on)
+├── Unified_Server.js                 # Enterprise unified server
+├── Start_All.sh                      # Starts sentinel + server
+├── Agent_Eyes.py                     # Eyes / Ears / Memory agent
+├── package.json                      # Node.js project manifest
+├── Sovereignty-AI-Studio-main/       # Main project source code
 │   ├── ai_core/                      # AI Core Modules
 │   │   ├── AI_Core.py                # Central AI core logic
 │   │   ├── Siri_Replace_Ara-Core.py  # Voice assistant replacement
@@ -237,12 +214,11 @@ SuperGrok-Hevy-Skeleton/
 │   └── Additional Files/             # Other Files
 │       ├── LICENSE.MD                # GPL v3 license
 │       ├── README.md                 # Detailed readme
-│       ├── .gitignore                # Git ignore rules
-│       ├── AI_iOS_Voice.py           # iOS voice
-│       ├── deploy.sh                 # Deploy script
-│       ├── setup-ish.sh              # Setup script
-│       ├── test_weather.py           # Weather tests
-│       └── weather_dashboard_check.md  # Dashboard check
+│       └── .gitignore                # Git ignore rules
+│
+├── .github/
+│   └── workflows/
+│       └── deploy.yml                # CI/CD: test + sentinel + build
 │
 ├── LICENSE                           # GPL v3 License (Root)
 ├── README.md                         # This file
@@ -251,6 +227,14 @@ SuperGrok-Hevy-Skeleton/
 ```
 
 ## 🚀 Key Features
+
+### 🛡️ Security Sentinel (Active Safety Agent)
+- **Always-On Protection**: Persistent watchdog process that runs alongside the server
+- **File-Integrity Monitoring**: SHA-256 baseline tracking of critical files with tamper alerts
+- **Rate-Limit Detection**: Monitors the access audit log for connection-burst / brute-force patterns
+- **Structured Audit Trail**: All events logged to `logs/sentinel.jsonl` in append-only JSON format
+- **CI/CD Integration**: Single-pass `--check` mode runs in the deploy pipeline before every build
+- **Daemon Mode**: Background operation with PID file management (`--daemon`)
 
 ### 🤖 AI Agent System
 - **Multi-Agent Architecture**: Coordinated AI agents for specialized tasks
@@ -549,7 +533,14 @@ For questions, issues, or collaboration inquiries:
 
 ## 📝 Changelog
 
-### [Current Version] - 2026-02-11
+### [1.1.0] - 2026-03-04
+- Added Security Sentinel active safety agent (`security_sentinel.py`)
+- File-integrity monitoring, rate-limit detection, structured audit logging
+- Updated `Start_All.sh` to launch sentinel alongside unified server
+- Added `security-sentinel` CI job to deploy workflow
+- Cleaned up README merge conflicts and updated project structure
+
+### [1.0.0] - 2026-02-11
 - Initial repository setup with complete skeleton
 - Extracted full Sovereignty AI Studio codebase
 - Comprehensive README with project structure
@@ -560,9 +551,7 @@ For questions, issues, or collaboration inquiries:
 
 ---
 
-**Last Updated**: February 11, 2026  
-**Version**: 1.0.0  
+**Last Updated**: March 4, 2026  
+**Version**: 1.1.0  
 **Status**: Active Development  
 **Core Model**: Super Grok Heavy 4.2
-main
->>>>>> main

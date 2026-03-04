@@ -1,4 +1,4 @@
-Here’s how you could create a Python module that supports Eyes, Ears, and Memory as distinct components, avoiding the mixing of responsibilities:
+# Here's how you could create a Python module that supports Eyes, Ears, and Memory as distinct components, avoiding the mixing of responsibilities:
 
 # agent.py – Offline Assistant with Eyes, Ears, and Memory
 import os
@@ -68,9 +68,9 @@ if __name__ == "__main__":
     print(ears.hear("forest", "birds chirping"))
     print(ears.recall_sound("forest"))
 
-This cleanly separates the three components:
-Eyes: Visual input and visual recall.
-Ears: Auditory input and sound recall.
-Memory: Central persistent storage for both.
-
-Run this script, and each component interacts with the same persistent memory file but maintains its own responsibility.
+# This cleanly separates the three components:
+# Eyes: Visual input and visual recall.
+# Ears: Auditory input and sound recall.
+# Memory: Central persistent storage for both.
+# 
+# Run this script, and each component interacts with the same persistent memory file but maintains its own responsibility.
