@@ -142,3 +142,6 @@ vite.config.ts.timestamp-*
 *.zip
 __pycache__/
 *.pyc
+
+# Sentinel runtime
+sentinel.pid
