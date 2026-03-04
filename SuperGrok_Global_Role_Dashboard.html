@@ -2583,7 +2583,10 @@ var Bridge={
       if(_d.type==='token_ok'){STATE.bridgeVerified=true;addAudit('BRIDGE_AUTH','WS verified lvl:'+_d.lvl);return;}
       if(_d.type==='token_invalid'){STATE.bridgeVerified=false;toast('Bridge token rejected','err');return;}
       if(_d.type==='ai_response'){addChatMsg('ai',_d.text||'');scrollChat();if(STATE.aiVoice)Bridge.speak(_d.text||'');if(_d.text&&_d.text.length>120)addMemory('AI '+(_d.model||''),_d.text);return;}
-      if(_d.type==='ddg_result'){var _out=_d.answer||_d.abstract||'';if(!_out&&_d.related)_out=(_d.related||[]).slice(0,4).join(' \u2014 ');var _rp=el('ddgResults');if(_rp){if(_out){_rp.style.display='block';_rp.innerHTML='<b>🔒 Result:</b> '+_out.slice(0,800)+((_d.url)?(' <a href="'+_d.url+'" target="_blank" style="color:var(--ac)">[source]</a>'):'')}else{_rp.style.display='block';_rp.innerHTML='<span style="color:var(--mu)">No instant answer \u2014 try the iframe browser above.</span>';}}addChatMsg('ai','DDG: '+(_out||'No instant answer').slice(0,1200));scrollChat();return;}
+      if(_d.type==='ddg_result'){var _out=_d.answer||_d.abstract||'';if(!_out&&_d.related)_out=(_d.related||[]).slice(0,4).join(' \u2014 ');var _rp=el('ddgResults');if(_rp){if(_out){_rp.style.display='block';_rp.innerHTML='<b>🔒 Result:</b> '
+        + _out.slice(0,800)
+        + (_d.url ? (' <a href="'+_d.url+'" target="_blank" style="color:var(--ac)">[source]</a>') : '');
+      }else{_rp.style.display='block';_rp.innerHTML='<span style="color:var(--mu)">No instant answer \u2014 try the iframe browser above.</span>';}}addChatMsg('ai','DDG: '+(_out||'No instant answer').slice(0,1200));scrollChat();return;}
       if(_d.type==='shell_output'){if(typeof Term!=='undefined')Term.line(_d.output||'','i');return;}
       if(_d.type==='memory_result'){if(_d.cards&&_d.cards.length){var _cur=STATE.memory||[];_d.cards.forEach(function(_nc){if(!_cur.some(function(_x){return _x.ts===_nc.ts;}))_cur.push(_nc);});STATE.memory=_cur;}return;}
       if(_d.type==='collab_event'){toast('Collab: '+(_d.payload||'').toString().slice(0,60),'info');return;}
