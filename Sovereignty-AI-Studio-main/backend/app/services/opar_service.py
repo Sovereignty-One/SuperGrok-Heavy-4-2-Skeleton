@@ -242,12 +242,20 @@ class OPARService:
             try:
                 appearance.body_type = OPARBodyType(updates["body_type"])
             except ValueError:
-                pass
+                logger.warning(
+                    "Invalid body_type '%s' provided for OPAR %s; keeping existing value",
+                    updates["body_type"],
+                    opar_id,
+                )
         if "gender" in updates:
             try:
                 appearance.gender = OPARGender(updates["gender"])
             except ValueError:
-                pass
+                logger.warning(
+                    "Invalid gender '%s' provided for OPAR %s; keeping existing value",
+                    updates["gender"],
+                    opar_id,
+                )
 
         logger.info("OPAR %s appearance updated", opar_id)
         return self._to_dict(inst)
