@@ -3228,7 +3228,7 @@ function kdRenderStatus(data){
   if(cnt)cnt.textContent=(s.errors||0)+(s.warnings||0)+' issues';
 }
 function kdSave(){toast('File saved: '+(el('kdFile')?el('kdFile').value:'untitled'),'ok');}
-function kdRun(){var code=el('kdCode');var lang=el('kdLang');if(code&&lang&&lang.value==='python'){Bridge.wsSend({type:'shell_cmd',cmd:'python3 -c "'+code.value.replace(/"/g,'\\"').slice(0,500)+'"'});toast('Running\u2026','ok');}else toast('Run: check bridge terminal','ok');}
+function kdRun(){var code=el('kdCode');var lang=el('kdLang');if(code&&lang){Bridge.wsSend({type:'code_check',code:code.value,language:lang.value});toast('Checking code…','ok');}else toast('No code to run','w');}
 function kdUpdateLang(){var ext=el('kdLang')&&el('kdLang').value==='python'?'.py':'.js';var fn=el('kdFile');if(fn)fn.value=fn.value.replace(/\.\w+$/,ext);}
 
 // ── Dashboard Builder helpers ────────────────────────────────────────
