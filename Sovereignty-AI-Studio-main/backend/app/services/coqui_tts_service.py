@@ -51,8 +51,8 @@ class CoquiTTSService:
             )
             if result.returncode == 0 and result.stdout.strip():
                 return result.stdout.strip()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Error while trying to locate 'tts' executable via 'which': %s", exc)
         return None
 
     # ------------------------------------------------------------------
