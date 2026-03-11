@@ -40,7 +40,7 @@ SENTINEL_PID=$!
 echo “  Sentinel PID: $SENTINEL_PID”
 
 echo “  Starting unified_server.js…”
-node unified_server.js &
+node Unified_Server.js &
 SERVER_PID=$!
 echo “  PID: $SERVER_PID”
 
@@ -48,7 +48,7 @@ echo “  PID: $SERVER_PID”
 
 echo “  Waiting for server…”
 for i in $(seq 1 10); do
-if curl -sf http://127.0.0.1:9000/health >/dev/null 2>&1; then
+if curl -sf http://127.0.0.1:9898/health >/dev/null 2>&1; then
 echo “  Health: OK”
 break
 fi
