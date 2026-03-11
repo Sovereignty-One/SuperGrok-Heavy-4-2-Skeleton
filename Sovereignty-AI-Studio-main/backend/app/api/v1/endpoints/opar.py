@@ -6,7 +6,7 @@ OPAR instances.  Every mutation is audit-logged.
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 import logging
 
 logger = logging.getLogger(__name__)
