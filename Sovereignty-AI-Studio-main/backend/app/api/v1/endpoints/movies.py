@@ -4,7 +4,6 @@ Provides scene-based movie composition and rendering pipeline.
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional
 import logging
 
 logger = logging.getLogger(__name__)
