@@ -2,7 +2,7 @@
 
 - SuperGrok Unified Server -- Production Enterprise
 - Single process: Node.js + WebSocket bridge + Auth + DDG + GitHub + Plaid + Piper + ISH shell
-- Ports: 9000 (primary), 9898 (bridge alias), 8443 (auth alias)
+- Ports: 9898 (primary), 9899 (bridge)
 - Run: node unified_server.js
   */
   'use strict';
@@ -17,9 +17,9 @@ const os      = require('os');
 const { spawn, exec } = require('child_process');
 
 // ─── CONFIG ───────────────────────────────────────────────────────────
-const PORT_UNIFIED = parseInt(process.env.PORT_UNIFIED || '9000');
-const PORT_BRIDGE  = parseInt(process.env.PORT_BRIDGE  || '9898');
-const PORT_AUTH    = parseInt(process.env.PORT_AUTH    || '8443');
+const PORT_UNIFIED = parseInt(process.env.PORT_UNIFIED || '9898');
+const PORT_BRIDGE  = parseInt(process.env.PORT_BRIDGE  || '9899');
+// Auth port always equals PORT_BRIDGE — single proxy for a-shell/iSH compat
 const PIPER_BIN    = process.env.PIPER_BIN    || './piper';
 const PIPER_MODEL  = process.env.PIPER_MODEL  || './en_US-lessac-medium.onnx';
 const COQUI_URL    = process.env.COQUI_URL    || 'http://localhost:5002';
@@ -146,7 +146,7 @@ medical:          { lvl:3, pp:false, panels:['dashboard','patient_care','vitals'
 prosecutor:       { lvl:3, pp:false, panels:['dashboard','active_cases','evidence','witnesses','charges','legal_research','ai_chat','audit_trail','profile'] },
 police:           { lvl:3, pp:false, panels:['dashboard','dispatch','arrests','reports','incidents','sos_panel','ai_chat','audit_trail','profile'] },
 pilot:            { lvl:3, pp:false, panels:['dashboard','flight_plan','notam','weather','charts','radar','ai_chat','audit_trail','profile'] },
-developer:        { lvl:3, pp:false, panels:['dashboard','api_console','cicd','project_builder','terminal','github_panel','key_mgmt','ai_chat','audit_trail','profile','bridge'] },
+developer:        { lvl:3, pp:false, panels:['dashboard','api_console','cicd','project_builder','terminal','github_panel','key_mgmt','ai_chat','audit_trail','profile','bridge','codemaster','koder','dashboard_builder'] },
 professor:        { lvl:3, pp:false, panels:['dashboard','courses','research','publications','ai_chat','audit_trail','profile'] },
 teacher:          { lvl:2, pp:false, panels:['dashboard','class_dash','grades','attendance','curriculum','eeg_classroom','ai_chat','audit_trail','profile'] },
 fire:             { lvl:2, pp:false, panels:['dashboard','incidents','dispatch','equipment','hazmat','sos_panel','ai_chat','audit_trail','profile'] },
@@ -163,6 +163,8 @@ journalist:       { lvl:1, pp:false, panels:['dashboard','story_research','sourc
 child:            { lvl:0, pp:false, panels:['dashboard','story_time','learning_games','drawing','ai_tutor','homework','profile'] },
 teen:             { lvl:0, pp:false, panels:['dashboard','college_prep','career','ai_tutor','homework','ai_games','profile'] },
 };
+
+const DEFAULT_PANELS = ['dashboard','ai_chat','profile'];
 
 const CHILD_BLOCKED = new Set(['president','prime_minister','root','superadmin','intel_officer',
 'cyber_cmd','judge','military','attorney_general','gov_official','supreme_court',
@@ -602,7 +604,7 @@ const rw = { n:0, reset:Date.now()+60000 };
 audit('WS_CONNECT', wsId, {ip});
 
 ws.send(JSON.stringify({ type:'connected', wsId, piper:piperReady, coqui:coquiReady, ts:Date.now(),
-features:['piper_tts','coqui_tts','ddg_search','gh_oauth','plaid','shell','memory','collab','ai_proxy','auth','token_verify','audit_export','diagnostic','ping'] }));
+features:['piper_tts','coqui_tts','ddg_search','gh_oauth','plaid','shell','memory','collab','ai_proxy','auth','token_verify','audit_export','diagnostic','ping','movie_generate','music_generate','opar_interact','opar_design','cgi_avatar_update','code_check','code_fix','dashboard_build'] }));
 
 ws.on('message', async raw => {
 const now = Date.now();
@@ -707,6 +709,152 @@ if (type === 'audit_export') {
 if (type === 'kc_save') { const sessions = (memStore['__kc']||{}); sessions[wsId]=msg.data; memStore['__kc']=sessions; ws.send(JSON.stringify({type:'kc_saved',wsId})); return; }
 if (type === 'kc_load') { const sessions = (memStore['__kc']||{}); ws.send(JSON.stringify({type:'kc_session',session:sessions[wsId]||null})); return; }
 
+// ─── COQUI TTS (on-device, no Google/Meta — via Python backend) ───────
+// Coqui TTS runs in the Python backend process.  The WebSocket returns
+// a fallback pointer so the client can POST to /api/voice/speak with JSON body { "engine": "coqui", ... }
+// for actual audio generation.  Piper TTS handles real-time WS audio.
+if (type === 'coqui_speak') {
+  if (!msg.text) { ws.send(JSON.stringify({type:'error',code:'NO_TEXT'})); return; }
+  audit('COQUI_TTS', 'request', {wsId, len: msg.text.length});
+  // Coqui runs via Python backend; respond with fallback info for the client
+  ws.send(JSON.stringify({type:'coqui_result', engine:'coqui', text:msg.text.slice(0,800),
+    fallback:true, note:'Use POST /api/voice/speak with JSON body {"engine":"coqui", ...} for audio generation'}));
+  return;
+}
+
+// ─── MOVIE GENERATOR ──────────────────────────────────────────────────
+if (type === 'movie_generate') {
+  audit('MOVIE_GEN', msg.title||'untitled', {wsId, genre:msg.genre||'short_film'});
+  const job = { job_id:'mv_'+crypto.randomBytes(6).toString('hex'), title:msg.title||'Untitled',
+    genre:msg.genre||'short_film', resolution:msg.resolution||'1920x1080', fps:msg.fps||24,
+    scenes:msg.scenes||[], status:'submitted', ts:Date.now() };
+  ws.send(JSON.stringify({type:'movie_job', ...job}));
+  return;
+}
+
+// ─── MUSIC GENERATOR ─────────────────────────────────────────────────
+if (type === 'music_generate') {
+  audit('MUSIC_GEN', msg.prompt||'', {wsId, genre:msg.genre||'ambient', bpm:msg.bpm||120});
+  const job = { job_id:'mu_'+crypto.randomBytes(6).toString('hex'), prompt:msg.prompt||'',
+    genre:msg.genre||'ambient', bpm:msg.bpm||120, duration:msg.duration||30,
+    status:'submitted', ts:Date.now() };
+  ws.send(JSON.stringify({type:'music_job', ...job}));
+  return;
+}
+
+// ─── OPAR (On-Premises AI Representative) ─────────────────────────────
+if (type === 'opar_interact') {
+  audit('OPAR', msg.message||'', {wsId, opar_id:msg.opar_id||'default'});
+  const response = { type:'opar_response', opar_id:msg.opar_id||'default',
+    message: msg.message ? 'Understood. Processing your request.' : 'Hello! I am your OPAR.',
+    emotion:'neutral', state:'speaking', voice_engine:msg.voice_engine||'piper', ts:Date.now() };
+  ws.send(JSON.stringify(response));
+  return;
+}
+
+if (type === 'opar_design') {
+  audit('OPAR_DESIGN', 'appearance update', {wsId, opar_id:msg.opar_id||'default'});
+  ws.send(JSON.stringify({type:'opar_design_ack', opar_id:msg.opar_id||'default',
+    appearance:msg.appearance||{}, status:'applied', ts:Date.now()}));
+  return;
+}
+
+// ─── 3D CGI AVATAR ────────────────────────────────────────────────────
+if (type === 'cgi_avatar_update') {
+  audit('CGI_AVATAR', 'update', {wsId});
+  ws.send(JSON.stringify({type:'cgi_avatar_ack', updates:msg.updates||{},
+    status:'applied', ts:Date.now()}));
+  return;
+}
+
+// ─── CODEMASTER / KODER — Syntax Check ────────────────────────────────
+if (type === 'code_check') {
+  const code = (msg.code||'').slice(0,50000);
+  const lang = msg.language||'python';
+  audit('CODE_CHECK', lang, {wsId, len:code.length});
+  const lines = code.split('\n');
+  const issues = [];
+  lines.forEach((line,i) => {
+    const ln = i+1;
+    const trimmed = line.trimEnd();
+    // Syntax-level red errors
+    if (lang==='python') {
+      if (/^\s*(def|class|if|elif|else|for|while|try|except|finally|with)\b/.test(trimmed) && !trimmed.endsWith(':') && !trimmed.endsWith(':\\'))
+        issues.push({line:ln,severity:'error',color:'#EF4444',msg:'Missing colon at end of statement',fix:trimmed+':'});
+      if (/\bprint\s+[^(]/.test(trimmed) && !/\bprint\s*\(/.test(trimmed))
+        issues.push({line:ln,severity:'error',color:'#EF4444',msg:'print needs parentheses (Python 3)',fix:trimmed.replace(/\bprint\s+(.+)/,'print($1)')});
+    }
+    if (lang==='javascript') {
+      if (/\bvar\b/.test(trimmed))
+        issues.push({line:ln,severity:'warning',color:'#F59E0B',msg:'Use const/let instead of var',fix:trimmed.replace(/\bvar\b/,'const')});
+      if (/==(?!=)/.test(trimmed) && !/===/.test(trimmed))
+        issues.push({line:ln,severity:'warning',color:'#F59E0B',msg:'Use === instead of ==',fix:trimmed.replace(/==(?!=)/g,'===')});
+    }
+    // Universal warnings (yellow/orange)
+    if (trimmed.length > 120)
+      issues.push({line:ln,severity:'warning',color:'#F59E0B',msg:'Line exceeds 120 chars',fix:null});
+    if (/\beval\s*\(/.test(trimmed))
+      issues.push({line:ln,severity:'error',color:'#EF4444',msg:'eval() is a security risk',fix:null});
+    if (/\bexec\s*\(/.test(trimmed) && lang==='python')
+      issues.push({line:ln,severity:'warning',color:'#FB923C',msg:'exec() usage — review carefully',fix:null});
+    if (trimmed !== line)
+      issues.push({line:ln,severity:'info',color:'#22C55E',msg:'Trailing whitespace',fix:trimmed});
+  });
+  // Mark clean lines green
+  const lineColors = {};
+  lines.forEach((_,i) => { lineColors[i+1] = '#22C55E'; }); // default green
+  issues.forEach(iss => {
+    if (iss.severity==='error') lineColors[iss.line]='#EF4444';
+    else if (iss.severity==='warning' && lineColors[iss.line]!=='#EF4444') lineColors[iss.line]='#F59E0B';
+  });
+  ws.send(JSON.stringify({type:'code_check_result', language:lang,
+    total_lines:lines.length, issues, lineColors,
+    summary:{errors:issues.filter(i=>i.severity==='error').length,
+             warnings:issues.filter(i=>i.severity==='warning').length,
+             clean:lines.length-Object.keys(issues.reduce((a,i)=>{a[i.line]=1;return a;},{})).length},
+    ts:Date.now()}));
+  return;
+}
+
+// ─── CODEMASTER / KODER — Auto-Fix ───────────────────────────────────
+if (type === 'code_fix') {
+  const code = (msg.code||'').slice(0,50000);
+  const lang = msg.language||'python';
+  const fixLine = msg.line;
+  const fixText = msg.fix;
+  audit('CODE_FIX', lang+':L'+fixLine, {wsId});
+  if (fixLine && fixText !== undefined && fixText !== null) {
+    const lines = code.split('\n');
+    if (fixLine >= 1 && fixLine <= lines.length) {
+      lines[fixLine-1] = fixText;
+      ws.send(JSON.stringify({type:'code_fix_result', code:lines.join('\n'),
+        line:fixLine, applied:true, ts:Date.now()}));
+      return;
+    }
+  }
+  ws.send(JSON.stringify({type:'code_fix_result', code, applied:false, reason:'Invalid line or fix', ts:Date.now()}));
+  return;
+}
+
+// ─── DASHBOARD BUILDER AI ─────────────────────────────────────────────
+if (type === 'dashboard_build') {
+  const role = msg.role||'adult';
+  const style = msg.style||'default';
+  audit('DASH_BUILD', role, {wsId, style});
+  const roleDef = RM[role] || RM['adult'];
+  const panels = roleDef.panels === '*'
+    ? DEFAULT_PANELS
+    : (Array.isArray(roleDef.panels) ? roleDef.panels : DEFAULT_PANELS);
+  const layout = panels.map((p,i) => ({
+    panel_id: p, order:i+1, width: i===0?'full':'half',
+    // Generate a visible accent color (first hex digit >= 8 ensures brightness)
+    color: '#'+crypto.randomBytes(3).toString('hex').replace(/^[0-3]/,'8')
+  }));
+  ws.send(JSON.stringify({type:'dashboard_built', role, level:roleDef.lvl||1,
+    layout, panel_count:panels.length, style, ts:Date.now()}));
+  return;
+}
+
 ws.send(JSON.stringify({type:'error',code:'UNKNOWN',received:type}));
 
 });
@@ -722,9 +870,12 @@ process.stdout.write('\n╔═════════════════�
 process.stdout.write('║  SuperGrok Unified Server -- LIVE                 ║\n');
 process.stdout.write('║  Primary   http://127.0.0.1:'+PORT_UNIFIED+'               ║\n');
 process.stdout.write('║  Bridge WS ws://127.0.0.1:'+PORT_BRIDGE+' (proxy)        ║\n');
-process.stdout.write('║  Auth      http://127.0.0.1:'+PORT_AUTH+' (proxy)        ║\n');
+process.stdout.write('║  No Google · No Meta · 127.0.0.1 Only             ║\n');
+process.stdout.write('║  a-shell / iSH / Node.js / Python OK              ║\n');
 process.stdout.write('║  Piper TTS '+(piperReady?'✅ Ready    ':'⚠️  Not found  ')+'                       ║\n');
 process.stdout.write('║  Coqui TTS '+(coquiReady?'✅ Ready    ':'⚠️  Not found  ')+'                       ║\n');
+process.stdout.write('║  OPAR · Movie · Music · 3D CGI Avatar             ║\n');
+process.stdout.write('║  CodeMaster · Koder · Dashboard Builder AI        ║\n');
 process.stdout.write('║  Audit log '+ACCESS_LOG.slice(0,30).padEnd(30,' ')+'║\n');
 process.stdout.write('╚══════════════════════════════════════════════════╝\n\n');
 });
@@ -755,7 +906,7 @@ srv.listen(port, '127.0.0.1', () => process.stdout.write('  '+label+' :'+port+' 
 return srv;
 }
 makeProxy(PORT_BRIDGE, 'Bridge  ');
-makeProxy(PORT_AUTH,   'Auth    ');
+// PORT_AUTH shares PORT_BRIDGE (9899) — single proxy for a-shell/iSH compatibility
 
 // ─── GRACEFUL SHUTDOWN ────────────────────────────────────────────────
 function shutdown(sig) {

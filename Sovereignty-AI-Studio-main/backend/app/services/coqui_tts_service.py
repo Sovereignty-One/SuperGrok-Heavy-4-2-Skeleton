@@ -25,7 +25,7 @@ import logging
 import tempfile
 import subprocess
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 logger = logging.getLogger(__name__)
 
@@ -56,8 +56,8 @@ class CoquiTTSService:
         self._tts = None
         self._available = self._check_available()
 
-    @property
     def is_available(self) -> bool:
+        """Return True if the Coqui TTS engine is installed and ready."""
         return self._available
 
     def _check_available(self) -> bool:
@@ -90,6 +90,7 @@ class CoquiTTSService:
         speaker: Optional[str] = None,
         language: Optional[str] = None,
         speed: float = 1.0,
+        model_name: Optional[str] = None,
     ) -> Optional[str]:
         """
         Convert text to speech using Coqui TTS.
@@ -100,6 +101,7 @@ class CoquiTTSService:
             speaker: Speaker ID for multi-speaker models.
             language: Language code for multilingual models.
             speed: Playback speed multiplier.
+            model_name: Override model (ignored when using the TTS library directly).
 
         Returns:
             Path to generated WAV file, or None on failure.
@@ -117,7 +119,7 @@ class CoquiTTSService:
             return None
 
         try:
-            kwargs = {}
+            kwargs: Dict[str, Any] = {}
             if speaker:
                 kwargs["speaker"] = speaker
             if language:
@@ -137,8 +139,15 @@ class CoquiTTSService:
             logger.error("Coqui TTS error: %s", e)
             return None
 
+    def get_available_models(self) -> List[Dict[str, str]]:
+        """Return the list of available Coqui TTS models."""
+        return [
+            {"id": v, "name": k, "lang": k.split("-")[0]}
+            for k, v in COQUI_MODELS.items()
+        ]
+
     def list_models(self) -> list:
-        """List available Coqui TTS models."""
+        """List available Coqui TTS models (alias)."""
         return list(COQUI_MODELS.items())
 
     def speak_alert(
@@ -177,6 +186,15 @@ class CoquiTTSService:
         logger.warning("No audio player found for playback")
         return False
 
+    def get_status(self) -> Dict[str, Any]:
+        """Return service status information."""
+        return {
+            "service": "coqui_tts",
+            "status": "online" if self._available else "unavailable",
+            "default_model": self.model_name,
+            "available_models": len(COQUI_MODELS),
+        }
+
 
 def run_server(host: str = "127.0.0.1", port: int = 5002, model: str = "en-default"):
     """Run Coqui TTS as an HTTP server compatible with the Unified Server bridge."""
@@ -194,8 +212,8 @@ def run_server(host: str = "127.0.0.1", port: int = 5002, model: str = "en-defau
         subprocess.run(cmd)
 
 
-# Global instance (lazy — only loads model when first used)
-coqui_service = CoquiTTSService()
+# Module-level singleton — name matches voice.py imports
+coqui_tts_service = CoquiTTSService()
 
 
 if __name__ == "__main__":

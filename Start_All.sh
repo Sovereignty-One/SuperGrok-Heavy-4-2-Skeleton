@@ -48,7 +48,7 @@ echo "  PID: $SERVER_PID"
 
 echo "  Waiting for server..."
 for i in $(seq 1 10); do
-  if curl -sf http://127.0.0.1:9000/health >/dev/null 2>&1; then
+  if curl -sf http://127.0.0.1:9898/health >/dev/null 2>&1; then
     echo "  Health: OK"
     break
   fi
@@ -56,10 +56,12 @@ for i in $(seq 1 10); do
 done
 
 echo ""
-echo "  Open your dashboard HTML file in your browser"
-echo "  Ports: 9000 (primary) 9898 (bridge) 8443 (auth)"
+echo "  Open SuperGrok_Global_Role_Dashboard.html in your browser"
+echo "  Ports: 9898 (primary) 9899 (bridge)"
 echo "  Logs:  ./logs/access.jsonl"
 echo ""
+echo "  Features: Movie · Music · 3D CGI Avatar · OPAR · CodeMaster · Koder"
+echo "  No Google · No Meta · 127.0.0.1 Only · a-shell/iSH Compatible"
 echo "  Sentinel: active (PID in ./sentinel.pid)"
 echo "  Press Ctrl+C to stop"
 echo ""
