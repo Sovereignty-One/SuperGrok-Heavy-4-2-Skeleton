@@ -36,10 +36,15 @@ class Settings(BaseSettings):
 
 def _get_settings() -> Settings:
     """Lazy settings loader — generates a secret_key if none is provided."""
+    import logging
     s = Settings()
     if not s.secret_key:
         import secrets
         s.secret_key = secrets.token_urlsafe(48)
+        logging.getLogger(__name__).warning(
+            "SECRET_KEY not set — auto-generated a temporary key. "
+            "Set SECRET_KEY in .env for production to preserve sessions across restarts."
+        )
     return s
 
 
