@@ -178,7 +178,7 @@ class CoquiTTSService:
         return False
 
 
-def run_server(host: str = "0.0.0.0", port: int = 5002, model: str = "en-default"):
+def run_server(host: str = "127.0.0.1", port: int = 5002, model: str = "en-default"):
     """Run Coqui TTS as an HTTP server compatible with the Unified Server bridge."""
     try:
         from TTS.server.server import create_app

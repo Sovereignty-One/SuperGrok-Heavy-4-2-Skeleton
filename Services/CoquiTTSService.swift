@@ -284,7 +284,7 @@ class CoquiTTSService: ObservableObject {
 
     // MARK: - System Fallback
 
-    private func speakWithSystem(_ text: String, speed: Float = 0.5) {
+    private func speakWithSystem(_ text: String, speed: Float = 1.0) {
         let utterance = AVSpeechUtterance(string: text)
         utterance.rate = speed * AVSpeechUtteranceDefaultSpeechRate
         utterance.voice = AVSpeechSynthesisVoice(language: "en-US")

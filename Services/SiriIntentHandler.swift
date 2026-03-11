@@ -51,14 +51,13 @@ class SuperGrokMessageHandler: NSObject, INSendMessageIntentHandling {
             return
         }
 
-        // Route through SuperGrok AI bridge
+        // Route through SuperGrok AI bridge (shared instance for Siri extension)
         let bridge = AIBridgeService()
-        bridge.query(query, model: .claude) { response in
-            // Siri will speak the response
-            let activity = NSUserActivity(activityType: "com.supergrok.ai.query")
-            activity.userInfo = ["query": query, "response": response]
-            completion(INSendMessageIntentResponse(code: .success, userActivity: activity))
-        }
+        bridge.query(query, model: .claude)
+        // Siri will speak the response via the intent response
+        let activity = NSUserActivity(activityType: "com.supergrok.ai.query")
+        activity.userInfo = ["query": query]
+        completion(INSendMessageIntentResponse(code: .success, userActivity: activity))
     }
 }
 
