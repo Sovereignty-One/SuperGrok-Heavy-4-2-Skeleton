@@ -1,157 +1,242 @@
 """
-Coqui TTS Integration Service — open-source text-to-speech engine.
+Coqui TTS Service — Real neural voice synthesis for SuperGrok.
 
-Provides on-device, privacy-respecting TTS using the Coqui TTS engine
-(Mozilla-licensed).  Falls back gracefully when the engine is not installed.
-All invocations are audit-logged for court-admissible compliance.
+Uses the Coqui TTS library (coqui-ai/TTS) for high-quality,
+multi-speaker, multilingual text-to-speech. Supports:
+  - XTTS v2 (multilingual, voice cloning)
+  - Tacotron2-DDC (fast English)
+  - VITS (fast multilingual)
+
+Can run as a standalone HTTP server or be imported as a library.
+
+Usage:
+  # As HTTP server (port 5002):
+  python coqui_tts_service.py --serve
+
+  # As library:
+  from coqui_tts_service import CoquiTTSService
+  svc = CoquiTTSService()
+  svc.text_to_speech("Hello world", "/tmp/out.wav")
 """
 import os
-import subprocess
-import tempfile
+import sys
+import json
 import logging
-from typing import Optional, Dict, Any, List
+import tempfile
+import subprocess
+from pathlib import Path
+from typing import Optional, List, Dict, Any
 
 logger = logging.getLogger(__name__)
 
+# Available Coqui models (name → model_name for TTS library)
+COQUI_MODELS = {
+    "en-default":  "tts_models/en/ljspeech/tacotron2-DDC",
+    "en-vctk":     "tts_models/en/vctk/vits",
+    "en-jenny":    "tts_models/en/jenny/jenny",
+    "multi-xtts":  "tts_models/multilingual/multi-dataset/xtts_v2",
+    "de-thorsten": "tts_models/de/thorsten/tacotron2-DDC",
+    "es-css10":    "tts_models/es/css10/vits",
+    "fr-css10":    "tts_models/fr/css10/vits",
+    "ja-kokoro":   "tts_models/ja/kokoro/tacotron2-DDC",
+}
+
 
 class CoquiTTSService:
-    """Text-to-speech via the open-source Coqui TTS engine."""
+    """Coqui TTS service with model management and audio generation."""
 
-    # Supported models shipped with coqui-tts (all open-license)
-    AVAILABLE_MODELS: List[Dict[str, str]] = [
-        {"id": "tts_models/en/ljspeech/tacotron2-DDC", "name": "LJSpeech Tacotron2", "lang": "en"},
-        {"id": "tts_models/en/ljspeech/glow-tts", "name": "LJSpeech GlowTTS", "lang": "en"},
-        {"id": "tts_models/en/vctk/vits", "name": "VCTK VITS (multi-speaker)", "lang": "en"},
-        {"id": "tts_models/de/thorsten/tacotron2-DDC", "name": "Thorsten (German)", "lang": "de"},
-        {"id": "tts_models/es/mai/tacotron2-DDC", "name": "Mai (Spanish)", "lang": "es"},
-        {"id": "tts_models/fr/mai/tacotron2-DDC", "name": "Mai (French)", "lang": "fr"},
-    ]
+    def __init__(self, model_name: str = "en-default"):
+        """
+        Initialize Coqui TTS service.
 
-    def __init__(self, model_name: Optional[str] = None):
-        self.model_name = model_name or "tts_models/en/ljspeech/tacotron2-DDC"
-        self._executable = self._find_executable()
-        if self._executable:
-            logger.info("CoquiTTSService ready — binary: %s", self._executable)
-        else:
-            logger.warning("Coqui TTS binary not found; service will return fallback responses")
+        Args:
+            model_name: Key from COQUI_MODELS or a full tts_models/... path.
+        """
+        self.model_name = COQUI_MODELS.get(model_name, model_name)
+        self._tts = None
+        self._available = self._check_available()
 
-    # ------------------------------------------------------------------
-    # Discovery
-    # ------------------------------------------------------------------
+    def is_available(self) -> bool:
+        """Return True if the Coqui TTS engine is installed and ready."""
+        return self._available
 
-    @staticmethod
-    def _find_executable() -> Optional[str]:
-        """Locate the ``tts`` CLI that ships with coqui-tts."""
-        for candidate in ["/usr/local/bin/tts", "/usr/bin/tts"]:
-            if os.path.isfile(candidate):
-                return candidate
+    def _check_available(self) -> bool:
+        """Check if the TTS library is installed."""
         try:
-            result = subprocess.run(
-                ["which", "tts"], capture_output=True, text=True, timeout=5,
+            import TTS  # noqa: F401
+            return True
+        except ImportError:
+            logger.warning(
+                "Coqui TTS not installed. Install with: pip install TTS"
             )
-            if result.returncode == 0 and result.stdout.strip():
-                return result.stdout.strip()
-        except Exception as exc:
-            logger.debug("Error while trying to locate 'tts' executable via 'which': %s", exc)
-        return None
+            return False
 
-    # ------------------------------------------------------------------
-    # Core TTS
-    # ------------------------------------------------------------------
+    def _get_tts(self):
+        """Lazy-load the TTS model."""
+        if self._tts is None:
+            try:
+                from TTS.api import TTS as CoquiTTS
+                self._tts = CoquiTTS(model_name=self.model_name, progress_bar=False)
+                logger.info("Coqui TTS model loaded: %s", self.model_name)
+            except Exception as e:
+                logger.error("Failed to load Coqui model %s: %s", self.model_name, e)
+                self._available = False
+        return self._tts
 
     def text_to_speech(
         self,
         text: str,
         output_file: Optional[str] = None,
+        speaker: Optional[str] = None,
+        language: Optional[str] = None,
+        speed: float = 1.0,
         model_name: Optional[str] = None,
-        speaker_id: Optional[str] = None,
     ) -> Optional[str]:
-        """Convert *text* to a WAV file using Coqui TTS.
-
-        Returns the path to the generated audio file, or ``None`` on failure.
         """
-        if not self._executable:
-            logger.warning("Coqui TTS not installed — skipping synthesis")
+        Convert text to speech using Coqui TTS.
+
+        Args:
+            text: Text to synthesize.
+            output_file: Output WAV path (auto-generated if None).
+            speaker: Speaker ID for multi-speaker models.
+            language: Language code for multilingual models.
+            speed: Playback speed multiplier.
+            model_name: Override model (ignored when using the TTS library directly).
+
+        Returns:
+            Path to generated WAV file, or None on failure.
+        """
+        if not self._available:
+            logger.warning("Coqui TTS not available, skipping")
             return None
 
         if not output_file:
             fd, output_file = tempfile.mkstemp(suffix=".wav")
             os.close(fd)
 
-        model = model_name or self.model_name
-        cmd: list = [
-            self._executable,
-            "--text", text[:2000],
-            "--model_name", model,
-            "--out_path", output_file,
-        ]
-        if speaker_id:
-            cmd.extend(["--speaker_idx", speaker_id])
+        tts = self._get_tts()
+        if tts is None:
+            return None
 
         try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=60,
-            )
-            if result.returncode == 0 and os.path.isfile(output_file):
-                logger.info("Coqui TTS generated: %s", output_file)
+            kwargs: Dict[str, Any] = {}
+            if speaker:
+                kwargs["speaker"] = speaker
+            if language:
+                kwargs["language"] = language
+            if speed != 1.0:
+                kwargs["speed"] = speed
+
+            tts.tts_to_file(text=text, file_path=output_file, **kwargs)
+
+            if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
+                logger.info("Generated Coqui TTS audio: %s", output_file)
                 return output_file
-            logger.error("Coqui TTS failed (rc=%d): %s", result.returncode, result.stderr[:500])
-        except subprocess.TimeoutExpired:
-            logger.error("Coqui TTS timed out")
-        except Exception as exc:
-            logger.error("Coqui TTS error: %s", exc)
-        return None
+            else:
+                logger.error("Coqui TTS produced empty output")
+                return None
+        except Exception as e:
+            logger.error("Coqui TTS error: %s", e)
+            return None
 
-    def speak_alert(self, title: str, message: str, severity: str = "medium") -> bool:
-        """Speak an alert via Coqui TTS, returning *True* on success."""
-        prefix = "Alert! " if severity in ("high", "critical") else ""
-        audio = self.text_to_speech(f"{prefix}{title}. {message}")
-        if audio:
-            return self._play_audio(audio)
-        return False
+    def get_available_models(self) -> List[Dict[str, str]]:
+        """Return the list of available Coqui TTS models."""
+        return [
+            {"id": v, "name": k, "lang": k.split("-")[0]}
+            for k, v in COQUI_MODELS.items()
+        ]
 
-    # ------------------------------------------------------------------
-    # Playback
-    # ------------------------------------------------------------------
+    def list_models(self) -> list:
+        """List available Coqui TTS models (alias)."""
+        return list(COQUI_MODELS.items())
 
-    @staticmethod
-    def _play_audio(audio_file: str) -> bool:
-        """Play *audio_file* using the first available system player."""
+    def speak_alert(
+        self,
+        title: str,
+        message: str,
+        severity: str = "medium",
+    ) -> bool:
+        """Speak an alert using Coqui TTS with system audio playback."""
+        if severity in ("high", "critical"):
+            text = f"Alert! {title}. {message}"
+        else:
+            text = f"{title}. {message}"
+
+        audio_file = self.text_to_speech(text)
+        if not audio_file:
+            return False
+
+        return self._play_audio(audio_file)
+
+    def _play_audio(self, audio_file: str) -> bool:
+        """Play audio using available system player."""
         players = [
             ["aplay", audio_file],
             ["afplay", audio_file],
-            ["powershell", "-c", f"(New-Object Media.SoundPlayer '{audio_file}').PlaySync()"],
+            ["powershell", "-c",
+             f"(New-Object Media.SoundPlayer '{audio_file}').PlaySync()"],
         ]
         for cmd in players:
             try:
-                r = subprocess.run(cmd, capture_output=True, timeout=15)
-                if r.returncode == 0:
+                result = subprocess.run(cmd, capture_output=True, timeout=30)
+                if result.returncode == 0:
                     return True
             except (FileNotFoundError, subprocess.TimeoutExpired):
                 continue
-        logger.warning("No audio player found for %s", audio_file)
+        logger.warning("No audio player found for playback")
         return False
 
-    # ------------------------------------------------------------------
-    # Metadata
-    # ------------------------------------------------------------------
-
-    def get_available_models(self) -> List[Dict[str, str]]:
-        return list(self.AVAILABLE_MODELS)
-
-    def is_available(self) -> bool:
-        """Return True if the Coqui TTS binary is found and ready."""
-        return self._executable is not None
-
     def get_status(self) -> Dict[str, Any]:
+        """Return service status information."""
         return {
             "service": "coqui_tts",
-            "status": "online" if self._executable else "unavailable",
-            "binary": self._executable,
+            "status": "online" if self._available else "unavailable",
             "default_model": self.model_name,
-            "available_models": len(self.AVAILABLE_MODELS),
+            "available_models": len(COQUI_MODELS),
         }
 
 
-# Module-level singleton
+def run_server(host: str = "127.0.0.1", port: int = 5002, model: str = "en-default"):
+    """Run Coqui TTS as an HTTP server compatible with the Unified Server bridge."""
+    try:
+        from TTS.server.server import create_app
+        app = create_app(model_name=COQUI_MODELS.get(model, model))
+        logger.info("Starting Coqui TTS server on %s:%d with model %s", host, port, model)
+        app.run(host=host, port=port)
+    except ImportError:
+        # Fallback: use tts-server CLI
+        model_path = COQUI_MODELS.get(model, model)
+        cmd = [sys.executable, "-m", "TTS.server.server",
+               "--model_name", model_path, "--port", str(port)]
+        logger.info("Starting Coqui TTS server: %s", " ".join(cmd))
+        subprocess.run(cmd)
+
+
+# Module-level singleton — name matches voice.py imports
 coqui_tts_service = CoquiTTSService()
+
+
+if __name__ == "__main__":
+    import argparse
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [COQUI] %(message)s")
+
+    parser = argparse.ArgumentParser(description="Coqui TTS Service")
+    parser.add_argument("--serve", action="store_true", help="Run as HTTP server")
+    parser.add_argument("--port", type=int, default=5002, help="Server port")
+    parser.add_argument("--model", default="en-default", help="Model name")
+    parser.add_argument("--text", help="Text to speak (one-shot mode)")
+    parser.add_argument("--output", help="Output WAV file path")
+    args = parser.parse_args()
+
+    if args.serve:
+        run_server(port=args.port, model=args.model)
+    elif args.text:
+        svc = CoquiTTSService(model_name=args.model)
+        out = svc.text_to_speech(args.text, output_file=args.output)
+        if out:
+            print(f"Audio saved to: {out}")
+        else:
+            print("TTS failed", file=sys.stderr)
+            sys.exit(1)
+    else:
+        parser.print_help()
