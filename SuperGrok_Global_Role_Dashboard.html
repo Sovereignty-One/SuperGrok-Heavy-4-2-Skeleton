@@ -3171,7 +3171,7 @@ function cmRenderResults(data){
       issuesByLine[ln].forEach(function(iss){
         html+='<span class="cm-issue" style="color:'+iss.color+'">'+esc(iss.msg)+'</span>';
         if(iss.fix!==null&&iss.fix!==undefined){
-          html+='<span class="cm-fix" onclick="cmApplyFix('+ln+',this)" data-fix="'+esc(iss.fix).replace(/"/g,'&quot;')+'">\u26A1 Fix</span>';
+          html+='<span class="cm-fix" onclick="cmApplyFix('+ln+',this)" data-fix="'+esc(iss.fix)+'">\u26A1 Fix</span>';
         }
       });
     }

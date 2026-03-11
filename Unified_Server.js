@@ -690,6 +690,7 @@ if (type === 'dashboard_build') {
   const panels = roleDef.panels === '*' ? Object.keys(RM).slice(0,12) : (Array.isArray(roleDef.panels) ? roleDef.panels : ['dashboard','ai_chat','profile']);
   const layout = panels.map((p,i) => ({
     panel_id: p, order:i+1, width: i===0?'full':'half',
+    // Generate a visible accent color (first hex digit >= 8 ensures brightness)
     color: '#'+crypto.randomBytes(3).toString('hex').replace(/^[0-3]/,'8')
   }));
   ws.send(JSON.stringify({type:'dashboard_built', role, level:roleDef.lvl||1,
