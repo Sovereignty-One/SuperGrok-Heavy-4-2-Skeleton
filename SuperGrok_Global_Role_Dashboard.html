@@ -1248,6 +1248,7 @@ developer:{lbl:'Developer',icon:'💻',lvl:4,color:'#8b5cf6',cat:'tech',
     {g:'Development',i:[{id:'dashboard',ic:'📊',lb:'Dashboard'},{id:'api_console',ic:'🔌',lb:'API Console'},{id:'terminal',ic:'⌨️',lb:'Quantum Terminal'},{id:'github_panel',ic:'🐙',lb:'GitHub'},{id:'cicd',ic:'🚀',lb:'CI/CD'},{id:'project_builder',ic:'🛠️',lb:'Project Builder'}]},
     {g:'AI Tools',i:[{id:'ai_chat',ic:'🤖',lb:'Code AI'},{id:'ddg_browser',ic:'🦆',lb:'Dev Search'},{id:'stream_studio',ic:'🎬',lb:'Stream Studio'}]},
     {g:'Creative AI',i:[{id:'voice_studio',ic:'🎤',lb:'Voice Studio'},{id:'movie_generator',ic:'🎬',lb:'Movies'},{id:'music_studio',ic:'🎵',lb:'Music'},{id:'cgi_avatar',ic:'🧑',lb:'3D Avatar'},{id:'opar_panel',ic:'🏠',lb:'OPAR'}]},
+    {g:'Code Tools',i:[{id:'codemaster',ic:'📝',lb:'CodeMaster'},{id:'koder',ic:'⌨️',lb:'KODER'},{id:'dashboard_builder',ic:'🤖',lb:'Dash Builder'}]},
     {g:'System',i:[{id:'audit_trail',ic:'🔐',lb:'Audit Chain'},{id:'key_mgmt',ic:'🔑',lb:'Key Mgmt'},{id:'memory',ic:'🧠',lb:'Memory Cards'},{id:'profile',ic:'👤',lb:'Profile'}]}
   ]},
 superadmin:{lbl:'Super Administrator',icon:'🕹️',lvl:5,color:'#0891b2',cat:'tech',
@@ -1257,6 +1258,7 @@ superadmin:{lbl:'Super Administrator',icon:'🕹️',lvl:5,color:'#0891b2',cat:'
     {g:'Super Control',i:[{id:'dashboard',ic:'📊',lb:'Dashboard'},{id:'system_ctrl',ic:'⚙️',lb:'System Control'},{id:'role_editor',ic:'🎭',lb:'Role Editor'},{id:'error_console',ic:'🪲',lb:'Error Console'},{id:'user_mgmt',ic:'👥',lb:'User Mgmt'},{id:'key_mgmt',ic:'🔑',lb:'Key Mgmt'}]},
     {g:'Dev Tools',i:[{id:'terminal',ic:'⌨️',lb:'Quantum Terminal'},{id:'github_panel',ic:'🐙',lb:'GitHub'},{id:'cicd',ic:'🚀',lb:'CI/CD'},{id:'bridge',ic:'⚡',lb:'Bridge Config'},{id:'ai_chat',ic:'🤖',lb:'Unified AI'},{id:'stream_studio',ic:'🎬',lb:'Stream Studio'}]},
     {g:'Creative AI',i:[{id:'voice_studio',ic:'🎤',lb:'Voice Studio'},{id:'movie_generator',ic:'🎬',lb:'Movies'},{id:'music_studio',ic:'🎵',lb:'Music'},{id:'cgi_avatar',ic:'🧑',lb:'3D Avatar'},{id:'opar_panel',ic:'🏠',lb:'OPAR'}]},
+    {g:'Code Tools',i:[{id:'codemaster',ic:'📝',lb:'CodeMaster'},{id:'koder',ic:'⌨️',lb:'KODER'},{id:'dashboard_builder',ic:'🤖',lb:'Dash Builder'}]},
     {g:'Audit',i:[{id:'audit_trail',ic:'🔐',lb:'Full Audit'},{id:'memory',ic:'🧠',lb:'Memory Cards'},{id:'profile',ic:'👤',lb:'Profile'}]}
   ]},
 root:{lbl:'Root / Superuser',icon:'🔱',lvl:6,color:'#dc2626',cat:'tech',
@@ -1265,6 +1267,7 @@ root:{lbl:'Root / Superuser',icon:'🔱',lvl:6,color:'#dc2626',cat:'tech',
   nav:[
     {g:'Root Access',i:[{id:'dashboard',ic:'📊',lb:'Dashboard'},{id:'system_ctrl',ic:'⚙️',lb:'Full System'},{id:'killswitch',ic:'💀',lb:'Killswitch'},{id:'vault_wipe',ic:'🗑️',lb:'Vault Wipe'},{id:'key_mgmt',ic:'🔑',lb:'Key Mgmt'}]},
     {g:'Creative AI',i:[{id:'voice_studio',ic:'🎤',lb:'Voice Studio'},{id:'movie_generator',ic:'🎬',lb:'Movies'},{id:'music_studio',ic:'🎵',lb:'Music'},{id:'cgi_avatar',ic:'🧑',lb:'3D Avatar'},{id:'opar_panel',ic:'🏠',lb:'OPAR'}]},
+    {g:'Code Tools',i:[{id:'codemaster',ic:'📝',lb:'CodeMaster'},{id:'koder',ic:'⌨️',lb:'KODER'},{id:'dashboard_builder',ic:'🤖',lb:'Dash Builder'}]},
     {g:'Dev',i:[{id:'terminal',ic:'⌨️',lb:'Root Terminal'},{id:'github_panel',ic:'🐙',lb:'GitHub'},{id:'audit_trail',ic:'🔐',lb:'Full Audit'},{id:'profile',ic:'👤',lb:'Profile'}]}
   ]},
 undercover:{lbl:'Undercover Agent',icon:'🕵️',lvl:5,color:'#111827',cat:'tech',
@@ -2205,9 +2208,153 @@ h+=‘<div class="ir"><select class="inp" id="oparLocation"><option>living_room<
 h+=‘<button class="btn bs" style="margin-top:6px" onclick="Bridge.wsSend({type:‘opar_design’,opar_id:‘default’,appearance:{location:el(‘oparLocation’).value}});toast(‘Location updated’,‘ok’)">📍 Move OPAR</button>’;
 h+=‘<div class="banner-i" style="margin-top:8px">OPAR runs entirely on-premises at 127.0.0.1:9898. No data leaves your home network. Every interaction is HMAC-SHA256 audit-logged for court admissibility.</div>’;
 h+=‘</div>’;
+h+=‘<div class="card"><div class="ct">🧑 OPAR Human Appearance Designer</div>’;
+h+=kv(‘Body Build’,‘<select class="inp" id="oparBuild" style="width:140px"><option>athletic</option><option>average</option><option>slim</option><option>stocky</option><option>tall_lean</option></select>’);
+h+=kv(‘Gender Pres.’,‘<select class="inp" id="oparGender" style="width:120px"><option>neutral</option><option>masculine</option><option>feminine</option><option>androgynous</option></select>’);
+h+=kv(‘Skin Tone’,‘<input type="color" id="oparSkin" value="#D4A574" style="width:40px;height:24px;border:none;cursor:pointer">’);
+h+=kv(‘Hair Style’,‘<select class="inp" id="oparHair" style="width:130px"><option>short_neat</option><option>long_flowing</option><option>curly</option><option>braided</option><option>bald</option><option>ponytail</option></select>’);
+h+=kv(‘Eye Color’,‘<input type="color" id="oparEyes" value="#4A90D9" style="width:40px;height:24px;border:none;cursor:pointer">’);
+h+=kv(‘Clothing’,‘<select class="inp" id="oparClothing" style="width:140px"><option>home_casual</option><option>smart_casual</option><option>professional</option><option>athleisure</option><option>formal</option></select>’);
+h+=kv(‘Age Appear.’,‘<input class="inp" id="oparAge" type="number" value="30" min="18" max="80" style="width:60px">’);
+h+=‘<button class="btn bp" style="margin-top:8px" onclick="Bridge.wsSend({type:’opar_design‘,opar_id:’default‘,appearance:{build:el(’oparBuild‘).value,gender:el(’oparGender‘).value,skin_tone:el(’oparSkin‘).value,hair_style:el(’oparHair‘).value,eye_color:el(’oparEyes‘).value,clothing:el(’oparClothing‘).value,apparent_age:parseInt(el(’oparAge‘).value)}});toast(’OPAR appearance updated‘,’ok‘)">🎨 Apply Human Design</button>’;
+h+=‘</div>’;
+h+=‘<div class="card"><div class="ct">🧠 OPAR Personality & Daily Life</div>’;
+h+=kv(‘Personality’,‘<select class="inp" id="oparPersonality" style="width:140px"><option>friendly_helper</option><option>professional</option><option>warm_companion</option><option>witty_conversant</option><option>calm_mentor</option></select>’);
+h+=kv(‘Wake Greeting’,‘<input class="inp" id="oparGreeting" value="Good morning! How can I help today?" style="width:250px">’);
+h+=kv(‘Active Hours’,‘<input class="inp" id="oparHoursStart" type="time" value="06:00" style="width:90px"> to <input class="inp" id="oparHoursEnd" type="time" value="23:00" style="width:90px">’);
+h+=kv(‘Presence Mode’,‘<select class="inp" id="oparPresence" style="width:130px"><option>always_visible</option><option>on_demand</option><option>scheduled</option><option>ambient</option></select>’);
+h+=kv(‘Daily Routines’,tag(‘Morning greet · Task remind · Weather brief · Evening wind-down’,‘tb2’));
+h+=kv(‘Memory’,tag(‘Persistent · On-Device · Encrypted’,‘tg’));
+h+=‘</div>’;
 return h;
 };
 
+
+
+// ── CODEMASTER IDE — Full Syntax Analysis ────────────────────────────
+PANELS.codemaster = function(){
+var h=ph(‘CodeMaster IDE’,‘// Visible Code · Syntax Colors · Red=Error · Yellow=Needs Work · Green=Good · Clickable Fixes’);
+h+=comp([‘Python’,‘JavaScript’,‘Live Syntax’,‘Red Errors’,‘Yellow Warnings’,‘Green Clean’,‘Auto-Fix’,‘No Cloud’]);
+h+=‘<style>’;
+h+=‘.cm-line{font-family:monospace;font-size:12px;padding:2px 8px;display:flex;border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer;transition:background .15s}’;
+h+=‘.cm-line:hover{background:rgba(255,255,255,.06)}’;
+h+=‘.cm-ln{width:36px;text-align:right;padding-right:8px;user-select:none;opacity:.5;flex-shrink:0}’;
+h+=‘.cm-code{flex:1;white-space:pre;overflow-x:auto}’;
+h+=‘.cm-err{background:rgba(239,68,68,.12);border-left:3px solid #EF4444}’;
+h+=‘.cm-warn{background:rgba(245,158,11,.10);border-left:3px solid #F59E0B}’;
+h+=‘.cm-good{border-left:3px solid #22C55E}’;
+h+=‘.cm-fix{display:inline-block;margin-left:8px;padding:1px 7px;font-size:10px;border-radius:4px;cursor:pointer;border:1px solid rgba(255,255,255,.2);background:rgba(34,197,94,.15);color:#22C55E}’;
+h+=‘.cm-fix:hover{background:rgba(34,197,94,.35)}’;
+h+=‘.cm-issue{font-size:10px;margin-left:12px;opacity:.7;font-style:italic}’;
+h+=‘.cm-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;margin:0 3px}’;
+h+=‘.cm-badge-r{background:rgba(239,68,68,.2);color:#EF4444}’;
+h+=‘.cm-badge-y{background:rgba(245,158,11,.2);color:#F59E0B}’;
+h+=‘.cm-badge-g{background:rgba(34,197,94,.2);color:#22C55E}’;
+h+=‘</style>’;
+h+=‘<div class="card"><div class="ct">📝 CodeMaster IDE</div>’;
+h+=‘<div style="display:flex;gap:8px;margin-bottom:8px">’;
+h+=‘<select class="inp" id="cmLang" style="width:120px"><option value="python">Python</option><option value="javascript">JavaScript</option></select>’;
+h+=‘<button class="btn bp" onclick="cmCheck()" style="padding:5px 14px">🔍 Check Syntax</button>’;
+h+=‘<button class="btn bs" onclick="cmFixAll()" style="padding:5px 14px">🔧 Fix All</button>’;
+h+=‘<button class="btn bs" onclick="cmClear()" style="padding:5px 10px">🗑️</button>’;
+h+=‘</div>’;
+h+=‘<textarea class="inp" id="cmCode" rows="14" style="font-family:monospace;font-size:12px;line-height:1.5;tab-size:4;white-space:pre;resize:vertical" placeholder="Paste or type code here…">def example():
+    x = eval("1+1")
+    if True
+        print "hello"
+    return x  
+</textarea>’;
+h+=‘</div>’;
+h+=‘<div class="card"><div class="ct">📊 Analysis Results</div>’;
+h+=‘<div id="cmSummary" style="display:flex;gap:8px;margin-bottom:10px">’;
+h+=‘<span class="cm-badge cm-badge-r" id="cmErrCount">0 errors</span>’;
+h+=‘<span class="cm-badge cm-badge-y" id="cmWarnCount">0 warnings</span>’;
+h+=‘<span class="cm-badge cm-badge-g" id="cmCleanCount">0 clean</span>’;
+h+=‘</div>’;
+h+=‘<div id="cmResults" style="border:1px solid var(--bd);border-radius:8px;overflow:hidden;max-height:400px;overflow-y:auto;background:rgba(0,0,0,.3)"></div>’;
+h+=‘</div>’;
+h+=‘<div class="banner-i">CodeMaster runs entirely on 127.0.0.1:9898. No code leaves your machine. Red = error · Yellow/Orange = needs work · Green = good · Click fix buttons to auto-repair.</div>’;
+return h;
+};
+
+// ── KODER — Live Code Editor with Syntax Colors ──────────────────────
+PANELS.koder = function(){
+var h=ph(‘KODER’,‘// Live Editor · Visible Code · Line Numbers · Syntax Colors · Red/Yellow/Green · iSH Compatible’);
+h+=comp([‘Live Edit’,‘Python’,‘JavaScript’,‘Red Errors’,‘Yellow Warn’,‘Green OK’,‘Line Numbers’,‘127.0.0.1’]);
+h+=‘<style>’;
+h+=‘.kd-editor{position:relative;border:1px solid var(--bd);border-radius:8px;overflow:hidden;background:#0d1117}’;
+h+=‘.kd-header{display:flex;gap:6px;padding:6px 10px;background:rgba(0,0,0,.4);border-bottom:1px solid rgba(255,255,255,.08);align-items:center}’;
+h+=‘.kd-dot{width:10px;height:10px;border-radius:50%}’;
+h+=‘.kd-filename{flex:1;font-size:11px;color:#8b5cf6;font-family:monospace}’;
+h+=‘.kd-ta{width:100%;min-height:300px;background:transparent;border:none;color:#e6edf3;font-family:monospace;font-size:12px;line-height:1.6;padding:10px 10px 10px 48px;resize:vertical;tab-size:4;white-space:pre;outline:none}’;
+h+=‘.kd-status{display:flex;gap:12px;padding:4px 10px;background:rgba(0,0,0,.3);font-size:10px;color:#8b949e;border-top:1px solid rgba(255,255,255,.05)}’;
+h+=‘.kd-indicator{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}’;
+h+=‘.kd-ln{position:absolute;left:0;top:0;padding:10px 0;font-family:monospace;font-size:12px;line-height:1.6;color:#484f58;text-align:right;width:35px;pointer-events:none;z-index:2}’;
+h+=‘</style>’;
+h+=‘<div class="card"><div class="ct">⌨️ KODER Live Editor</div>’;
+h+=‘<div class="kd-editor">’;
+h+=‘<div class="kd-header">’;
+h+=‘<div class="kd-dot" style="background:#ff5f56"></div>’;
+h+=‘<div class="kd-dot" style="background:#ffbd2e"></div>’;
+h+=‘<div class="kd-dot" style="background:#27c93f"></div>’;
+h+=‘<input class="inp kd-filename" id="kdFile" value="main.py" style="background:transparent;border:none;color:#8b949e;font-size:11px">’;
+h+=‘<select class="inp" id="kdLang" style="width:100px;font-size:10px;padding:3px" onchange="kdUpdateLang()">’;
+h+=‘<option value="python">Python</option><option value="javascript">JavaScript</option></select>’;
+h+=‘</div>’;
+h+=‘<div style="position:relative">’;
+h+=‘<div class="kd-ln" id="kdLineNums"></div>’;
+h+=‘<textarea class="kd-ta" id="kdCode" spellcheck="false" oninput="kdLiveCheck()" onscroll="kdSyncScroll()">#!/usr/bin/env python3
+# KODER Live Editor
+
+def greet(name):
+    print(f\"Hello, {name}!\")
+    return True
+
+if __name__ == \"__main__\":
+    greet(\"World\")
+</textarea>’;
+h+=‘</div>’;
+h+=‘<div class="kd-status">’;
+h+=‘<span><span class="kd-indicator" id="kdStatusDot" style="background:#27c93f"></span><span id="kdStatusText">Ready</span></span>’;
+h+=‘<span id="kdLineInfo">Ln 1, Col 1</span>’;
+h+=‘<span id="kdIssueCount">0 issues</span>’;
+h+=‘<span>127.0.0.1:9898</span>’;
+h+=‘</div></div>’;
+h+=‘<div style="display:flex;gap:6px;margin-top:8px">’;
+h+=‘<button class="btn bp" onclick="kdCheck()" style="padding:5px 12px">🔍 Full Check</button>’;
+h+=‘<button class="btn bs" onclick="kdSave()" style="padding:5px 12px">💾 Save</button>’;
+h+=‘<button class="btn bs" onclick="kdRun()" style="padding:5px 12px">▶️ Run</button>’;
+h+=‘</div></div>’;
+h+=‘<div class="banner-i">KODER runs on 127.0.0.1:9898 via a-shell/iSH. No Google · No Meta. Syntax: 🔴 Red = Error · 🟡 Yellow = Needs Work · 🟢 Green = Good</div>’;
+return h;
+};
+
+// ── DASHBOARD BUILDER AI ─────────────────────────────────────────────
+PANELS.dashboard_builder = function(){
+var h=ph(‘Dashboard Builder AI’,‘// Auto-Create Dashboards Per Role · AI Layout · On-Device · No Cloud’);
+h+=comp([‘AI Layout’,‘Per-Role’,‘Preview’,‘Export’,‘No Cloud’,‘Court Admissible’]);
+h+=‘<div class="card"><div class="ct">🤖 AI Dashboard Creator</div>’;
+h+=kv(‘Engine’,‘On-Device AI Layout Generator’);
+h+=kv(‘Connection’,‘127.0.0.1:9898 (a-shell / iSH)’);
+h+=kv(‘Cloud Dependencies’,tag(‘None’,‘tg’));
+h+=‘<div style="margin-top:10px">’;
+h+=‘<div class="ir"><select class="inp" id="dbRole" style="width:160px">’;
+var roleKeys = Object.keys(ROLES||{});
+for(var ri=0;ri<roleKeys.length;ri++){
+  var rk=roleKeys[ri]; var rl=ROLES[rk];
+  h+=‘<option value="’+rk+‘">’+(rl.icon||‘👤’)+‘ ’+(rl.lbl||rk)+‘</option>’;
+}
+h+=‘</select>’;
+h+=‘<select class="inp" id="dbStyle" style="width:120px"><option value="default">Default</option><option value="compact">Compact</option><option value="executive">Executive</option><option value="minimal">Minimal</option><option value="data_heavy">Data Heavy</option></select>’;
+h+=‘<button class="btn bp" onclick="dbGenerate()" style="padding:5px 14px">🤖 Generate Dashboard</button>’;
+h+=‘</div></div></div>’;
+h+=‘<div class="card"><div class="ct">📋 Generated Layout</div>’;
+h+=‘<div id="dbPreview" style="min-height:200px;border:1px solid var(--bd);border-radius:8px;padding:12px;background:rgba(0,0,0,.2)">’;
+h+=‘<div style="text-align:center;color:#666;padding:40px">Select a role and click Generate to create an AI dashboard layout</div>’;
+h+=‘</div></div>’;
+h+=‘<div class="banner-i">Dashboard Builder AI creates role-optimized layouts using on-device generation. No data leaves 127.0.0.1. Audit-logged.</div>’;
+return h;
+};
 
 // ─── Ustream4Free Pro Studio v7.0 ────────────────────────────────────
 PANELS.stream_studio = function(){
@@ -2705,6 +2852,15 @@ var Bridge={
       if(_d.type==='pong'){STATE.bridgeOnline=true;return;}
       if(_d.type==='audit_data'){STATE.auditLog=(_d.logs||[]).concat(STATE.auditLog||[]).slice(0,500);return;}
       if(_d.type==='error'){addAudit('BRIDGE_ERR',_d.code||_d.msg||'');return;}
+      if(_d.type==='code_check_result'){if(typeof cmRenderResults==='function')cmRenderResults(_d);if(typeof kdRenderStatus==='function')kdRenderStatus(_d);return;}
+      if(_d.type==='code_fix_result'){if(_d.applied&&_d.code){var _cmTA=el('cmCode');if(_cmTA)_cmTA.value=_d.code;var _kdTA=el('kdCode');if(_kdTA)_kdTA.value=_d.code;toast('Fix applied line '+_d.line,'ok');if(typeof cmCheck==='function')cmCheck();}return;}
+      if(_d.type==='dashboard_built'){if(typeof dbRenderLayout==='function')dbRenderLayout(_d);return;}
+      if(_d.type==='movie_job'){toast('Movie job '+_d.job_id+' '+_d.status,'ok');return;}
+      if(_d.type==='music_job'){toast('Music job '+_d.job_id+' '+_d.status,'ok');return;}
+      if(_d.type==='opar_response'){var _or=el('oparResponse');if(_or)_or.innerHTML='<div style="color:#22C55E">'+esc(_d.message||'')+'</div><div style="font-size:10px;color:#666;margin-top:4px">Emotion: '+(_d.emotion||'neutral')+' · State: '+(_d.state||'idle')+'</div>';return;}
+      if(_d.type==='opar_design_ack'){toast('OPAR design applied','ok');return;}
+      if(_d.type==='cgi_avatar_ack'){toast('Avatar updated','ok');return;}
+      if(_d.type==='coqui_result'){toast('Coqui TTS: '+(_d.note||'ready'),'ok');return;}
       // original audio handler replaced by unified handler above
       };
     }catch(e){STATE.bridgeOnline=false;}
@@ -2991,6 +3147,113 @@ function sgPlaidBridge(t,extra){if(!Bridge.ws||Bridge.ws.readyState!==1){toast('
 function sgCollabSend(payload){if(!Bridge.ws||Bridge.ws.readyState!==1)return;Bridge.ws.send(JSON.stringify({type:'collab_broadcast',payload:payload,from:STATE.userName||'?'}));}
 async function sgRefreshToken(){var tok=STATE.sgToken||sessionStorage.getItem('sg_jwt');if(!tok)return;try{var r=await fetch('http://127.0.0.1:9898/api/auth/refresh',{method:'POST',headers:{Authorization:'Bearer '+tok},signal:AbortSignal.timeout(5000)});if(r.ok){var d=await r.json();STATE.sgToken=d.token;sessionStorage.setItem('sg_jwt',d.token);}}catch(_){}}
 setInterval(sgRefreshToken,27900000);
+
+// ── CodeMaster helper functions ──────────────────────────────────────
+function cmCheck(){var code=el('cmCode');var lang=el('cmLang');if(code&&lang)Bridge.wsSend({type:'code_check',code:code.value,language:lang.value});}
+var _cmLastCode='';
+var _cmLastIssues=[];
+function cmRenderResults(data){
+  _cmLastCode=el('cmCode')?el('cmCode').value:'';
+  _cmLastIssues=data.issues||[];
+  var lines=_cmLastCode.split('\n');
+  var colors=data.lineColors||{};
+  var issuesByLine={};
+  (data.issues||[]).forEach(function(iss){if(!issuesByLine[iss.line])issuesByLine[iss.line]=[];issuesByLine[iss.line].push(iss);});
+  var html='';
+  lines.forEach(function(line,i){
+    var ln=i+1;
+    var color=colors[ln]||'#22C55E';
+    var cls=color==='#EF4444'?'cm-err':color==='#F59E0B'?'cm-warn':'cm-good';
+    html+='<div class="cm-line '+cls+'">';
+    html+='<span class="cm-ln" style="color:'+color+'">'+ln+'</span>';
+    html+='<span class="cm-code">'+esc(line)+'</span>';
+    if(issuesByLine[ln]){
+      issuesByLine[ln].forEach(function(iss){
+        html+='<span class="cm-issue" style="color:'+iss.color+'">'+esc(iss.msg)+'</span>';
+        if(iss.fix!==null&&iss.fix!==undefined){
+          html+='<span class="cm-fix" onclick="cmApplyFix('+ln+',this)" data-fix="'+esc(iss.fix).replace(/"/g,'&quot;')+'">\u26A1 Fix</span>';
+        }
+      });
+    }
+    html+='</div>';
+  });
+  var res=el('cmResults');if(res)res.innerHTML=html;
+  var s=data.summary||{};
+  var ec=el('cmErrCount');if(ec)ec.textContent=(s.errors||0)+' errors';
+  var wc=el('cmWarnCount');if(wc)wc.textContent=(s.warnings||0)+' warnings';
+  var cc=el('cmCleanCount');if(cc)cc.textContent=(s.clean||0)+' clean';
+}
+function cmApplyFix(line,btn){
+  var fix=btn.getAttribute('data-fix');
+  var code=el('cmCode');
+  if(code)Bridge.wsSend({type:'code_fix',code:code.value,language:el('cmLang').value,line:line,fix:fix});
+}
+function cmFixAll(){
+  var code=el('cmCode');if(!code)return;
+  var issues=_cmLastIssues||[];
+  var lines=code.value.split('\n');
+  var fixed=0;
+  issues.sort(function(a,b){return b.line-a.line;}).forEach(function(iss){
+    if(iss.fix!==null&&iss.fix!==undefined&&iss.line>=1&&iss.line<=lines.length){
+      lines[iss.line-1]=iss.fix;fixed++;
+    }
+  });
+  if(fixed>0){code.value=lines.join('\n');toast(fixed+' fixes applied','ok');cmCheck();}
+  else toast('No auto-fixes available','w');
+}
+function cmClear(){var c=el('cmCode');if(c)c.value='';var r=el('cmResults');if(r)r.innerHTML='';var ec=el('cmErrCount');if(ec)ec.textContent='0 errors';var wc=el('cmWarnCount');if(wc)wc.textContent='0 warnings';var cc=el('cmCleanCount');if(cc)cc.textContent='0 clean';}
+
+// ── KODER helper functions ───────────────────────────────────────────
+function kdUpdateLineNums(){var code=el('kdCode');if(!code)return;var lines=code.value.split('\n').length;var nums='';for(var i=1;i<=lines;i++)nums+=i+'\n';var ln=el('kdLineNums');if(ln)ln.textContent=nums;}
+function kdSyncScroll(){var code=el('kdCode');var ln=el('kdLineNums');if(code&&ln)ln.style.transform='translateY(-'+code.scrollTop+'px)';}
+var _kdTimer=null;
+function kdLiveCheck(){
+  kdUpdateLineNums();
+  var code=el('kdCode');if(!code)return;
+  var pos=code.selectionStart;
+  var beforeCursor=code.value.substring(0,pos);
+  var lineNum=beforeCursor.split('\n').length;
+  var colNum=pos-beforeCursor.lastIndexOf('\n');
+  var info=el('kdLineInfo');if(info)info.textContent='Ln '+lineNum+', Col '+colNum;
+  clearTimeout(_kdTimer);
+  _kdTimer=setTimeout(function(){Bridge.wsSend({type:'code_check',code:code.value,language:el('kdLang').value});},800);
+}
+function kdCheck(){var code=el('kdCode');if(code)Bridge.wsSend({type:'code_check',code:code.value,language:el('kdLang').value});}
+function kdRenderStatus(data){
+  var s=data.summary||{};
+  var dot=el('kdStatusDot');var txt=el('kdStatusText');var cnt=el('kdIssueCount');
+  if(s.errors>0){if(dot)dot.style.background='#EF4444';if(txt)txt.textContent=s.errors+' error(s)';}
+  else if(s.warnings>0){if(dot)dot.style.background='#F59E0B';if(txt)txt.textContent=s.warnings+' warning(s)';}
+  else{if(dot)dot.style.background='#22C55E';if(txt)txt.textContent='Clean';}
+  if(cnt)cnt.textContent=(s.errors||0)+(s.warnings||0)+' issues';
+}
+function kdSave(){toast('File saved: '+(el('kdFile')?el('kdFile').value:'untitled'),'ok');}
+function kdRun(){var code=el('kdCode');var lang=el('kdLang');if(code&&lang&&lang.value==='python'){Bridge.wsSend({type:'shell_cmd',cmd:'python3 -c "'+code.value.replace(/"/g,'\\"').slice(0,500)+'"'});toast('Running\u2026','ok');}else toast('Run: check bridge terminal','ok');}
+function kdUpdateLang(){var ext=el('kdLang')&&el('kdLang').value==='python'?'.py':'.js';var fn=el('kdFile');if(fn)fn.value=fn.value.replace(/\.\w+$/,ext);}
+
+// ── Dashboard Builder helpers ────────────────────────────────────────
+function dbGenerate(){var role=el('dbRole');var style=el('dbStyle');if(role&&style)Bridge.wsSend({type:'dashboard_build',role:role.value,style:style.value});}
+function dbQuickGen(role){var sel=el('dbRole');if(sel)sel.value=role;Bridge.wsSend({type:'dashboard_build',role:role,style:'default'});}
+function dbRenderLayout(data){
+  var preview=el('dbPreview');if(!preview)return;
+  var roleDef=ROLES[data.role]||{};
+  var html='<div style="margin-bottom:10px">';
+  html+='<div style="font-size:14px;font-weight:600;color:'+(roleDef.color||'#8b5cf6')+'">'+(roleDef.icon||'\uD83D\uDC64')+' '+(roleDef.lbl||data.role)+' Dashboard</div>';
+  html+='<div style="font-size:11px;color:#888">Level '+data.level+' \u00B7 '+data.panel_count+' panels \u00B7 Style: '+data.style+'</div>';
+  html+='</div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">';
+  (data.layout||[]).forEach(function(item){
+    var w=item.width==='full'?'grid-column:1/-1;':'';
+    html+='<div style="'+w+'background:'+item.color+'22;border:1px solid '+item.color+'44;border-radius:8px;padding:10px;cursor:pointer;transition:all .2s" onclick="D.load(\''+item.panel_id+'\')">';
+    html+='<div style="font-size:11px;font-weight:600;color:'+item.color+'">'+item.panel_id.replace(/_/g,' ').toUpperCase()+'</div>';
+    html+='<div style="font-size:10px;color:#888;margin-top:2px">Panel #'+item.order+'</div>';
+    html+='</div>';
+  });
+  html+='</div>';
+  preview.innerHTML=html;
+  toast('Dashboard generated for '+data.role,'ok');
+}
+
 setInterval(function(){if(STATE.bridgeOnline)sgMemorySync();},300000);
 </script>
 

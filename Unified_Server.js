@@ -95,7 +95,7 @@ medical:          { lvl:3, pp:false, panels:['dashboard','patient_care','vitals'
 prosecutor:       { lvl:3, pp:false, panels:['dashboard','active_cases','evidence','witnesses','charges','legal_research','ai_chat','audit_trail','profile'] },
 police:           { lvl:3, pp:false, panels:['dashboard','dispatch','arrests','reports','incidents','sos_panel','ai_chat','audit_trail','profile'] },
 pilot:            { lvl:3, pp:false, panels:['dashboard','flight_plan','notam','weather','charts','radar','ai_chat','audit_trail','profile'] },
-developer:        { lvl:3, pp:false, panels:['dashboard','api_console','cicd','project_builder','terminal','github_panel','key_mgmt','ai_chat','audit_trail','profile','bridge'] },
+developer:        { lvl:3, pp:false, panels:['dashboard','api_console','cicd','project_builder','terminal','github_panel','key_mgmt','ai_chat','audit_trail','profile','bridge','codemaster','koder','dashboard_builder'] },
 professor:        { lvl:3, pp:false, panels:['dashboard','courses','research','publications','ai_chat','audit_trail','profile'] },
 teacher:          { lvl:2, pp:false, panels:['dashboard','class_dash','grades','attendance','curriculum','eeg_classroom','ai_chat','audit_trail','profile'] },
 fire:             { lvl:2, pp:false, panels:['dashboard','incidents','dispatch','equipment','hazmat','sos_panel','ai_chat','audit_trail','profile'] },
@@ -467,7 +467,7 @@ const rw = { n:0, reset:Date.now()+60000 };
 audit('WS_CONNECT', wsId, {ip});
 
 ws.send(JSON.stringify({ type:'connected', wsId, piper:piperReady, ts:Date.now(),
-features:['piper_tts','coqui_tts','ddg_search','gh_oauth','plaid','shell','memory','collab','ai_proxy','auth','token_verify','audit_export','ping','movie_gen','music_gen','opar','cgi_avatar'] }));
+features:['piper_tts','coqui_tts','ddg_search','gh_oauth','plaid','shell','memory','collab','ai_proxy','auth','token_verify','audit_export','ping','movie_gen','music_gen','opar','cgi_avatar','code_check','code_fix','dashboard_build'] }));
 
 ws.on('message', async raw => {
 const now = Date.now();
@@ -612,6 +612,91 @@ if (type === 'cgi_avatar_update') {
   return;
 }
 
+// ─── CODEMASTER / KODER — Syntax Check ────────────────────────────────
+if (type === 'code_check') {
+  const code = (msg.code||'').slice(0,50000);
+  const lang = msg.language||'python';
+  audit('CODE_CHECK', lang, {wsId, len:code.length});
+  const lines = code.split('\n');
+  const issues = [];
+  lines.forEach((line,i) => {
+    const ln = i+1;
+    const trimmed = line.trimEnd();
+    // Syntax-level red errors
+    if (lang==='python') {
+      if (/^\s*(def|class|if|elif|else|for|while|try|except|finally|with)\b/.test(trimmed) && !trimmed.endsWith(':') && !trimmed.endsWith(':\\'))
+        issues.push({line:ln,severity:'error',color:'#EF4444',msg:'Missing colon at end of statement',fix:trimmed+':'});
+      if (/\bprint\s+[^(]/.test(trimmed) && !/\bprint\s*\(/.test(trimmed))
+        issues.push({line:ln,severity:'error',color:'#EF4444',msg:'print needs parentheses (Python 3)',fix:trimmed.replace(/\bprint\s+(.+)/,'print($1)')});
+    }
+    if (lang==='javascript') {
+      if (/\bvar\b/.test(trimmed))
+        issues.push({line:ln,severity:'warning',color:'#F59E0B',msg:'Use const/let instead of var',fix:trimmed.replace(/\bvar\b/,'const')});
+      if (/==(?!=)/.test(trimmed) && !/===/.test(trimmed))
+        issues.push({line:ln,severity:'warning',color:'#F59E0B',msg:'Use === instead of ==',fix:trimmed.replace(/==(?!=)/g,'===')});
+    }
+    // Universal warnings (yellow/orange)
+    if (trimmed.length > 120)
+      issues.push({line:ln,severity:'warning',color:'#F59E0B',msg:'Line exceeds 120 chars',fix:null});
+    if (/\beval\s*\(/.test(trimmed))
+      issues.push({line:ln,severity:'error',color:'#EF4444',msg:'eval() is a security risk',fix:null});
+    if (/\bexec\s*\(/.test(trimmed) && lang==='python')
+      issues.push({line:ln,severity:'warning',color:'#FB923C',msg:'exec() usage — review carefully',fix:null});
+    if (trimmed !== line)
+      issues.push({line:ln,severity:'info',color:'#22C55E',msg:'Trailing whitespace',fix:trimmed});
+  });
+  // Mark clean lines green
+  const lineColors = {};
+  lines.forEach((_,i) => { lineColors[i+1] = '#22C55E'; }); // default green
+  issues.forEach(iss => {
+    if (iss.severity==='error') lineColors[iss.line]='#EF4444';
+    else if (iss.severity==='warning' && lineColors[iss.line]!=='#EF4444') lineColors[iss.line]='#F59E0B';
+  });
+  ws.send(JSON.stringify({type:'code_check_result', language:lang,
+    total_lines:lines.length, issues, lineColors,
+    summary:{errors:issues.filter(i=>i.severity==='error').length,
+             warnings:issues.filter(i=>i.severity==='warning').length,
+             clean:lines.length-Object.keys(issues.reduce((a,i)=>{a[i.line]=1;return a;},{})).length},
+    ts:Date.now()}));
+  return;
+}
+
+// ─── CODEMASTER / KODER — Auto-Fix ───────────────────────────────────
+if (type === 'code_fix') {
+  const code = (msg.code||'').slice(0,50000);
+  const lang = msg.language||'python';
+  const fixLine = msg.line;
+  const fixText = msg.fix;
+  audit('CODE_FIX', lang+':L'+fixLine, {wsId});
+  if (fixLine && fixText !== undefined && fixText !== null) {
+    const lines = code.split('\n');
+    if (fixLine >= 1 && fixLine <= lines.length) {
+      lines[fixLine-1] = fixText;
+      ws.send(JSON.stringify({type:'code_fix_result', code:lines.join('\n'),
+        line:fixLine, applied:true, ts:Date.now()}));
+      return;
+    }
+  }
+  ws.send(JSON.stringify({type:'code_fix_result', code, applied:false, reason:'Invalid line or fix', ts:Date.now()}));
+  return;
+}
+
+// ─── DASHBOARD BUILDER AI ─────────────────────────────────────────────
+if (type === 'dashboard_build') {
+  const role = msg.role||'adult';
+  const style = msg.style||'default';
+  audit('DASH_BUILD', role, {wsId, style});
+  const roleDef = RM[role] || RM['adult'];
+  const panels = roleDef.panels === '*' ? Object.keys(RM).slice(0,12) : (Array.isArray(roleDef.panels) ? roleDef.panels : ['dashboard','ai_chat','profile']);
+  const layout = panels.map((p,i) => ({
+    panel_id: p, order:i+1, width: i===0?'full':'half',
+    color: '#'+crypto.randomBytes(3).toString('hex').replace(/^[0-3]/,'8')
+  }));
+  ws.send(JSON.stringify({type:'dashboard_built', role, level:roleDef.lvl||1,
+    layout, panel_count:panels.length, style, ts:Date.now()}));
+  return;
+}
+
 ws.send(JSON.stringify({type:'error',code:'UNKNOWN',received:type}));
 
 });
@@ -632,6 +717,7 @@ process.stdout.write('║  a-shell / iSH / Node.js / Python OK              ║\
 process.stdout.write('║  Piper TTS '+(piperReady?'✅ Ready    ':'⚠️  Not found  ')+'                       ║\n');
 process.stdout.write('║  Coqui TTS ⚙️  Via Python backend                  ║\n');
 process.stdout.write('║  OPAR · Movie · Music · 3D CGI Avatar             ║\n');
+process.stdout.write('║  CodeMaster · Koder · Dashboard Builder AI        ║\n');
 process.stdout.write('║  Audit log '+ACCESS_LOG.slice(0,30).padEnd(30,' ')+'║\n');
 process.stdout.write('╚══════════════════════════════════════════════════╝\n\n');
 });

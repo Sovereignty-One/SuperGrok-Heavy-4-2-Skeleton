@@ -56,10 +56,12 @@ sleep 0.5
 done
 
 echo “”
-echo “  Open SuperGrok_v13_COMPLETE.html in your browser”
-echo “  Ports: 9000 (primary) 9898 (bridge) 8443 (auth)”
+echo “  Open SuperGrok_Global_Role_Dashboard.html in your browser”
+echo “  Ports: 9898 (primary) 9899 (bridge)”
 echo “  Logs:  ./logs/access.jsonl”
 echo “”
+echo “  Features: Movie · Music · 3D CGI Avatar · OPAR · CodeMaster · Koder”
+echo “  No Google · No Meta · 127.0.0.1 Only · a-shell/iSH Compatible”
 echo “  Sentinel: active (PID in ./sentinel.pid)”
 echo “  Press Ctrl+C to stop”
 echo “”
