@@ -19,6 +19,7 @@ const { spawn, exec } = require('child_process');
 // ─── CONFIG ───────────────────────────────────────────────────────────
 const PORT_UNIFIED = parseInt(process.env.PORT_UNIFIED || '9898');
 const PORT_BRIDGE  = parseInt(process.env.PORT_BRIDGE  || '9899');
+// PORT_AUTH shares PORT_BRIDGE — single proxy for a-shell/iSH compat
 const PORT_AUTH    = parseInt(process.env.PORT_AUTH    || '9899');
 const PIPER_BIN    = process.env.PIPER_BIN    || './piper';
 const PIPER_MODEL  = process.env.PIPER_MODEL  || './en_US-lessac-medium.onnx';
@@ -553,7 +554,10 @@ if (type === 'audit_export') {
 if (type === 'kc_save') { const sessions = (memStore['__kc']||{}); sessions[wsId]=msg.data; memStore['__kc']=sessions; ws.send(JSON.stringify({type:'kc_saved',wsId})); return; }
 if (type === 'kc_load') { const sessions = (memStore['__kc']||{}); ws.send(JSON.stringify({type:'kc_session',session:sessions[wsId]||null})); return; }
 
-// ─── COQUI TTS (on-device, no Google/Meta) ────────────────────────────
+// ─── COQUI TTS (on-device, no Google/Meta — via Python backend) ───────
+// Coqui TTS runs in the Python backend process.  The WebSocket returns
+// a fallback pointer so the client can POST to /api/voice/speak?engine=coqui
+// for actual audio generation.  Piper TTS handles real-time WS audio.
 if (type === 'coqui_speak') {
   if (!msg.text) { ws.send(JSON.stringify({type:'error',code:'NO_TEXT'})); return; }
   audit('COQUI_TTS', 'request', {wsId, len: msg.text.length});

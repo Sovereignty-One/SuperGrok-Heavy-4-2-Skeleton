@@ -145,7 +145,7 @@ async def voice_status():
 
     try:
         from app.services.coqui_tts_service import coqui_tts_service
-        coqui_available = coqui_tts_service._executable is not None
+        coqui_available = coqui_tts_service.is_available()
         coqui_models = coqui_tts_service.get_available_models()
     except Exception:
         coqui_available = False

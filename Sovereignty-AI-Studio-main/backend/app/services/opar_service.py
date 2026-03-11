@@ -316,7 +316,7 @@ class OPARService:
                 "You can customise my entire appearance — body type, hair, eyes, "
                 "clothing, and more. Just open the OPAR designer panel."
             )
-        return f"Understood. Let me process that for you, {inst.user_id.split('@')[0] if '@' in inst.user_id else 'there'}."
+        return f"Understood. Let me process that for you."
 
     @staticmethod
     def _infer_emotion(message: str) -> OPAREmotion:

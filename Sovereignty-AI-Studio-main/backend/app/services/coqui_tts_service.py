@@ -140,6 +140,10 @@ class CoquiTTSService:
     def get_available_models(self) -> List[Dict[str, str]]:
         return list(self.AVAILABLE_MODELS)
 
+    def is_available(self) -> bool:
+        """Return True if the Coqui TTS binary is found and ready."""
+        return self._executable is not None
+
     def get_status(self) -> Dict[str, Any]:
         return {
             "service": "coqui_tts",
