@@ -2829,7 +2829,7 @@ var Bridge={
     try{
       this.ws=new WebSocket('ws://127.0.0.1:9899'); var _sg_tok=STATE.sgToken||sessionStorage.getItem('sg_jwt')||'';
       this.ws.onopen=function(){STATE.bridgeOnline=true;STATE.piperActive=true;var _b=el('tbbBridge');if(_b){_b.textContent='⚡ LIVE';_b.classList.add('on');}var _l=el('liveLabel');if(_l)_l.textContent='LIVE';addAudit('BRIDGE','Unified server connected');var _tok=STATE.sgToken||sessionStorage.getItem('sg_jwt')||'';if(_tok)Bridge.ws.send(JSON.stringify({type:'token_verify',token:_tok}));};
-      this.ws.onclose=function(){STATE.bridgeOnline=false;STATE.piperActive=false;el('tbbBridge').textContent='⚡ 9898';el('tbbBridge').classList.remove('on');};
+      this.ws.onclose=function(){STATE.bridgeOnline=false;STATE.piperActive=false;el('tbbBridge').textContent='⚡ 9899';el('tbbBridge').classList.remove('on');};
       this.ws.onerror=function(){STATE.bridgeOnline=false;};
       this.ws.onmessage=function(e){
       var _d;try{_d=JSON.parse(e.data);}catch{return;}
@@ -3152,9 +3152,11 @@ setInterval(sgRefreshToken,27900000);
 function cmCheck(){var code=el('cmCode');var lang=el('cmLang');if(code&&lang)Bridge.wsSend({type:'code_check',code:code.value,language:lang.value});}
 var _cmLastCode='';
 var _cmLastIssues=[];
+var _cmFixMap={};
 function cmRenderResults(data){
   _cmLastCode=el('cmCode')?el('cmCode').value:'';
   _cmLastIssues=data.issues||[];
+  _cmFixMap={};
   var lines=_cmLastCode.split('\n');
   var colors=data.lineColors||{};
   var issuesByLine={};
@@ -3168,10 +3170,14 @@ function cmRenderResults(data){
     html+='<span class="cm-ln" style="color:'+color+'">'+ln+'</span>';
     html+='<span class="cm-code">'+esc(line)+'</span>';
     if(issuesByLine[ln]){
+      var fixIdx=0;
       issuesByLine[ln].forEach(function(iss){
         html+='<span class="cm-issue" style="color:'+iss.color+'">'+esc(iss.msg)+'</span>';
         if(iss.fix!==null&&iss.fix!==undefined){
-          html+='<span class="cm-fix" onclick="cmApplyFix('+ln+',this)" data-fix="'+esc(iss.fix)+'">\u26A1 Fix</span>';
+          var key=ln+':'+fixIdx;
+          _cmFixMap[key]=iss.fix;
+          html+='<span class="cm-fix" onclick="cmApplyFix('+ln+',\''+key+'\')">\u26A1 Fix</span>';
+          fixIdx++;
         }
       });
     }
@@ -3183,8 +3189,9 @@ function cmRenderResults(data){
   var wc=el('cmWarnCount');if(wc)wc.textContent=(s.warnings||0)+' warnings';
   var cc=el('cmCleanCount');if(cc)cc.textContent=(s.clean||0)+' clean';
 }
-function cmApplyFix(line,btn){
-  var fix=btn.getAttribute('data-fix');
+function cmApplyFix(line,key){
+  var fix=_cmFixMap[key];
+  if(!fix)return;
   var code=el('cmCode');
   if(code)Bridge.wsSend({type:'code_fix',code:code.value,language:el('cmLang').value,line:line,fix:fix});
 }

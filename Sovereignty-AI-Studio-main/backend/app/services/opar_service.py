@@ -134,9 +134,17 @@ class OPARService:
         appearance_overrides: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Create a new OPAR instance with full 3-D CGI appearance."""
+        try:
+            bt = OPARBodyType(body_type)
+        except ValueError:
+            bt = OPARBodyType.HUMAN_REALISTIC
+        try:
+            gn = OPARGender(gender)
+        except ValueError:
+            gn = OPARGender.ANDROGYNOUS
         appearance = OPARAppearance(
-            body_type=OPARBodyType(body_type),
-            gender=OPARGender(gender),
+            body_type=bt,
+            gender=gn,
         )
         if appearance_overrides:
             for key, val in appearance_overrides.items():

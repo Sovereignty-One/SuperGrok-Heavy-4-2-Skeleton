@@ -19,7 +19,8 @@ const { spawn, exec } = require('child_process');
 // ─── CONFIG ───────────────────────────────────────────────────────────
 const PORT_UNIFIED = parseInt(process.env.PORT_UNIFIED || '9898');
 const PORT_BRIDGE  = parseInt(process.env.PORT_BRIDGE  || '9899');
-// Auth traffic shares PORT_BRIDGE — single proxy for a-shell/iSH compat
+// PORT_AUTH always equals PORT_BRIDGE — single proxy for a-shell/iSH compat
+const PORT_AUTH    = PORT_BRIDGE;
 const PIPER_BIN    = process.env.PIPER_BIN    || './piper';
 const PIPER_MODEL  = process.env.PIPER_MODEL  || './en_US-lessac-medium.onnx';
 const LOG_DIR      = process.env.LOG_DIR      || './logs';
@@ -466,7 +467,7 @@ const rw = { n:0, reset:Date.now()+60000 };
 audit('WS_CONNECT', wsId, {ip});
 
 ws.send(JSON.stringify({ type:'connected', wsId, piper:piperReady, ts:Date.now(),
-features:['piper_tts','coqui_tts','ddg_search','gh_oauth','plaid','shell','memory','collab','ai_proxy','auth','token_verify','audit_export','ping','movie_gen','music_gen','opar','cgi_avatar','code_check','code_fix','dashboard_build'] }));
+features:['piper_tts','coqui_speak','ddg_search','gh_oauth','plaid','shell','memory','collab','ai_proxy','auth','token_verify','audit_export','ping','movie_generate','music_generate','opar_interact','opar_design','cgi_avatar_update','code_check','code_fix','dashboard_build'] }));
 
 ws.on('message', async raw => {
 const now = Date.now();
@@ -555,14 +556,14 @@ if (type === 'kc_load') { const sessions = (memStore['__kc']||{}); ws.send(JSON.
 
 // ─── COQUI TTS (on-device, no Google/Meta — via Python backend) ───────
 // Coqui TTS runs in the Python backend process.  The WebSocket returns
-// a fallback pointer so the client can POST to /api/voice/speak?engine=coqui
+// a fallback pointer so the client can POST to /api/voice/speak with JSON body { "engine": "coqui", ... }
 // for actual audio generation.  Piper TTS handles real-time WS audio.
 if (type === 'coqui_speak') {
   if (!msg.text) { ws.send(JSON.stringify({type:'error',code:'NO_TEXT'})); return; }
   audit('COQUI_TTS', 'request', {wsId, len: msg.text.length});
   // Coqui runs via Python backend; respond with fallback info for the client
   ws.send(JSON.stringify({type:'coqui_result', engine:'coqui', text:msg.text.slice(0,800),
-    fallback:true, note:'Use POST /api/voice/speak with engine=coqui for audio generation'}));
+    fallback:true, note:'Use POST /api/voice/speak with JSON body {"engine":"coqui", ...} for audio generation'}));
   return;
 }
 
