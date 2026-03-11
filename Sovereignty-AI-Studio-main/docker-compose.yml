@@ -6,7 +6,10 @@ services:
     ports:
       - "9898:9898"
     environment:
-      - DATABASE_URL=postgresql://postgres:password@db:5432/creativeflow_db
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-password}@db:5432/creativeflow_db
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-}
+      - ALGORITHM=HS256
     depends_on:
       - db
       - redis
@@ -14,12 +17,12 @@ services:
   node-bridge:
     build: ./node-bridge
     ports:
-      - "9898:9898"
+      - "9899:9899"
     environment:
       - BACKEND_URL=http://backend:9898
       - WEATHER_URL=http://backend:9898
-      - NODE_BRIDGE_PORT=9898
-      - CORS_ORIGIN=http://localhost:9898
+      - NODE_BRIDGE_PORT=9899
+      - CORS_ORIGIN=http://localhost:3000
     depends_on:
       - backend
 
