@@ -658,7 +658,7 @@ srv.listen(port, '127.0.0.1', () => process.stdout.write('  '+label+' :'+port+' 
 return srv;
 }
 makeProxy(PORT_BRIDGE, 'Bridge  ');
-makeProxy(PORT_AUTH,   'Auth    ');
+// PORT_AUTH shares PORT_BRIDGE (9899) — single proxy for a-shell/iSH compatibility
 
 // ─── GRACEFUL SHUTDOWN ────────────────────────────────────────────────
 function shutdown(sig) {
