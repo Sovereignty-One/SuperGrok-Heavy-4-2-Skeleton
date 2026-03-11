@@ -22,6 +22,7 @@ const PORT_BRIDGE  = parseInt(process.env.PORT_BRIDGE  || '9898');
 const PORT_AUTH    = parseInt(process.env.PORT_AUTH    || '8443');
 const PIPER_BIN    = process.env.PIPER_BIN    || './piper';
 const PIPER_MODEL  = process.env.PIPER_MODEL  || './en_US-lessac-medium.onnx';
+const COQUI_URL    = process.env.COQUI_URL    || 'http://localhost:5002';
 const LOG_DIR      = process.env.LOG_DIR      || './logs';
 const KEY_FILE     = process.env.KEY_FILE     || '.sg_master_key';
 const VERBOSE      = process.env.VERBOSE      === '1';
@@ -30,6 +31,57 @@ if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
 
 const ACCESS_LOG  = path.join(LOG_DIR, 'access.jsonl');
 const piperReady  = fs.existsSync(PIPER_BIN) && fs.existsSync(PIPER_MODEL);
+
+// ─── COQUI TTS STATUS ────────────────────────────────────────────────
+let coquiReady = false;
+(function checkCoqui() {
+const req = http.get(COQUI_URL + '/api/tts', { timeout: 3000 }, res => {
+  // Any response means server is running (even 405 on GET)
+  coquiReady = true;
+  res.resume();
+  if (VERBOSE) process.stdout.write('[TTS] Coqui server detected at '+COQUI_URL+'\n');
+});
+req.on('error', () => { coquiReady = false; });
+req.on('timeout', () => { req.destroy(); coquiReady = false; });
+})();
+
+// ─── TTS QUEUE (shared by Piper + Coqui) ─────────────────────────────
+const ttsQueue = [];
+let ttsProcessing = false;
+
+function enqueueTTS(text, wsId, engine, voice, speed) {
+return new Promise(resolve => {
+  ttsQueue.push({ text, wsId, engine: engine||'auto', voice: voice||'', speed: speed||1.0, resolve });
+  if (!ttsProcessing) processTTSQueue();
+});
+}
+
+async function processTTSQueue() {
+if (ttsQueue.length === 0) { ttsProcessing = false; return; }
+ttsProcessing = true;
+const item = ttsQueue.shift();
+let result;
+try {
+  const engine = pickEngine(item.engine);
+  if (engine === 'coqui')      result = await coquiSpeak(item.text, item.wsId, item.voice, item.speed);
+  else if (engine === 'piper') result = await piperSpeak(item.text, item.wsId);
+  else                         result = { type:'piper_done', fallback:true, engine:'none' };
+} catch(e) {
+  result = { type:'piper_done', fallback:true, error:e.message };
+}
+item.resolve(result);
+setImmediate(() => processTTSQueue());
+}
+
+function pickEngine(requested) {
+if (requested === 'coqui' && coquiReady) return 'coqui';
+if (requested === 'piper' && piperReady) return 'piper';
+if (requested === 'auto') {
+  if (coquiReady) return 'coqui';
+  if (piperReady) return 'piper';
+}
+return 'none';
+}
 
 // ─── MASTER KEY ───────────────────────────────────────────────────────
 let MASTER_KEY;
@@ -268,6 +320,90 @@ setTimeout(() => { if(!done){done=true; child.kill(); resolve({ type:'piper_done
 });
 }
 
+// ─── COQUI TTS ────────────────────────────────────────────────────────
+function coquiSpeak(text, wsId, voice, speed) {
+const safe = text.replace(/[`$\'";|<>(){}[\]!#*?\n\r]/g,' ').slice(0,800);
+return new Promise(resolve => {
+  if (!coquiReady) { resolve({ type:'coqui_done', fallback:true }); return; }
+
+  const params = new URLSearchParams({
+    text: safe,
+    speaker_id: '',
+    style_wav: '',
+    language_id: '',
+  });
+  if (voice) params.set('speaker_id', voice);
+
+  const url = new URL(COQUI_URL + '/api/tts?' + params.toString());
+  const opts = {
+    hostname: url.hostname, port: url.port, path: url.pathname + url.search,
+    method: 'GET', timeout: 30000,
+  };
+
+  const req = http.request(opts, res => {
+    if (res.statusCode !== 200) {
+      res.resume();
+      resolve({ type:'coqui_done', fallback:true, status:res.statusCode });
+      return;
+    }
+    const chunks = [];
+    res.on('data', c => chunks.push(c));
+    res.on('end', () => {
+      const audio = Buffer.concat(chunks);
+      if (audio.length < 100) { resolve({ type:'coqui_done', fallback:true }); return; }
+      resolve({ type:'audio', data:audio.toString('base64'), engine:'coqui', done:true });
+    });
+  });
+
+  req.on('error', () => {
+    coquiReady = false;
+    resolve({ type:'coqui_done', fallback:true });
+  });
+  req.on('timeout', () => {
+    req.destroy();
+    resolve({ type:'coqui_done', fallback:true, error:'timeout' });
+  });
+  req.end();
+});
+}
+
+// ─── DIAGNOSTIC AGENT ─────────────────────────────────────────────────
+function runDiagnostic(ws) {
+const status = {
+  type: 'diagnostic_report',
+  ts: new Date().toISOString(),
+  server: {
+    uptime: Math.floor(process.uptime()),
+    memory: process.memoryUsage(),
+    pid: process.pid,
+    nodeVersion: process.version,
+  },
+  tts: {
+    piperReady,
+    coquiReady,
+    coquiURL: COQUI_URL,
+    queueLength: ttsQueue.length,
+    processing: ttsProcessing,
+  },
+  websocket: {
+    clients: clients.size,
+    features: ['piper_tts','coqui_tts','ddg_search','gh_oauth','plaid','shell','memory','collab','ai_proxy','auth','token_verify','audit_export','diagnostic','ping'],
+  },
+  ai: {
+    claude: !!process.env.ANTHROPIC_API_KEY,
+    gpt: !!process.env.OPENAI_API_KEY,
+    grok: !!process.env.XAI_API_KEY,
+  },
+  errors: [],
+};
+// Check for common issues
+if (!piperReady && !coquiReady) status.errors.push({code:'NO_TTS',message:'Neither Piper nor Coqui TTS is available',fix:'Install Piper binary or start Coqui server: tts-server --model_name tts_models/en/ljspeech/tacotron2-DDC'});
+if (!process.env.ANTHROPIC_API_KEY && !process.env.OPENAI_API_KEY && !process.env.XAI_API_KEY)
+  status.errors.push({code:'NO_AI_KEYS',message:'No AI API keys configured',fix:'Set ANTHROPIC_API_KEY, OPENAI_API_KEY, or XAI_API_KEY in .env'});
+if (!fs.existsSync(ACCESS_LOG)) status.errors.push({code:'NO_LOG',message:'Audit log not found',fix:'Check LOG_DIR permissions'});
+ws.send(JSON.stringify(status));
+}
+
 // ─── GITHUB OAUTH ─────────────────────────────────────────────────────
 function ghOAuth(code, ws) {
 const cid = process.env.GH_CLIENT_ID, sec = process.env.GH_CLIENT_SECRET;
@@ -372,7 +508,6 @@ let body;
 try { body = await readBody(req); }
 catch (e) { json(400, { detail:'Bad request: '+e.message }); return; }
 
-```
 if (!checkRate(ip)) { json(429, { detail:'Rate limit exceeded' }); return; }
 
 if (url === '/api/auth/login') {
@@ -427,7 +562,6 @@ if (url === '/api/execute-command') {
   json(200,{output:'['+role+'] '+command+' -- ack '+new Date().toISOString()});
   return;
 }
-```
 
 }
 
@@ -467,26 +601,43 @@ clients.set(wsId, ws);
 const rw = { n:0, reset:Date.now()+60000 };
 audit('WS_CONNECT', wsId, {ip});
 
-ws.send(JSON.stringify({ type:'connected', wsId, piper:piperReady, ts:Date.now(),
-features:['piper_tts','ddg_search','gh_oauth','plaid','shell','memory','collab','ai_proxy','auth','token_verify','audit_export','ping'] }));
+ws.send(JSON.stringify({ type:'connected', wsId, piper:piperReady, coqui:coquiReady, ts:Date.now(),
+features:['piper_tts','coqui_tts','ddg_search','gh_oauth','plaid','shell','memory','collab','ai_proxy','auth','token_verify','audit_export','diagnostic','ping'] }));
 
 ws.on('message', async raw => {
 const now = Date.now();
 if (now > rw.reset) { rw.n=0; rw.reset=now+60000; }
 if (++rw.n > 80) { ws.send(JSON.stringify({type:'error',code:'RATE_LIMIT'})); return; }
 
-```
 let msg; try { msg = JSON.parse(raw); } catch { ws.send(JSON.stringify({type:'error',code:'PARSE'})); return; }
 const { type } = msg;
 audit('WS', type, {wsId});
 
 if (type === 'ping') {
-  ws.send(JSON.stringify({type:'pong',ts:Date.now(),piper:piperReady,wsId,uptime:Math.floor(process.uptime())})); return;
+  ws.send(JSON.stringify({type:'pong',ts:Date.now(),piper:piperReady,coqui:coquiReady,wsId,uptime:Math.floor(process.uptime())})); return;
 }
 
 if (type === 'piper_speak' || type === 'speak') {
   if (!msg.text) { ws.send(JSON.stringify({type:'error',code:'NO_TEXT'})); return; }
-  ws.send(await piperSpeak(msg.text, wsId)); return;
+  ws.send(JSON.stringify(await enqueueTTS(msg.text, wsId, 'piper', '', msg.speed||1.0))); return;
+}
+
+if (type === 'coqui_speak') {
+  if (!msg.text) { ws.send(JSON.stringify({type:'error',code:'NO_TEXT'})); return; }
+  ws.send(JSON.stringify(await enqueueTTS(msg.text, wsId, 'coqui', msg.voice||'', msg.speed||1.0))); return;
+}
+
+if (type === 'tts_speak') {
+  if (!msg.text) { ws.send(JSON.stringify({type:'error',code:'NO_TEXT'})); return; }
+  ws.send(JSON.stringify(await enqueueTTS(msg.text, wsId, msg.engine||'auto', msg.voice||'', msg.speed||1.0))); return;
+}
+
+if (type === 'tts_status') {
+  ws.send(JSON.stringify({type:'tts_status',piper:piperReady,coqui:coquiReady,queueLength:ttsQueue.length,processing:ttsProcessing})); return;
+}
+
+if (type === 'diagnostic') {
+  runDiagnostic(ws); return;
 }
 
 if (type === 'ddg_search') {
@@ -557,7 +708,6 @@ if (type === 'kc_save') { const sessions = (memStore['__kc']||{}); sessions[wsId
 if (type === 'kc_load') { const sessions = (memStore['__kc']||{}); ws.send(JSON.stringify({type:'kc_session',session:sessions[wsId]||null})); return; }
 
 ws.send(JSON.stringify({type:'error',code:'UNKNOWN',received:type}));
-```
 
 });
 
@@ -574,6 +724,7 @@ process.stdout.write('║  Primary   http://127.0.0.1:'+PORT_UNIFIED+'          
 process.stdout.write('║  Bridge WS ws://127.0.0.1:'+PORT_BRIDGE+' (proxy)        ║\n');
 process.stdout.write('║  Auth      http://127.0.0.1:'+PORT_AUTH+' (proxy)        ║\n');
 process.stdout.write('║  Piper TTS '+(piperReady?'✅ Ready    ':'⚠️  Not found  ')+'                       ║\n');
+process.stdout.write('║  Coqui TTS '+(coquiReady?'✅ Ready    ':'⚠️  Not found  ')+'                       ║\n');
 process.stdout.write('║  Audit log '+ACCESS_LOG.slice(0,30).padEnd(30,' ')+'║\n');
 process.stdout.write('╚══════════════════════════════════════════════════╝\n\n');
 });

@@ -2091,8 +2091,10 @@ var h=ph(‘DDG Research Browser’,’// Privacy-First · Zero Retention · Gra
 h+=comp([‘DuckDuckGo’,‘Privacy-First’,‘Zero Logging’,‘CIPA’]);
 h+=’<div style="border:1px solid var(--bd);border-radius:var(--r2);overflow:hidden;height:500px">’;
 h+=’<div style="display:flex;gap:7px;padding:8px 12px;background:var(--sf);border-bottom:1px solid var(--bd)">’;
-h+=’<input class="inp" id="ddgUrl" style="flex:1;padding:7px 12px;font-size:12px" placeholder="Search or type URL…" value="https://duckduckgo.com">’;
-h+=’<button class="btn bp" onclick="el(\'ddgFrame\').src=el(\'ddgUrl\').value" style="padding:7px 14px">Go</button></div>’;
+h+=’<input class="inp" id="ddgUrl" style="flex:1;padding:7px 12px;font-size:12px" placeholder="Search or type URL…" value="https://duckduckgo.com" onkeydown="if(event.key==='Enter')sgDDGNav()">’;
+h+=’<button class="btn bp" onclick="sgDDGNav()" style="padding:7px 14px">Go</button>’;
+h+=’<button class="btn bs" onclick="sgDDGSearch()" style="padding:7px 10px" title="Search via quantum-safe bridge proxy">🔒 Search</button></div>’;
+h+=’<div id="ddgResults" style="display:none;padding:10px 14px;background:var(--sf);border-bottom:1px solid var(--bd);font-size:12px;max-height:120px;overflow-y:auto"></div>’;
 h+=’<iframe id="ddgFrame" src="https://duckduckgo.com" style="width:100%;height:calc(100% - 50px);border:none" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>’;
 h+=’</div>’;
 return h;
@@ -2581,7 +2583,10 @@ var Bridge={
       if(_d.type==='token_ok'){STATE.bridgeVerified=true;addAudit('BRIDGE_AUTH','WS verified lvl:'+_d.lvl);return;}
       if(_d.type==='token_invalid'){STATE.bridgeVerified=false;toast('Bridge token rejected','err');return;}
       if(_d.type==='ai_response'){addChatMsg('ai',_d.text||'');scrollChat();if(STATE.aiVoice)Bridge.speak(_d.text||'');if(_d.text&&_d.text.length>120)addMemory('AI '+(_d.model||''),_d.text);return;}
-      if(_d.type==='ddg_result'){var _out=_d.answer||_d.abstract||'';if(!_out&&_d.related)_out=(_d.related||[]).slice(0,4).join(' - ');addChatMsg('ai','DDG: '+_out.slice(0,1200));scrollChat();return;}
+      if(_d.type==='ddg_result'){var _out=_d.answer||_d.abstract||'';if(!_out&&_d.related)_out=(_d.related||[]).slice(0,4).join(' \u2014 ');var _rp=el('ddgResults');if(_rp){if(_out){_rp.style.display='block';_rp.innerHTML='<b>🔒 Result:</b> '
+        + _out.slice(0,800)
+        + (_d.url ? (' <a href="'+_d.url+'" target="_blank" style="color:var(--ac)">[source]</a>') : '');
+      }else{_rp.style.display='block';_rp.innerHTML='<span style="color:var(--mu)">No instant answer \u2014 try the iframe browser above.</span>';}}addChatMsg('ai','DDG: '+(_out||'No instant answer').slice(0,1200));scrollChat();return;}
       if(_d.type==='shell_output'){if(typeof Term!=='undefined')Term.line(_d.output||'','i');return;}
       if(_d.type==='memory_result'){if(_d.cards&&_d.cards.length){var _cur=STATE.memory||[];_d.cards.forEach(function(_nc){if(!_cur.some(function(_x){return _x.ts===_nc.ts;}))_cur.push(_nc);});STATE.memory=_cur;}return;}
       if(_d.type==='collab_event'){toast('Collab: '+(_d.payload||'').toString().slice(0,60),'info');return;}
@@ -2871,7 +2876,8 @@ function memFlip(el2){if(_mfLocked||el2.dataset.flipped)return;el2.textContent=e
 function termHashRun(){var v=el('termHashInp');if(v&&v.value.trim())Term.run('hash '+v.value.trim());}
 function termHashKey(e){if(e.key==='Enter'){termHashRun();}}
 
-function sgDDGSearch(){var inp=el('ddgUrl');if(!inp||!inp.value.trim()){toast('Enter query','warn');return;}if(Bridge.ws&&Bridge.ws.readyState===1){Bridge.ws.send(JSON.stringify({type:'ddg_search',query:inp.value.trim()}));toast('Searching DDG...','ok');}else{var frame=el('ddgFrame');if(frame)frame.src='https://html.duckduckgo.com/html/?q='+encodeURIComponent(inp.value.trim());}}
+function sgDDGNav(){var inp=el('ddgUrl');if(!inp||!inp.value.trim())return;var v=inp.value.trim();var frame=el('ddgFrame');if(v.match(/^https?:\/\//)){if(frame)frame.src=v;}else{if(frame)frame.src='https://html.duckduckgo.com/html/?q='+encodeURIComponent(v);}}
+function sgDDGSearch(){var inp=el('ddgUrl');if(!inp||!inp.value.trim()){toast('Enter query','warn');return;}if(Bridge.ws&&Bridge.ws.readyState===1){Bridge.ws.send(JSON.stringify({type:'ddg_search',query:inp.value.trim()}));toast('Searching via quantum-safe proxy…','ok');}else{sgDDGNav();}}
 function sgShellCmd(cmd,role){if(!Bridge.ws||Bridge.ws.readyState!==1){toast('Bridge offline','err');return;}Bridge.ws.send(JSON.stringify({type:'shell_cmd',cmd:cmd,role:role||STATE.roleKey||'user'}));}
 function sgMemorySync(){if(!Bridge.ws||Bridge.ws.readyState!==1)return;var k=(STATE.roleKey||'anon')+'_mem';(STATE.memory||[]).forEach(function(c){Bridge.ws.send(JSON.stringify({type:'memory_save',key:k,card:c}));});Bridge.ws.send(JSON.stringify({type:'memory_get',key:k}));}
 function sgMFAGen(role){if(!Bridge.ws||Bridge.ws.readyState!==1){toast('Bridge offline','err');return;}Bridge.ws.send(JSON.stringify({type:'mfa_gen',role:role||STATE.roleKey||''}));}

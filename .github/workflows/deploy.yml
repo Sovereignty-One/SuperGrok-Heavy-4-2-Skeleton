@@ -40,8 +40,26 @@ jobs:
           REDIS_URL: redis://localhost:6379/0
           SECRET_KEY: test-secret-key-for-ci-only-not-production-use-1234
 
+  security-sentinel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Syntax check security sentinel
+        run: python -m py_compile security_sentinel.py
+        working-directory: .
+
+      - name: Run security sentinel single-pass check
+        run: python security_sentinel.py --check
+        working-directory: .
+
   build:
-    needs: test
+    needs: [test, security-sentinel]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

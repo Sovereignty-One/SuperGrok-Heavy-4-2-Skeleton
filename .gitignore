@@ -142,3 +142,12 @@ vite.config.ts.timestamp-*
 *.zip
 __pycache__/
 *.pyc
+
+# Sentinel runtime
+sentinel.pid
+
+# Master key (secret - never commit)
+.sg_master_key
+
+# Lock files (generated)
+package-lock.json
