@@ -3,6 +3,7 @@ Avatar Companion Service – on-device AI avatar for interactive user guidance.
 
 Provides a persistent AI avatar companion with configurable personality,
 appearance, and interaction modes for the Sovereignty AI Studio.
+Supports 3-D CGI rendering with fully designable human-looking avatars.
 """
 import uuid
 import logging
@@ -27,6 +28,33 @@ class AvatarStyle(str, Enum):
     REALISTIC = "realistic"
     ANIME = "anime"
     ROBOTIC = "robotic"
+    CGI_HUMAN = "cgi_human"
+    HOLOGRAPHIC = "holographic"
+
+
+@dataclass
+class CGIAppearance:
+    """3-D CGI appearance configuration for the avatar."""
+    skin_tone: str = "#C68642"
+    hair_color: str = "#2C1B0E"
+    hair_style: str = "short_wavy"
+    eye_color: str = "#4A90D9"
+    clothing_style: str = "smart_casual"
+    face_shape: str = "oval"
+    height_cm: int = 170
+    render_quality: str = "high"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "skin_tone": self.skin_tone,
+            "hair_color": self.hair_color,
+            "hair_style": self.hair_style,
+            "eye_color": self.eye_color,
+            "clothing_style": self.clothing_style,
+            "face_shape": self.face_shape,
+            "height_cm": self.height_cm,
+            "render_quality": self.render_quality,
+        }
 
 
 @dataclass
@@ -42,6 +70,8 @@ class AvatarProfile:
     created_at: str = ""
     interaction_count: int = 0
     preferences: Dict[str, Any] = field(default_factory=dict)
+    cgi_appearance: CGIAppearance = field(default_factory=CGIAppearance)
+    opar_linked: bool = False
 
     def __post_init__(self):
         if not self.created_at:
@@ -62,8 +92,14 @@ class AvatarCompanionService:
         style: str = "minimal",
         voice_id: str = "en_US-lessac-medium",
         personality: str = "helpful",
+        cgi_overrides: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Create a new avatar companion for a user."""
+        cgi = CGIAppearance()
+        if cgi_overrides:
+            for key, val in cgi_overrides.items():
+                if hasattr(cgi, key):
+                    setattr(cgi, key, val)
         avatar = AvatarProfile(
             avatar_id=str(uuid.uuid4()),
             user_id=user_id,
@@ -71,6 +107,7 @@ class AvatarCompanionService:
             style=AvatarStyle(style),
             voice_id=voice_id,
             personality=personality,
+            cgi_appearance=cgi,
         )
         self._avatars[avatar.avatar_id] = avatar
         logger.info("Avatar '%s' (%s) created for user %s", name, avatar.avatar_id, user_id)
@@ -127,7 +164,33 @@ class AvatarCompanionService:
             "active_avatars": len(self._avatars),
             "available_styles": [s.value for s in AvatarStyle],
             "available_moods": [m.value for m in AvatarMood],
+            "cgi_3d_enabled": True,
+            "opar_linkable": True,
         }
+
+    # ── 3-D CGI appearance ───────────────────────────────────────────
+
+    def update_cgi_appearance(
+        self, avatar_id: str, updates: Dict[str, Any],
+    ) -> Optional[Dict[str, Any]]:
+        """Update the 3-D CGI appearance of an avatar."""
+        avatar = self._avatars.get(avatar_id)
+        if not avatar:
+            return None
+        cgi = avatar.cgi_appearance
+        for key, val in updates.items():
+            if hasattr(cgi, key):
+                setattr(cgi, key, val)
+        logger.info("Avatar %s CGI appearance updated", avatar_id)
+        return self._avatar_to_dict(avatar)
+
+    def link_opar(self, avatar_id: str, linked: bool = True) -> Optional[Dict[str, Any]]:
+        """Link or unlink an avatar to the OPAR system."""
+        avatar = self._avatars.get(avatar_id)
+        if not avatar:
+            return None
+        avatar.opar_linked = linked
+        return self._avatar_to_dict(avatar)
 
     # ── Private helpers ──────────────────────────────────────────────
 
@@ -157,6 +220,8 @@ class AvatarCompanionService:
             "personality": avatar.personality,
             "created_at": avatar.created_at,
             "interaction_count": avatar.interaction_count,
+            "cgi_appearance": avatar.cgi_appearance.to_dict(),
+            "opar_linked": avatar.opar_linked,
         }
 
 

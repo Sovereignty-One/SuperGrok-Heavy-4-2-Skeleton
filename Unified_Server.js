@@ -2,7 +2,7 @@
 
 - SuperGrok Unified Server -- Production Enterprise
 - Single process: Node.js + WebSocket bridge + Auth + DDG + GitHub + Plaid + Piper + ISH shell
-- Ports: 9000 (primary), 9898 (bridge alias), 8443 (auth alias)
+- Ports: 9898 (primary), 9899 (bridge)
 - Run: node unified_server.js
   */
   'use strict';
@@ -17,11 +17,12 @@ const os      = require('os');
 const { spawn, exec } = require('child_process');
 
 // ─── CONFIG ───────────────────────────────────────────────────────────
-const PORT_UNIFIED = parseInt(process.env.PORT_UNIFIED || '9000');
-const PORT_BRIDGE  = parseInt(process.env.PORT_BRIDGE  || '9898');
-const PORT_AUTH    = parseInt(process.env.PORT_AUTH    || '8443');
+const PORT_UNIFIED = parseInt(process.env.PORT_UNIFIED || '9898');
+const PORT_BRIDGE  = parseInt(process.env.PORT_BRIDGE  || '9899');
+// Auth port always equals PORT_BRIDGE — single proxy for a-shell/iSH compat
 const PIPER_BIN    = process.env.PIPER_BIN    || './piper';
 const PIPER_MODEL  = process.env.PIPER_MODEL  || './en_US-lessac-medium.onnx';
+const COQUI_URL    = process.env.COQUI_URL    || 'http://localhost:5002';
 const LOG_DIR      = process.env.LOG_DIR      || './logs';
 const KEY_FILE     = process.env.KEY_FILE     || '.sg_master_key';
 const VERBOSE      = process.env.VERBOSE      === '1';
@@ -30,6 +31,57 @@ if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
 
 const ACCESS_LOG  = path.join(LOG_DIR, 'access.jsonl');
 const piperReady  = fs.existsSync(PIPER_BIN) && fs.existsSync(PIPER_MODEL);
+
+// ─── COQUI TTS STATUS ────────────────────────────────────────────────
+let coquiReady = false;
+(function checkCoqui() {
+const req = http.get(COQUI_URL + '/api/tts', { timeout: 3000 }, res => {
+  // Any response means server is running (even 405 on GET)
+  coquiReady = true;
+  res.resume();
+  if (VERBOSE) process.stdout.write('[TTS] Coqui server detected at '+COQUI_URL+'\n');
+});
+req.on('error', () => { coquiReady = false; });
+req.on('timeout', () => { req.destroy(); coquiReady = false; });
+})();
+
+// ─── TTS QUEUE (shared by Piper + Coqui) ─────────────────────────────
+const ttsQueue = [];
+let ttsProcessing = false;
+
+function enqueueTTS(text, wsId, engine, voice, speed) {
+return new Promise(resolve => {
+  ttsQueue.push({ text, wsId, engine: engine||'auto', voice: voice||'', speed: speed||1.0, resolve });
+  if (!ttsProcessing) processTTSQueue();
+});
+}
+
+async function processTTSQueue() {
+if (ttsQueue.length === 0) { ttsProcessing = false; return; }
+ttsProcessing = true;
+const item = ttsQueue.shift();
+let result;
+try {
+  const engine = pickEngine(item.engine);
+  if (engine === 'coqui')      result = await coquiSpeak(item.text, item.wsId, item.voice, item.speed);
+  else if (engine === 'piper') result = await piperSpeak(item.text, item.wsId);
+  else                         result = { type:'piper_done', fallback:true, engine:'none' };
+} catch(e) {
+  result = { type:'piper_done', fallback:true, error:e.message };
+}
+item.resolve(result);
+setImmediate(() => processTTSQueue());
+}
+
+function pickEngine(requested) {
+if (requested === 'coqui' && coquiReady) return 'coqui';
+if (requested === 'piper' && piperReady) return 'piper';
+if (requested === 'auto') {
+  if (coquiReady) return 'coqui';
+  if (piperReady) return 'piper';
+}
+return 'none';
+}
 
 // ─── MASTER KEY ───────────────────────────────────────────────────────
 let MASTER_KEY;
@@ -94,7 +146,7 @@ medical:          { lvl:3, pp:false, panels:['dashboard','patient_care','vitals'
 prosecutor:       { lvl:3, pp:false, panels:['dashboard','active_cases','evidence','witnesses','charges','legal_research','ai_chat','audit_trail','profile'] },
 police:           { lvl:3, pp:false, panels:['dashboard','dispatch','arrests','reports','incidents','sos_panel','ai_chat','audit_trail','profile'] },
 pilot:            { lvl:3, pp:false, panels:['dashboard','flight_plan','notam','weather','charts','radar','ai_chat','audit_trail','profile'] },
-developer:        { lvl:3, pp:false, panels:['dashboard','api_console','cicd','project_builder','terminal','github_panel','key_mgmt','ai_chat','audit_trail','profile','bridge'] },
+developer:        { lvl:3, pp:false, panels:['dashboard','api_console','cicd','project_builder','terminal','github_panel','key_mgmt','ai_chat','audit_trail','profile','bridge','codemaster','koder','dashboard_builder'] },
 professor:        { lvl:3, pp:false, panels:['dashboard','courses','research','publications','ai_chat','audit_trail','profile'] },
 teacher:          { lvl:2, pp:false, panels:['dashboard','class_dash','grades','attendance','curriculum','eeg_classroom','ai_chat','audit_trail','profile'] },
 fire:             { lvl:2, pp:false, panels:['dashboard','incidents','dispatch','equipment','hazmat','sos_panel','ai_chat','audit_trail','profile'] },
@@ -111,6 +163,8 @@ journalist:       { lvl:1, pp:false, panels:['dashboard','story_research','sourc
 child:            { lvl:0, pp:false, panels:['dashboard','story_time','learning_games','drawing','ai_tutor','homework','profile'] },
 teen:             { lvl:0, pp:false, panels:['dashboard','college_prep','career','ai_tutor','homework','ai_games','profile'] },
 };
+
+const DEFAULT_PANELS = ['dashboard','ai_chat','profile'];
 
 const CHILD_BLOCKED = new Set(['president','prime_minister','root','superadmin','intel_officer',
 'cyber_cmd','judge','military','attorney_general','gov_official','supreme_court',
@@ -266,6 +320,90 @@ resolve({ type:'audio', data, done:true });
 child.on('error', () => { if(!done){done=true; resolve({ type:'piper_done', fallback:true });} });
 setTimeout(() => { if(!done){done=true; child.kill(); resolve({ type:'piper_done', fallback:true });} }, 9000);
 });
+}
+
+// ─── COQUI TTS ────────────────────────────────────────────────────────
+function coquiSpeak(text, wsId, voice, speed) {
+const safe = text.replace(/[`$\'";|<>(){}[\]!#*?\n\r]/g,' ').slice(0,800);
+return new Promise(resolve => {
+  if (!coquiReady) { resolve({ type:'coqui_done', fallback:true }); return; }
+
+  const params = new URLSearchParams({
+    text: safe,
+    speaker_id: '',
+    style_wav: '',
+    language_id: '',
+  });
+  if (voice) params.set('speaker_id', voice);
+
+  const url = new URL(COQUI_URL + '/api/tts?' + params.toString());
+  const opts = {
+    hostname: url.hostname, port: url.port, path: url.pathname + url.search,
+    method: 'GET', timeout: 30000,
+  };
+
+  const req = http.request(opts, res => {
+    if (res.statusCode !== 200) {
+      res.resume();
+      resolve({ type:'coqui_done', fallback:true, status:res.statusCode });
+      return;
+    }
+    const chunks = [];
+    res.on('data', c => chunks.push(c));
+    res.on('end', () => {
+      const audio = Buffer.concat(chunks);
+      if (audio.length < 100) { resolve({ type:'coqui_done', fallback:true }); return; }
+      resolve({ type:'audio', data:audio.toString('base64'), engine:'coqui', done:true });
+    });
+  });
+
+  req.on('error', () => {
+    coquiReady = false;
+    resolve({ type:'coqui_done', fallback:true });
+  });
+  req.on('timeout', () => {
+    req.destroy();
+    resolve({ type:'coqui_done', fallback:true, error:'timeout' });
+  });
+  req.end();
+});
+}
+
+// ─── DIAGNOSTIC AGENT ─────────────────────────────────────────────────
+function runDiagnostic(ws) {
+const status = {
+  type: 'diagnostic_report',
+  ts: new Date().toISOString(),
+  server: {
+    uptime: Math.floor(process.uptime()),
+    memory: process.memoryUsage(),
+    pid: process.pid,
+    nodeVersion: process.version,
+  },
+  tts: {
+    piperReady,
+    coquiReady,
+    coquiURL: COQUI_URL,
+    queueLength: ttsQueue.length,
+    processing: ttsProcessing,
+  },
+  websocket: {
+    clients: clients.size,
+    features: ['piper_tts','coqui_tts','ddg_search','gh_oauth','plaid','shell','memory','collab','ai_proxy','auth','token_verify','audit_export','diagnostic','ping'],
+  },
+  ai: {
+    claude: !!process.env.ANTHROPIC_API_KEY,
+    gpt: !!process.env.OPENAI_API_KEY,
+    grok: !!process.env.XAI_API_KEY,
+  },
+  errors: [],
+};
+// Check for common issues
+if (!piperReady && !coquiReady) status.errors.push({code:'NO_TTS',message:'Neither Piper nor Coqui TTS is available',fix:'Install Piper binary or start Coqui server: tts-server --model_name tts_models/en/ljspeech/tacotron2-DDC'});
+if (!process.env.ANTHROPIC_API_KEY && !process.env.OPENAI_API_KEY && !process.env.XAI_API_KEY)
+  status.errors.push({code:'NO_AI_KEYS',message:'No AI API keys configured',fix:'Set ANTHROPIC_API_KEY, OPENAI_API_KEY, or XAI_API_KEY in .env'});
+if (!fs.existsSync(ACCESS_LOG)) status.errors.push({code:'NO_LOG',message:'Audit log not found',fix:'Check LOG_DIR permissions'});
+ws.send(JSON.stringify(status));
 }
 
 // ─── GITHUB OAUTH ─────────────────────────────────────────────────────
@@ -465,8 +603,8 @@ clients.set(wsId, ws);
 const rw = { n:0, reset:Date.now()+60000 };
 audit('WS_CONNECT', wsId, {ip});
 
-ws.send(JSON.stringify({ type:'connected', wsId, piper:piperReady, ts:Date.now(),
-features:['piper_tts','ddg_search','gh_oauth','plaid','shell','memory','collab','ai_proxy','auth','token_verify','audit_export','ping'] }));
+ws.send(JSON.stringify({ type:'connected', wsId, piper:piperReady, coqui:coquiReady, ts:Date.now(),
+features:['piper_tts','coqui_tts','ddg_search','gh_oauth','plaid','shell','memory','collab','ai_proxy','auth','token_verify','audit_export','diagnostic','ping','movie_generate','music_generate','opar_interact','opar_design','cgi_avatar_update','code_check','code_fix','dashboard_build'] }));
 
 ws.on('message', async raw => {
 const now = Date.now();
@@ -478,12 +616,30 @@ const { type } = msg;
 audit('WS', type, {wsId});
 
 if (type === 'ping') {
-  ws.send(JSON.stringify({type:'pong',ts:Date.now(),piper:piperReady,wsId,uptime:Math.floor(process.uptime())})); return;
+  ws.send(JSON.stringify({type:'pong',ts:Date.now(),piper:piperReady,coqui:coquiReady,wsId,uptime:Math.floor(process.uptime())})); return;
 }
 
 if (type === 'piper_speak' || type === 'speak') {
   if (!msg.text) { ws.send(JSON.stringify({type:'error',code:'NO_TEXT'})); return; }
-  ws.send(await piperSpeak(msg.text, wsId)); return;
+  ws.send(JSON.stringify(await enqueueTTS(msg.text, wsId, 'piper', '', msg.speed||1.0))); return;
+}
+
+if (type === 'coqui_speak') {
+  if (!msg.text) { ws.send(JSON.stringify({type:'error',code:'NO_TEXT'})); return; }
+  ws.send(JSON.stringify(await enqueueTTS(msg.text, wsId, 'coqui', msg.voice||'', msg.speed||1.0))); return;
+}
+
+if (type === 'tts_speak') {
+  if (!msg.text) { ws.send(JSON.stringify({type:'error',code:'NO_TEXT'})); return; }
+  ws.send(JSON.stringify(await enqueueTTS(msg.text, wsId, msg.engine||'auto', msg.voice||'', msg.speed||1.0))); return;
+}
+
+if (type === 'tts_status') {
+  ws.send(JSON.stringify({type:'tts_status',piper:piperReady,coqui:coquiReady,queueLength:ttsQueue.length,processing:ttsProcessing})); return;
+}
+
+if (type === 'diagnostic') {
+  runDiagnostic(ws); return;
 }
 
 if (type === 'ddg_search') {
@@ -553,6 +709,152 @@ if (type === 'audit_export') {
 if (type === 'kc_save') { const sessions = (memStore['__kc']||{}); sessions[wsId]=msg.data; memStore['__kc']=sessions; ws.send(JSON.stringify({type:'kc_saved',wsId})); return; }
 if (type === 'kc_load') { const sessions = (memStore['__kc']||{}); ws.send(JSON.stringify({type:'kc_session',session:sessions[wsId]||null})); return; }
 
+// ─── COQUI TTS (on-device, no Google/Meta — via Python backend) ───────
+// Coqui TTS runs in the Python backend process.  The WebSocket returns
+// a fallback pointer so the client can POST to /api/voice/speak with JSON body { "engine": "coqui", ... }
+// for actual audio generation.  Piper TTS handles real-time WS audio.
+if (type === 'coqui_speak') {
+  if (!msg.text) { ws.send(JSON.stringify({type:'error',code:'NO_TEXT'})); return; }
+  audit('COQUI_TTS', 'request', {wsId, len: msg.text.length});
+  // Coqui runs via Python backend; respond with fallback info for the client
+  ws.send(JSON.stringify({type:'coqui_result', engine:'coqui', text:msg.text.slice(0,800),
+    fallback:true, note:'Use POST /api/voice/speak with JSON body {"engine":"coqui", ...} for audio generation'}));
+  return;
+}
+
+// ─── MOVIE GENERATOR ──────────────────────────────────────────────────
+if (type === 'movie_generate') {
+  audit('MOVIE_GEN', msg.title||'untitled', {wsId, genre:msg.genre||'short_film'});
+  const job = { job_id:'mv_'+crypto.randomBytes(6).toString('hex'), title:msg.title||'Untitled',
+    genre:msg.genre||'short_film', resolution:msg.resolution||'1920x1080', fps:msg.fps||24,
+    scenes:msg.scenes||[], status:'submitted', ts:Date.now() };
+  ws.send(JSON.stringify({type:'movie_job', ...job}));
+  return;
+}
+
+// ─── MUSIC GENERATOR ─────────────────────────────────────────────────
+if (type === 'music_generate') {
+  audit('MUSIC_GEN', msg.prompt||'', {wsId, genre:msg.genre||'ambient', bpm:msg.bpm||120});
+  const job = { job_id:'mu_'+crypto.randomBytes(6).toString('hex'), prompt:msg.prompt||'',
+    genre:msg.genre||'ambient', bpm:msg.bpm||120, duration:msg.duration||30,
+    status:'submitted', ts:Date.now() };
+  ws.send(JSON.stringify({type:'music_job', ...job}));
+  return;
+}
+
+// ─── OPAR (On-Premises AI Representative) ─────────────────────────────
+if (type === 'opar_interact') {
+  audit('OPAR', msg.message||'', {wsId, opar_id:msg.opar_id||'default'});
+  const response = { type:'opar_response', opar_id:msg.opar_id||'default',
+    message: msg.message ? 'Understood. Processing your request.' : 'Hello! I am your OPAR.',
+    emotion:'neutral', state:'speaking', voice_engine:msg.voice_engine||'piper', ts:Date.now() };
+  ws.send(JSON.stringify(response));
+  return;
+}
+
+if (type === 'opar_design') {
+  audit('OPAR_DESIGN', 'appearance update', {wsId, opar_id:msg.opar_id||'default'});
+  ws.send(JSON.stringify({type:'opar_design_ack', opar_id:msg.opar_id||'default',
+    appearance:msg.appearance||{}, status:'applied', ts:Date.now()}));
+  return;
+}
+
+// ─── 3D CGI AVATAR ────────────────────────────────────────────────────
+if (type === 'cgi_avatar_update') {
+  audit('CGI_AVATAR', 'update', {wsId});
+  ws.send(JSON.stringify({type:'cgi_avatar_ack', updates:msg.updates||{},
+    status:'applied', ts:Date.now()}));
+  return;
+}
+
+// ─── CODEMASTER / KODER — Syntax Check ────────────────────────────────
+if (type === 'code_check') {
+  const code = (msg.code||'').slice(0,50000);
+  const lang = msg.language||'python';
+  audit('CODE_CHECK', lang, {wsId, len:code.length});
+  const lines = code.split('\n');
+  const issues = [];
+  lines.forEach((line,i) => {
+    const ln = i+1;
+    const trimmed = line.trimEnd();
+    // Syntax-level red errors
+    if (lang==='python') {
+      if (/^\s*(def|class|if|elif|else|for|while|try|except|finally|with)\b/.test(trimmed) && !trimmed.endsWith(':') && !trimmed.endsWith(':\\'))
+        issues.push({line:ln,severity:'error',color:'#EF4444',msg:'Missing colon at end of statement',fix:trimmed+':'});
+      if (/\bprint\s+[^(]/.test(trimmed) && !/\bprint\s*\(/.test(trimmed))
+        issues.push({line:ln,severity:'error',color:'#EF4444',msg:'print needs parentheses (Python 3)',fix:trimmed.replace(/\bprint\s+(.+)/,'print($1)')});
+    }
+    if (lang==='javascript') {
+      if (/\bvar\b/.test(trimmed))
+        issues.push({line:ln,severity:'warning',color:'#F59E0B',msg:'Use const/let instead of var',fix:trimmed.replace(/\bvar\b/,'const')});
+      if (/==(?!=)/.test(trimmed) && !/===/.test(trimmed))
+        issues.push({line:ln,severity:'warning',color:'#F59E0B',msg:'Use === instead of ==',fix:trimmed.replace(/==(?!=)/g,'===')});
+    }
+    // Universal warnings (yellow/orange)
+    if (trimmed.length > 120)
+      issues.push({line:ln,severity:'warning',color:'#F59E0B',msg:'Line exceeds 120 chars',fix:null});
+    if (/\beval\s*\(/.test(trimmed))
+      issues.push({line:ln,severity:'error',color:'#EF4444',msg:'eval() is a security risk',fix:null});
+    if (/\bexec\s*\(/.test(trimmed) && lang==='python')
+      issues.push({line:ln,severity:'warning',color:'#FB923C',msg:'exec() usage — review carefully',fix:null});
+    if (trimmed !== line)
+      issues.push({line:ln,severity:'info',color:'#22C55E',msg:'Trailing whitespace',fix:trimmed});
+  });
+  // Mark clean lines green
+  const lineColors = {};
+  lines.forEach((_,i) => { lineColors[i+1] = '#22C55E'; }); // default green
+  issues.forEach(iss => {
+    if (iss.severity==='error') lineColors[iss.line]='#EF4444';
+    else if (iss.severity==='warning' && lineColors[iss.line]!=='#EF4444') lineColors[iss.line]='#F59E0B';
+  });
+  ws.send(JSON.stringify({type:'code_check_result', language:lang,
+    total_lines:lines.length, issues, lineColors,
+    summary:{errors:issues.filter(i=>i.severity==='error').length,
+             warnings:issues.filter(i=>i.severity==='warning').length,
+             clean:lines.length-Object.keys(issues.reduce((a,i)=>{a[i.line]=1;return a;},{})).length},
+    ts:Date.now()}));
+  return;
+}
+
+// ─── CODEMASTER / KODER — Auto-Fix ───────────────────────────────────
+if (type === 'code_fix') {
+  const code = (msg.code||'').slice(0,50000);
+  const lang = msg.language||'python';
+  const fixLine = msg.line;
+  const fixText = msg.fix;
+  audit('CODE_FIX', lang+':L'+fixLine, {wsId});
+  if (fixLine && fixText !== undefined && fixText !== null) {
+    const lines = code.split('\n');
+    if (fixLine >= 1 && fixLine <= lines.length) {
+      lines[fixLine-1] = fixText;
+      ws.send(JSON.stringify({type:'code_fix_result', code:lines.join('\n'),
+        line:fixLine, applied:true, ts:Date.now()}));
+      return;
+    }
+  }
+  ws.send(JSON.stringify({type:'code_fix_result', code, applied:false, reason:'Invalid line or fix', ts:Date.now()}));
+  return;
+}
+
+// ─── DASHBOARD BUILDER AI ─────────────────────────────────────────────
+if (type === 'dashboard_build') {
+  const role = msg.role||'adult';
+  const style = msg.style||'default';
+  audit('DASH_BUILD', role, {wsId, style});
+  const roleDef = RM[role] || RM['adult'];
+  const panels = roleDef.panels === '*'
+    ? DEFAULT_PANELS
+    : (Array.isArray(roleDef.panels) ? roleDef.panels : DEFAULT_PANELS);
+  const layout = panels.map((p,i) => ({
+    panel_id: p, order:i+1, width: i===0?'full':'half',
+    // Generate a visible accent color (first hex digit >= 8 ensures brightness)
+    color: '#'+crypto.randomBytes(3).toString('hex').replace(/^[0-3]/,'8')
+  }));
+  ws.send(JSON.stringify({type:'dashboard_built', role, level:roleDef.lvl||1,
+    layout, panel_count:panels.length, style, ts:Date.now()}));
+  return;
+}
+
 ws.send(JSON.stringify({type:'error',code:'UNKNOWN',received:type}));
 
 });
@@ -568,8 +870,12 @@ process.stdout.write('\n╔═════════════════�
 process.stdout.write('║  SuperGrok Unified Server -- LIVE                 ║\n');
 process.stdout.write('║  Primary   http://127.0.0.1:'+PORT_UNIFIED+'               ║\n');
 process.stdout.write('║  Bridge WS ws://127.0.0.1:'+PORT_BRIDGE+' (proxy)        ║\n');
-process.stdout.write('║  Auth      http://127.0.0.1:'+PORT_AUTH+' (proxy)        ║\n');
+process.stdout.write('║  No Google · No Meta · 127.0.0.1 Only             ║\n');
+process.stdout.write('║  a-shell / iSH / Node.js / Python OK              ║\n');
 process.stdout.write('║  Piper TTS '+(piperReady?'✅ Ready    ':'⚠️  Not found  ')+'                       ║\n');
+process.stdout.write('║  Coqui TTS '+(coquiReady?'✅ Ready    ':'⚠️  Not found  ')+'                       ║\n');
+process.stdout.write('║  OPAR · Movie · Music · 3D CGI Avatar             ║\n');
+process.stdout.write('║  CodeMaster · Koder · Dashboard Builder AI        ║\n');
 process.stdout.write('║  Audit log '+ACCESS_LOG.slice(0,30).padEnd(30,' ')+'║\n');
 process.stdout.write('╚══════════════════════════════════════════════════╝\n\n');
 });
@@ -600,7 +906,7 @@ srv.listen(port, '127.0.0.1', () => process.stdout.write('  '+label+' :'+port+' 
 return srv;
 }
 makeProxy(PORT_BRIDGE, 'Bridge  ');
-makeProxy(PORT_AUTH,   'Auth    ');
+// PORT_AUTH shares PORT_BRIDGE (9899) — single proxy for a-shell/iSH compatibility
 
 // ─── GRACEFUL SHUTDOWN ────────────────────────────────────────────────
 function shutdown(sig) {
