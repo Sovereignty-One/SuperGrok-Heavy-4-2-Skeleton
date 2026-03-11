@@ -19,8 +19,7 @@ const { spawn, exec } = require('child_process');
 // ─── CONFIG ───────────────────────────────────────────────────────────
 const PORT_UNIFIED = parseInt(process.env.PORT_UNIFIED || '9898');
 const PORT_BRIDGE  = parseInt(process.env.PORT_BRIDGE  || '9899');
-// PORT_AUTH shares PORT_BRIDGE — single proxy for a-shell/iSH compat
-const PORT_AUTH    = parseInt(process.env.PORT_AUTH    || '9899');
+// Auth traffic shares PORT_BRIDGE — single proxy for a-shell/iSH compat
 const PIPER_BIN    = process.env.PIPER_BIN    || './piper';
 const PIPER_MODEL  = process.env.PIPER_MODEL  || './en_US-lessac-medium.onnx';
 const LOG_DIR      = process.env.LOG_DIR      || './logs';
