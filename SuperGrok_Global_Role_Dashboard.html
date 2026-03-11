@@ -1643,7 +1643,7 @@ h+=’<div class="card"><div class="ct">⚡ Port 9898 Primary</div>’;
 h+=kv(‘Status’,tag(STATE.bridgeOnline?‘ONLINE’:‘OFFLINE’,STATE.bridgeOnline?‘tg’:‘tr2’));
 h+=kv(‘Primary’,‘ws://127.0.0.1:9898 (a-shell/iSH)’);
 h+=kv(‘Bridge’,‘ws://127.0.0.1:9899’);
-h+=kv(‘Auth alias’,‘http://localhost:8443’);
+h+=kv(‘Auth (shares Bridge port)’,‘via 9898/9899’);
 h+=kv(‘Piper TTS’,tag(STATE.piperActive?‘Active’:‘Inactive’,STATE.piperActive?‘tg’:‘ta2’));
 h+=’<div class="btn-row" style="margin-top:10px"><button class="btn bp" onclick="Bridge.connect()">Reconnect Bridge</button><button class="btn bs" onclick="Bridge.pingHealth()">Ping Health</button></div>’;
 h+=’<div class="banner-i" style="margin-top:8px">Run: <code>node Unified_Server.js</code> — all services on 9898/9899 · a-shell / iSH compatible</div></div>’;

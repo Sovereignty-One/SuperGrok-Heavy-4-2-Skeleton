@@ -79,6 +79,14 @@ class MovieGeneratorService:
         self._projects: Dict[str, MovieProject] = {}
         logger.info("MovieGeneratorService initialised")
 
+    @staticmethod
+    def _safe_genre(genre: str) -> "MovieGenre":
+        """Convert *genre* to a ``MovieGenre`` enum, defaulting to SHORT_FILM on invalid input."""
+        try:
+            return MovieGenre(genre)
+        except ValueError:
+            return MovieGenre.SHORT_FILM
+
     # ── Project CRUD ─────────────────────────────────────────────────
 
     def create_project(
@@ -95,7 +103,7 @@ class MovieGeneratorService:
             project_id=str(uuid.uuid4()),
             user_id=user_id,
             title=title,
-            genre=MovieGenre(genre),
+            genre=self._safe_genre(genre),
             description=description,
             resolution=resolution,
             fps=min(max(fps, 12), 60),

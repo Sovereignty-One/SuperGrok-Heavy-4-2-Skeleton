@@ -112,6 +112,8 @@ child:            { lvl:0, pp:false, panels:['dashboard','story_time','learning_
 teen:             { lvl:0, pp:false, panels:['dashboard','college_prep','career','ai_tutor','homework','ai_games','profile'] },
 };
 
+const DEFAULT_PANELS = ['dashboard','ai_chat','profile'];
+
 const CHILD_BLOCKED = new Set(['president','prime_minister','root','superadmin','intel_officer',
 'cyber_cmd','judge','military','attorney_general','gov_official','supreme_court',
 'surgeon_general','un_sg','ambassador','foreign_minister','interpol']);
@@ -686,7 +688,9 @@ if (type === 'dashboard_build') {
   const style = msg.style||'default';
   audit('DASH_BUILD', role, {wsId, style});
   const roleDef = RM[role] || RM['adult'];
-  const panels = roleDef.panels === '*' ? Object.keys(RM).slice(0,12) : (Array.isArray(roleDef.panels) ? roleDef.panels : ['dashboard','ai_chat','profile']);
+  const panels = roleDef.panels === '*'
+    ? DEFAULT_PANELS
+    : (Array.isArray(roleDef.panels) ? roleDef.panels : DEFAULT_PANELS);
   const layout = panels.map((p,i) => ({
     panel_id: p, order:i+1, width: i===0?'full':'half',
     // Generate a visible accent color (first hex digit >= 8 ensures brightness)

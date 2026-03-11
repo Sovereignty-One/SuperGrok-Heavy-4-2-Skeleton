@@ -5,7 +5,7 @@ No Google / No Meta — fully on-device, 127.0.0.1 only.
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional
+from typing import Literal, Optional
 import logging
 
 logger = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ router = APIRouter()
 class VoiceRequest(BaseModel):
     text: str
     voice_model: Optional[str] = None
-    engine: str = "piper"
+    engine: Literal["piper", "coqui"] = "piper"
     speed: float = 1.0
 
 
