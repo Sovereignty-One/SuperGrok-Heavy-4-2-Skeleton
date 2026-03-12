@@ -4,7 +4,7 @@ import Combine
 /// AIBridgeService — Connects iOS to Claude, GPT, Grok, and Siri
 /// through the SuperGrok Unified Server WebSocket bridge.
 ///
-/// All AI queries are routed through the Unified Server (port 9000)
+/// All AI queries are routed through the Unified Server (port 9898)
 /// which proxies to Anthropic, OpenAI, and xAI APIs. This keeps
 /// API keys server-side and provides unified audit logging.
 class AIBridgeService: ObservableObject {
@@ -52,7 +52,7 @@ class AIBridgeService: ObservableObject {
 
     // MARK: - Init
 
-    init(serverHost: String = "127.0.0.1", serverPort: Int = 9000) {
+    init(serverHost: String = "127.0.0.1", serverPort: Int = 9898) {
         self.serverURL = URL(string: "ws://\(serverHost):\(serverPort)")!
         self.session = URLSession(configuration: .default)
         connect()
@@ -80,7 +80,7 @@ class AIBridgeService: ObservableObject {
                     self.isConnected = false
                     self.addError(model: self.activeModel,
                                   message: "Connection lost: \(error.localizedDescription)",
-                                  suggestion: "Check that Unified_Server.js is running on port 9000. Run: npm start")
+                                  suggestion: "Check that Unified_Server.js is running on port 9898. Run: npm start")
                 }
                 // Auto-reconnect after 5 seconds
                 DispatchQueue.main.asyncAfter(deadline: .now() + 5) {

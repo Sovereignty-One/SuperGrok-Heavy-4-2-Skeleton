@@ -50,7 +50,7 @@ class CoquiTTSService: ObservableObject {
 
     // MARK: - Init
 
-    init(serverHost: String = "127.0.0.1", serverPort: Int = 9000) {
+    init(serverHost: String = "127.0.0.1", serverPort: Int = 9898) {
         self.serverURL = URL(string: "ws://\(serverHost):\(serverPort)")!
         self.session = URLSession(configuration: .default)
 

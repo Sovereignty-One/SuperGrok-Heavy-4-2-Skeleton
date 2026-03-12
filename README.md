@@ -5,11 +5,11 @@
 **Private Sovereign AI Research and Development Platform**  
 **Core Model:** Super Grok Heavy 4.2  
 (xAI) – Locked, Sealed, Sovereign  
-**Last Updated:** March 4, 2026
+**Last Updated:** March 12, 2026
 
 ## 📋 Overview
 
-SuperGrok-Hevy-Skeleton is the foundation repository for the Sovereignty AI Studio platform. This is a fully private, self-contained research and production environment for advanced sovereign artificial intelligence systems.
+SuperGrok-Heavy-4-2-Skeleton is the foundation repository for the Sovereignty AI Studio platform. This is a fully private, self-contained research and production environment for advanced sovereign artificial intelligence systems.
 
 The platform integrates specialized domains including:
 - 🤖 AI Agents and Orchestration
@@ -310,15 +310,17 @@ SuperGrok-Heavy-4-2-Skeleton/
 
 ```bash
 # Clone the repository
-git clone https://github.com/Sovereignty-One/SuperGrok-Hevy-Skeleton-.git
-cd SuperGrok-Hevy-Skeleton-/Sovereignty-AI-Studio-main
+git clone https://github.com/Sovereignty-One/SuperGrok-Heavy-4-2-Skeleton.git
+cd SuperGrok-Heavy-4-2-Skeleton/Sovereignty-AI-Studio-main
 
 # Build and run with Docker Compose
 docker-compose up -d
 
 # Access the services
-# Backend: http://localhost:8000
-# Frontend: http://localhost:3000
+# All services accessible through unified port: http://localhost:9898
+# Backend API: http://localhost:9898/api/v1
+# WebSocket: ws://localhost:9898/ws/alerts
+# Frontend: http://localhost:3000 (if running separately)
 ```
 
 ### Option 2: Manual Installation
@@ -337,8 +339,8 @@ pip install -r requirements.txt
 # Run database migrations
 alembic upgrade head
 
-# Start the backend server
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# Start the backend server (internal - will be proxied via node-bridge)
+uvicorn app.main:app --reload --host 0.0.0.0 --port 9898
 ```
 
 #### Frontend Setup
@@ -367,6 +369,24 @@ python main.py
 ```
 
 ## 🔧 Configuration
+
+### Port Architecture
+
+**UNIFIED PORT 9898 - Single Entry Point**
+
+All services funnel through port **9898** as the single external entry point:
+
+- **External Access**: `ws://127.0.0.1:9898` or `http://127.0.0.1:9898`
+- **Node Bridge**: Port 9898 (external) - Proxies all traffic to internal services
+- **Backend (FastAPI)**: Internal only - Accessed via Docker network
+- **Redis**: Internal only - Bound to 127.0.0.1, no external exposure
+- **PostgreSQL**: Internal only - Accessible within Docker network only
+
+**No wild port numbers** - Everything routes through 9898. This architecture:
+- Simplifies firewall rules (single port)
+- Works seamlessly with a-shell/iSH environments
+- Provides a unified interface for iOS apps and frontend
+- Keeps internal services secure (no direct external access)
 
 ### Environment Variables
 
@@ -528,7 +548,7 @@ See [LICENSE](LICENSE) for the full license text.
 ## 📞 Contact & Support
 
 For questions, issues, or collaboration inquiries:
-- **Repository**: [SuperGrok-Hevy-Skeleton](https://github.com/Sovereignty-One/SuperGrok-Hevy-Skeleton-)
+- **Repository**: [SuperGrok-Heavy-4-2-Skeleton](https://github.com/Sovereignty-One/SuperGrok-Heavy-4-2-Skeleton)
 - **Issues**: Use GitHub Issues for bug reports and feature requests
 
 ## 📝 Changelog
@@ -551,7 +571,7 @@ For questions, issues, or collaboration inquiries:
 
 ---
 
-**Last Updated**: March 4, 2026  
+**Last Updated**: March 12, 2026  
 **Version**: 1.1.0  
 **Status**: Active Development  
 **Core Model**: Super Grok Heavy 4.2

@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./sovereignty.db"
 
     # Redis
-    redis_url: str = "redis://localhost:6379/0"
+    redis_url: str = "redis://127.0.0.1:6379/0"
 
     # Security
     secret_key: str = ""
@@ -22,12 +22,8 @@ class Settings(BaseSettings):
 
     # CORS
     cors_origins: List[str] = [
-        "http://localhost:3000",
-        "http://localhost:9898",
-        "http://localhost:9000",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:9898",
-        "http://127.0.0.1:9000",
     ]
 
     class Config:
