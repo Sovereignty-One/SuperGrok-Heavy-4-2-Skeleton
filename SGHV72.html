@@ -466,7 +466,7 @@ try { PiperTTS.ws.send(typeof msg === ‘string’ ? msg : JSON.stringify(msg));
 }
 if (!sent) {
 /* HTTP fallback */
-fetch(‘http://localhost:9899/chat’, {
+fetch(‘http://localhost:9898/chat’, {
 method:‘POST’, headers:{‘Content-Type’:‘application/json’},
 body: JSON.stringify(typeof msg === ‘object’ ? msg : {message:msg})
 }).then(function(r){return r.json();}).then(function(d){
@@ -616,7 +616,7 @@ var tnow = window.tnow;
     /* ── 5. HTTP fallback — fire-and-forget ── */
     if(!sent){
       try {
-        fetch('http://localhost:9899/error_ping', {
+        fetch('http://localhost:9898/error_ping', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -1775,7 +1775,7 @@ const BRIDGE = {
     try{
       // Try 9899 (bridge health) then 9898/health fallback
       let r;
-      try { r = await fetch('http://localhost:9899/health',{signal:_safeAbort(2000)}); }
+      try { r = await fetch('http://localhost:9898/health',{signal:_safeAbort(2000)}); }
       catch(e2) { r = await fetch('http://localhost:9898/health',{signal:_safeAbort(2000)}); }
       if(r.ok){
         this.connected=true; this.lastPing=Date.now();
@@ -3615,7 +3615,7 @@ var _CFG_KEY = 'sg_agent_cfg';
 var CFG = (function(){
   var D = {autoRepair:true,logLevel:'info',bridgeRelay:true,repairThrottleMs:500,
     alertThreshold:5,sealIntervalMs:30000,patchSandbox:true,maxRepairLog:200,
-    maxErrorLog:500,bridgeWsUrl:'ws://localhost:9898',bridgeHttpUrl:'http://localhost:9899/agent'};
+    maxErrorLog:500,bridgeWsUrl:'ws://localhost:9898',bridgeHttpUrl:'http://localhost:9898/agent'};
   try { return Object.assign({},D,JSON.parse(localStorage.getItem(_CFG_KEY)||'{}')); }
   catch(e){ return Object.assign({},D); }
 })();
@@ -7150,7 +7150,7 @@ if (typeof PiperTTS !== 'undefined' && PiperTTS.ws && PiperTTS.ws.readyState ===
   window._drawAIOut = out;
 } else {
   /* Fallback: HTTP POST */
-  fetch('http://localhost:9899/chat', {
+  fetch('http://localhost:9898/chat', {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({ message: prompt + '\n\n[Drawing: attached]', agent:'claude' })
@@ -7455,7 +7455,7 @@ if (typeof PiperTTS !== 'undefined' && PiperTTS.ws && PiperTTS.ws.readyState ===
   if (stat) stat.textContent = '\u2713 Sent to Claude via bridge';
   window._faiOut = out;
 } else {
-  fetch('http://localhost:9899/chat', {
+  fetch('http://localhost:9898/chat', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ message:msg, agent:'claude' })
   }).then(function(r){ return r.json(); })
@@ -9389,7 +9389,7 @@ var fullMsg = '[Companion: '+name+']\n\nUser says: '+input+'\n\nRespond naturall
 if (typeof PiperTTS !== 'undefined' && PiperTTS.ws && PiperTTS.ws.readyState === 1) {
   PiperTTS.ws.send(JSON.stringify({ type:'ai_chat', agent:'claude', message:fullMsg, context:'opar_chat' }));
 } else {
-  fetch('http://localhost:9899/chat', {
+  fetch('http://localhost:9898/chat', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body:JSON.stringify({ message:fullMsg, agent:'claude' })
   }).then(function(r){ return r.json(); })
@@ -11247,7 +11247,7 @@ out += row(‘Agent bridge’, agentBridge===‘connected’?true:‘warn’, �
 
 out += ‘<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">’;
 out += ‘<button class="btn-p" style="font-size:9px" onclick="sg(function(){if(typeof BRIDGE!==\'undefined\'&&BRIDGE.tryWebSocket)BRIDGE.tryWebSocket();if(typeof PiperTTS!==\'undefined\'&&PiperTTS.connect)PiperTTS.connect();if(window.SG_AGENT)SG_AGENT.reconnectBridge();toast(\'All bridges reconnecting…\',\'\');setTimeout(function(){loadPanel(\'diag\');},1500)})">🔌 Reconnect All Bridges</button>’;
-out += ‘<button class="btn-s" style="font-size:9px" onclick="sg(function(){fetch(\'http://localhost:9899/health\').then(function(r){return r.json();}).then(function(d){toast(\'Bridge HTTP alive: \'+JSON.stringify(d).slice(0,60),\'ok\');}).catch(function(e){toast(\'Bridge HTTP dead: \'+e.message,\'err\');});})">🏥 Test HTTP :9899</button>’;
+out += ‘<button class="btn-s" style="font-size:9px" onclick="sg(function(){fetch(\'http://localhost:9898/health\').then(function(r){return r.json();}).then(function(d){toast(\'Bridge HTTP alive: \'+JSON.stringify(d).slice(0,60),\'ok\');}).catch(function(e){toast(\'Bridge HTTP dead: \'+e.message,\'err\');});})">🏥 Test HTTP :9898</button>’;
 out += ‘<button class="btn-s" style="font-size:9px" onclick="sg(function(){var ws=new WebSocket(\'ws://localhost:9898\');ws.onopen=function(){toast(\'WS :9898 OPEN ✓\',\'ok\');ws.close();};ws.onerror=function(){toast(\'WS :9898 FAILED — bridge.py not running\',\'err\');};})">📶 Test WS :9898</button>’;
 out += ‘</div>’;
 out += ‘</div>’;
@@ -11380,13 +11380,13 @@ out += ‘<div style="font-family:var(--mono);background:var(--bg3);padding:10px
 ‘python3 bridge.py<br><br>’+
 ‘# Bridge listens on:<br>’+
 ‘ws://localhost:9898   ← WebSocket (AI chat, voice, agent)<br>’+
-‘http://localhost:9899 ← HTTP health + REST endpoints’+
+‘http://localhost:9898 ← HTTP health + REST endpoints’+
 ‘</div>’;
 out += ‘<div>If bridge.py is running but still disconnected: check firewall, verify port 9898 is free (<code style="font-family:var(--mono);color:var(--cy)">lsof -i :9898</code>), and make sure the bridge has no startup errors.</div>’;
 out += ‘</div>’;
 
 out += ‘<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">’;
-out += ‘<button class="btn-s" style="font-size:9px" onclick="sg(function(){fetch(\'http://localhost:9899/health\').then(function(r){return r.json();}).then(function(d){toast(\'Bridge alive: \'+d.status,\'ok\');}).catch(function(){toast(\'Bridge offline — start bridge.py\',\'err\');});})">🏥 Ping :9899</button>’;
+out += ‘<button class="btn-s" style="font-size:9px" onclick="sg(function(){fetch(\'http://localhost:9898/health\').then(function(r){return r.json();}).then(function(d){toast(\'Bridge alive: \'+d.status,\'ok\');}).catch(function(){toast(\'Bridge offline — start bridge.py\',\'err\');});})">🏥 Ping :9898</button>’;
 out += ‘<button class="btn-s" style="font-size:9px" onclick="sg(function(){var ws=new WebSocket(\'ws://localhost:9898\');var t=setTimeout(function(){ws.close();toast(\'Port 9898 timeout\',\'err\');},3000);ws.onopen=function(){clearTimeout(t);toast(\'Port 9898 OPEN ✓ Bridge is running!\',\'ok\');ws.close();};ws.onerror=function(){clearTimeout(t);toast(\'Port 9898 refused — bridge.py not running\',\'err\');};})">📶 Test WS :9898</button>’;
 out += ‘</div>’;
 out += ‘</div>’;
