@@ -35,7 +35,7 @@ class TTSManager: ObservableObject {
 
     // MARK: - Init
 
-    init(serverHost: String = "127.0.0.1", serverPort: Int = 9000) {
+    init(serverHost: String = "127.0.0.1", serverPort: Int = 9898) {
         self.coquiService = CoquiTTSService(serverHost: serverHost, serverPort: serverPort)
         self.piperService = PiperService()
 

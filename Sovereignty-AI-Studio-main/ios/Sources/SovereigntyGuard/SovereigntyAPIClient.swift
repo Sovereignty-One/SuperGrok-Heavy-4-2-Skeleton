@@ -27,7 +27,7 @@ public final class SovereigntyAPIClient: @unchecked Sendable {
 
     private let session: URLSession
 
-    public init(baseURL: String = "http://localhost:9898") {
+    public init(baseURL: String = "http://127.0.0.1:9898") {
         self._baseURL = baseURL
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 15

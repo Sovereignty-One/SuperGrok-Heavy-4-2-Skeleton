@@ -196,7 +196,7 @@ struct DiagnosticAgentView: View {
         let errorText = customPrompt.isEmpty ? (selectedError?.message ?? "") : customPrompt
         let context = """
         Platform: iOS (SuperGrok Heavy 4.2)
-        Server: Unified_Server.js on port 9000
+        Server: Unified_Server.js on port 9898
         TTS Engine: \(ttsManager.activeEngine)
         WS Connected: \(aiBridge.isConnected)
         Active Model: \(aiBridge.activeModel.displayName)
