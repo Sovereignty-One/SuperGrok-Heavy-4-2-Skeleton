@@ -569,6 +569,26 @@ if (url === '/api/execute-command') {
 
 // ── GET routes ─────────────────────────────────────────────────────
 if (req.method === 'GET') {
+// ── Serve FullDashboard.html ─────────────────────────────────────
+if (url === '/' || url === '/dashboard' || url === '/FullDashboard.html') {
+const dashboardPath = path.join(__dirname, 'FullDashboard.html');
+if (fs.existsSync(dashboardPath)) {
+try {
+const content = fs.readFileSync(dashboardPath, 'utf8');
+res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
+res.end(content);
+audit('DASHBOARD_SERVE', 'FullDashboard.html served', {ip});
+return;
+} catch(e) {
+json(500, {detail: 'Error reading dashboard: ' + e.message});
+return;
+}
+} else {
+json(404, {detail: 'Dashboard file not found'});
+return;
+}
+}
+
 if (url === '/api/logs/access') {
 const tok = req.headers['x-admin-token']||'';
 try {

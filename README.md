@@ -388,6 +388,14 @@ All services funnel through port **9898** as the single external entry point:
 - Provides a unified interface for iOS apps and frontend
 - Keeps internal services secure (no direct external access)
 
+### FullDashboard Integration
+
+The **FullDashboard.html** is fully integrated and accessible at:
+- http://127.0.0.1:9898/
+- http://127.0.0.1:9898/dashboard
+
+See [DASHBOARD_SETUP.md](DASHBOARD_SETUP.md) for complete setup instructions.
+
 ### Environment Variables
 
 Create a `.env` file in the root directory:
