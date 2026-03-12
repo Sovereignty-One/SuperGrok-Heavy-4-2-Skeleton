@@ -1773,7 +1773,7 @@ const BRIDGE = {
 
   async pollHealth(){
     try{
-      // Try 9899 (bridge health) then 9898/health fallback
+      // Try unified port 9898 for health check
       let r;
       try { r = await fetch('http://localhost:9898/health',{signal:_safeAbort(2000)}); }
       catch(e2) { r = await fetch('http://localhost:9898/health',{signal:_safeAbort(2000)}); }
