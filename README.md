@@ -5,11 +5,11 @@
 **Private Sovereign AI Research and Development Platform**  
 **Core Model:** Super Grok Heavy 4.2  
 (xAI) – Locked, Sealed, Sovereign  
-**Last Updated:** March 4, 2026
+**Last Updated:** March 12, 2026
 
 ## 📋 Overview
 
-SuperGrok-Hevy-Skeleton is the foundation repository for the Sovereignty AI Studio platform. This is a fully private, self-contained research and production environment for advanced sovereign artificial intelligence systems.
+SuperGrok-Heavy-4-2-Skeleton is the foundation repository for the Sovereignty AI Studio platform. This is a fully private, self-contained research and production environment for advanced sovereign artificial intelligence systems.
 
 The platform integrates specialized domains including:
 - 🤖 AI Agents and Orchestration
@@ -310,8 +310,8 @@ SuperGrok-Heavy-4-2-Skeleton/
 
 ```bash
 # Clone the repository
-git clone https://github.com/Sovereignty-One/SuperGrok-Hevy-Skeleton-.git
-cd SuperGrok-Hevy-Skeleton-/Sovereignty-AI-Studio-main
+git clone https://github.com/Sovereignty-One/SuperGrok-Heavy-4-2-Skeleton.git
+cd SuperGrok-Heavy-4-2-Skeleton/Sovereignty-AI-Studio-main
 
 # Build and run with Docker Compose
 docker-compose up -d
@@ -528,7 +528,7 @@ See [LICENSE](LICENSE) for the full license text.
 ## 📞 Contact & Support
 
 For questions, issues, or collaboration inquiries:
-- **Repository**: [SuperGrok-Hevy-Skeleton](https://github.com/Sovereignty-One/SuperGrok-Hevy-Skeleton-)
+- **Repository**: [SuperGrok-Heavy-4-2-Skeleton](https://github.com/Sovereignty-One/SuperGrok-Heavy-4-2-Skeleton)
 - **Issues**: Use GitHub Issues for bug reports and feature requests
 
 ## 📝 Changelog
@@ -551,7 +551,7 @@ For questions, issues, or collaboration inquiries:
 
 ---
 
-**Last Updated**: March 4, 2026  
+**Last Updated**: March 12, 2026  
 **Version**: 1.1.0  
 **Status**: Active Development  
 **Core Model**: Super Grok Heavy 4.2
