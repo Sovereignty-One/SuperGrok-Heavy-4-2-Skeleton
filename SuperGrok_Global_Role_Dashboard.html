@@ -1639,14 +1639,14 @@ h+=’<div class="fg" style="margin-bottom:8px"><label>OPENAI API KEY (GPT-4)</l
 h+=’<div class="fg" style="margin-bottom:8px"><label>XAI API KEY (Grok)</label><input class="fi" id="xaiKey" type="password" placeholder="xai-…" value="'+(SS.get('sg_xai_key')||'')+'"></div>’;
 h+=’<button class="btn bp btn-w" onclick="saveAIKeys()" style="margin-top:4px">Save API Keys</button></div>’;
 // Bridge
-h+=’<div class="card"><div class="ct">⚡ Port 9898 Primary</div>’;
-h+=kv(‘Status’,tag(STATE.bridgeOnline?‘ONLINE’:‘OFFLINE’,STATE.bridgeOnline?‘tg’:‘tr2’));
-h+=kv(‘Primary’,‘ws://127.0.0.1:9898 (a-shell/iSH)’);
-h+=kv(‘Bridge’,‘ws://127.0.0.1:9899’);
-h+=kv(‘Auth (shares Bridge port)’,‘via 9898/9899’);
-h+=kv(‘Piper TTS’,tag(STATE.piperActive?‘Active’:‘Inactive’,STATE.piperActive?‘tg’:‘ta2’));
-h+=’<div class="btn-row" style="margin-top:10px"><button class="btn bp" onclick="Bridge.connect()">Reconnect Bridge</button><button class="btn bs" onclick="Bridge.pingHealth()">Ping Health</button></div>’;
-h+=’<div class="banner-i" style="margin-top:8px">Run: <code>node Unified_Server.js</code> — all services on 9898/9899 · a-shell / iSH compatible</div></div>’;
+h+='<div class="card"><div class="ct">⚡ Port 9898 Unified</div>';
+h+=kv('Status',tag(STATE.bridgeOnline?'ONLINE':'OFFLINE',STATE.bridgeOnline?'tg':'tr2'));
+h+=kv('Primary','ws://127.0.0.1:9898 (a-shell/iSH)');
+h+=kv('Bridge','ws://127.0.0.1:9898 (unified)');
+h+=kv('Auth (unified port)','via 9898');
+h+=kv('Piper TTS',tag(STATE.piperActive?'Active':'Inactive',STATE.piperActive?'tg':'ta2'));
+h+='<div class="btn-row" style="margin-top:10px"><button class="btn bp" onclick="Bridge.connect()">Reconnect Bridge</button><button class="btn bs" onclick="Bridge.pingHealth()">Ping Health</button></div>';
+h+='<div class="banner-i" style="margin-top:8px">Run: <code>node Unified_Server.js</code> — all services unified on 9898 · a-shell / iSH compatible</div></div>';
 h+=’</div>’;
 // GitHub
 h+=’<div class="card"><div class="ct">🐙 GitHub Token</div>’;
@@ -2827,9 +2827,9 @@ var Bridge={
   ws:null,
   connect:function(){
     try{
-      this.ws=new WebSocket('ws://127.0.0.1:9899'); var _sg_tok=STATE.sgToken||sessionStorage.getItem('sg_jwt')||'';
+      this.ws=new WebSocket('ws://127.0.0.1:9898'); var _sg_tok=STATE.sgToken||sessionStorage.getItem('sg_jwt')||'';
       this.ws.onopen=function(){STATE.bridgeOnline=true;STATE.piperActive=true;var _b=el('tbbBridge');if(_b){_b.textContent='⚡ LIVE';_b.classList.add('on');}var _l=el('liveLabel');if(_l)_l.textContent='LIVE';addAudit('BRIDGE','Unified server connected');var _tok=STATE.sgToken||sessionStorage.getItem('sg_jwt')||'';if(_tok)Bridge.ws.send(JSON.stringify({type:'token_verify',token:_tok}));};
-      this.ws.onclose=function(){STATE.bridgeOnline=false;STATE.piperActive=false;el('tbbBridge').textContent='⚡ 9899';el('tbbBridge').classList.remove('on');};
+      this.ws.onclose=function(){STATE.bridgeOnline=false;STATE.piperActive=false;el('tbbBridge').textContent='⚡ 9898';el('tbbBridge').classList.remove('on');};
       this.ws.onerror=function(){STATE.bridgeOnline=false;};
       this.ws.onmessage=function(e){
       var _d;try{_d=JSON.parse(e.data);}catch{return;}
