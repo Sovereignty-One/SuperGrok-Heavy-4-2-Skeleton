@@ -11,16 +11,19 @@ All services in the SuperGrok Heavy 4.2 Skeleton funnel through **port 9898** as
 │                  External Clients                            │
 │  • iOS App (ws://127.0.0.1:9898)                            │
 │  • React Frontend (http://127.0.0.1:9898)                   │
+│  • FullDashboard.html (http://127.0.0.1:9898/)             │
 │  • a-shell/iSH Terminal (127.0.0.1:9898)                    │
 └────────────────────┬────────────────────────────────────────┘
                      │
                      │ Port 9898 (ONLY external port)
                      ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              Node Bridge (Port 9898)                         │
+│           Unified_Server.js (Port 9898)                      │
 │  • Single entry point for all traffic                       │
-│  • WebSocket support: /ws/alerts                            │
-│  • REST API proxy: /api/v1/* → Backend                      │
+│  • Serves FullDashboard.html on / and /dashboard           │
+│  • WebSocket support for real-time communication           │
+│  • REST API: /api/v1/*                                      │
+│  • Authentication & Authorization                           │
 │  • Health check: /health                                    │
 └────────────────────┬────────────────────────────────────────┘
                      │
@@ -65,6 +68,22 @@ All services in the SuperGrok Heavy 4.2 Skeleton funnel through **port 9898** as
 - ~~9000~~: Management port (consolidated into 9898)
 
 ## Connection Examples
+
+### FullDashboard.html (Browser)
+```javascript
+// Dashboard is served directly from port 9898
+// Access at: http://127.0.0.1:9898/
+// OR: http://127.0.0.1:9898/dashboard
+
+// WebSocket connection (built into dashboard)
+const ws = new WebSocket('ws://127.0.0.1:9898');
+
+// HTTP API calls
+fetch('http://127.0.0.1:9898/api/auth/login', {
+  method: 'POST',
+  body: JSON.stringify(credentials)
+});
+```
 
 ### iOS App (Swift)
 ```swift
