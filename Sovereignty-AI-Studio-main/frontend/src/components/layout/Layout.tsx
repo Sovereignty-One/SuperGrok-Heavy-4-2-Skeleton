@@ -42,7 +42,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   // Initialize WebSocket connection
   const { isConnected } = useAlertWebSocket({
     userId,
-    apiUrl: process.env.REACT_APP_WS_URL || 'ws://localhost:9898',
+    apiUrl: process.env.REACT_APP_WS_URL || 'ws://127.0.0.1:9898',
     onAlert: handleNewAlert,
     onSystemAlert: handleSystemAlert,
     onAlertUpdate: handleAlertUpdate,
