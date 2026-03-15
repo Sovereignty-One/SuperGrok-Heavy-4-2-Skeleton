@@ -7,7 +7,7 @@
 **Core Model:** Super Grok Heavy 4.2  
 (xAI) – Locked, Sealed, Sovereign  
 **Authority:** Derek Appel  
-**Last Updated:** March 2, 2026
+**Last Updated:** March 15, 2026
 
 ## Overview
 
@@ -17,7 +17,7 @@ The platform integrates specialized domains including computer vision, logical r
 
 No external services, third-party models, or internet connectivity are required for core operation.
 
-The latest SuperGrok V90 dashboard is included at `apps/dashboards/SGHv90.html`, kept in sync with the root skeleton version.
+The latest SuperGrok V90 dashboard is included at `apps/dashboards/SGHv90.html`, kept in sync with the root skeleton version (`/SGHv90.html`) so both repositories remain current.
 
 ## Project Structure
 
