@@ -17,6 +17,8 @@ The platform integrates specialized domains including computer vision, logical r
 
 No external services, third-party models, or internet connectivity are required for core operation.
 
+The latest SuperGrok V90 dashboard is included at `apps/dashboards/SGHv90.html`, kept in sync with the root skeleton version.
+
 ## Project Structure
 
 ```
