@@ -98,7 +98,7 @@ The dashboard automatically connects to port 9898. Connection settings in the HT
 var wsUrl = 'ws://127.0.0.1:9898'; /* 9898 ONLY */
 
 // HTTP Fallback (lines 1897-1898)
-fetch('http://127.0.0.1:9899/health')  // Bridge health
+fetch('http://127.0.0.1:9898/health')  // Bridge health + direct
 fetch('http://127.0.0.1:9898/health')  // Direct fallback
 ```
 

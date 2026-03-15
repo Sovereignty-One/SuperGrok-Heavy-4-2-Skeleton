@@ -189,6 +189,8 @@ PORT_BRIDGE=9898
 PORT_AUTH=9898
 ```
 
+> When `PORT_BRIDGE` equals `PORT_UNIFIED` (the default), the Unified server skips starting the extra proxy listener to avoid double-binding the same port. Set `PORT_BRIDGE` to a different value (e.g., `9899`) if you need a legacy compatibility proxy.
+
 ### Sovereignty-AI-Studio-main/.env
 ```bash
 # Backend configuration

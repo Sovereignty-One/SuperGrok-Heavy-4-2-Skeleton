@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#03060f">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; connect-src 'self' ws://127.0.0.1:9898 ws://127.0.0.1:9898/ ws://127.0.0.1:9898/terminal ws://127.0.0.1:9898/agent ws://127.0.0.1:9898/chat wss://127.0.0.1:9898 wss://127.0.0.1:9898/ wss://127.0.0.1:9898/terminal wss://127.0.0.1:9898/agent wss://127.0.0.1:9898/chat ws://localhost:9898 wss://localhost:9898 http://127.0.0.1:9899 http://127.0.0.1:9900; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob:; frame-src https://duckduckgo.com blob:; worker-src blob:;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; connect-src 'self' ws://127.0.0.1:9898 ws://127.0.0.1:9898/ ws://127.0.0.1:9898/terminal ws://127.0.0.1:9898/agent ws://127.0.0.1:9898/chat wss://127.0.0.1:9898 wss://127.0.0.1:9898/ wss://127.0.0.1:9898/terminal wss://127.0.0.1:9898/agent wss://127.0.0.1:9898/chat ws://localhost:9898 wss://localhost:9898 http://127.0.0.1:9898; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob:; frame-src https://duckduckgo.com blob:; worker-src blob:;">
 <script>/* kill Script error. before anything else — also unregister stale SWs */
 (function(){
   var _s='Script error';
@@ -570,7 +570,7 @@ try { PiperTTS.ws.send(typeof msg === ‘string’ ? msg : JSON.stringify(msg));
 }
 if (!sent) {
 /* HTTP fallback */
-fetch(‘http://127.0.0.1:9899/chat’, {
+fetch(‘http://127.0.0.1:9898/chat’, {
 method:‘POST’, headers:{‘Content-Type’:‘application/json’},
 body: JSON.stringify(typeof msg === ‘object’ ? msg : {message:msg})
 }).then(function(r){return r.json();}).then(function(d){
@@ -720,7 +720,7 @@ var tnow = window.tnow;
     /* ── 5. HTTP fallback — fire-and-forget ── */
     if(!sent){
       try {
-        fetch('http://127.0.0.1:9899/error_ping', {
+        fetch('http://127.0.0.1:9898/error_ping', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -1892,10 +1892,7 @@ const BRIDGE = {
 
   async pollHealth(){
     try{
-      // Try 9899 (bridge health) then 9898/health fallback
-      let r;
-      try { r = await fetch('http://127.0.0.1:9899/health',{signal:_safeAbort(2000)}); }
-      catch(e2) { r = await fetch('http://127.0.0.1:9898/health',{signal:_safeAbort(2000)}); }
+      const r = await fetch('http://127.0.0.1:9898/health',{signal:_safeAbort(2000)});
       if(r.ok){
         this.connected=true; this.lastPing=Date.now();
         if(ST && ST.cicd) ST.cicd.status = 'online';
@@ -3739,13 +3736,13 @@ var CFG = (function(){
   /* 9898 IS THE ONLY PORT. HARDLOCKED. */
   var D = {autoRepair:true,logLevel:'info',bridgeRelay:true,repairThrottleMs:500,
     alertThreshold:5,sealIntervalMs:30000,patchSandbox:true,maxRepairLog:200,
-    maxErrorLog:500,bridgeWsUrl:'ws://127.0.0.1:9898',bridgeHttpUrl:'http://127.0.0.1:9899/agent'};
+    maxErrorLog:500,bridgeWsUrl:'ws://127.0.0.1:9898',bridgeHttpUrl:'http://127.0.0.1:9898/agent'};
   try {
     var saved = JSON.parse(localStorage.getItem(_CFG_KEY)||'{}');
     if (saved) {
       /* Hardlock: loopback always uses ws:// on 9898 regardless of what localStorage has */
       saved.bridgeWsUrl = 'ws://127.0.0.1:9898';
-      saved.bridgeHttpUrl = 'http://127.0.0.1:9899/agent';
+      saved.bridgeHttpUrl = 'http://127.0.0.1:9898/agent';
     }
     return Object.assign({}, D, saved);
   } catch(e) {
@@ -3822,7 +3819,7 @@ function bridgeConnect(){
             b.innerHTML = '<span style="font-size:18px">⚠️</span>' +
               '<span><b>Bridge = ws://127.0.0.1:9898</b> &mdash; open from file server :9900 so Safari allows ws://: ' +
               '<a href="http://127.0.0.1:9900" style="color:#fff;font-weight:bold">http://127.0.0.1:9900</a>' +
-              ' &nbsp;(9900=file server · 9898=bridge · 9899=REST)</span>' +
+              ' &nbsp;(9900=file server · 9898=bridge+REST)</span>' +
               '<button onclick="this.parentNode.remove()" style="margin-left:auto;background:transparent;border:1px solid rgba(255,255,255,.5);color:#fff;padding:2px 8px;border-radius:4px;cursor:pointer">✕</button>';
             document.body.insertBefore(b, document.body.firstChild);
           }
@@ -7115,7 +7112,7 @@ if (typeof PiperTTS !== 'undefined' && PiperTTS.ws && PiperTTS.ws.readyState ===
   window._drawAIOut = out;
 } else {
   /* Fallback: HTTP POST */
-  fetch('http://127.0.0.1:9899/chat', {
+  fetch('http://127.0.0.1:9898/chat', {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({ message: prompt + '\n\n[Drawing: attached]', agent:'claude' })
@@ -7420,7 +7417,7 @@ if (typeof PiperTTS !== 'undefined' && PiperTTS.ws && PiperTTS.ws.readyState ===
   if (stat) stat.textContent = '\u2713 Sent to Claude via bridge';
   window._faiOut = out;
 } else {
-  fetch('http://127.0.0.1:9899/chat', {
+  fetch('http://127.0.0.1:9898/chat', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ message:msg, agent:'claude' })
   }).then(function(r){ return r.json(); })
@@ -9354,7 +9351,7 @@ var fullMsg = '[Companion: '+name+']\n\nUser says: '+input+'\n\nRespond naturall
 if (typeof PiperTTS !== 'undefined' && PiperTTS.ws && PiperTTS.ws.readyState === 1) {
   PiperTTS.ws.send(JSON.stringify({ type:'ai_chat', agent:'claude', message:fullMsg, context:'opar_chat' }));
 } else {
-  fetch('http://127.0.0.1:9899/chat', {
+  fetch('http://127.0.0.1:9898/chat', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body:JSON.stringify({ message:fullMsg, agent:'claude' })
   }).then(function(r){ return r.json(); })
@@ -11212,7 +11209,7 @@ out += row(‘Agent bridge’, agentBridge===‘connected’?true:‘warn’, �
 
 out += ‘<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">’;
 out += ‘<button class="btn-p" style="font-size:9px" onclick="sg(function(){if(typeof BRIDGE!==\'undefined\'&&BRIDGE.tryWebSocket)BRIDGE.tryWebSocket();if(typeof PiperTTS!==\'undefined\'&&PiperTTS.connect)PiperTTS.connect();if(window.SG_AGENT)SG_AGENT.reconnectBridge();toast(\'All bridges reconnecting…\',\'\');setTimeout(function(){loadPanel(\'diag\');},1500)})">🔌 Reconnect All Bridges</button>’;
-out += ‘<button class="btn-s" style="font-size:9px" onclick="sg(function(){fetch(\'http://127.0.0.1:9899/health\').then(function(r){return r.json();}).then(function(d){toast(\'Bridge HTTP alive: \'+JSON.stringify(d).slice(0,60),\'ok\');}).catch(function(e){toast(\'Bridge HTTP dead: \'+e.message,\'err\');});})">🏥 Test HTTP :9899</button>’;
+out += ‘<button class="btn-s" style="font-size:9px" onclick="sg(function(){fetch(\'http://127.0.0.1:9898/health\').then(function(r){return r.json();}).then(function(d){toast(\'Bridge HTTP alive: \'+JSON.stringify(d).slice(0,60),\'ok\');}).catch(function(e){toast(\'Bridge HTTP dead: \'+e.message,\'err\');});})">🏥 Test HTTP :9898</button>’;
 out += ‘<button class="btn-s" style="font-size:9px" onclick="sg(function(){var ws=new WebSocket(\'ws://127.0.0.1:9898\');ws.onopen=function(){toast(\'WS :9898 OPEN ✓\',\'ok\');ws.close();};ws.onerror=function(){toast(\'WS :9898 FAILED — bridge.py not running\',\'err\');};})">📶 Test WS :9898</button>’;
 out += ‘</div>’;
 out += ‘</div>’;
@@ -11345,13 +11342,13 @@ out += ‘<div style="font-family:var(--mono);background:var(--bg3);padding:10px
 ‘python3 bridge.py<br><br>’+
 ‘# Bridge listens on:<br>’+
 ‘ws://127.0.0.1:9898   ← WebSocket (AI chat, voice, agent)<br>’+
-‘http://127.0.0.1:9899 ← HTTP health + REST endpoints’+
+‘http://127.0.0.1:9898 ← HTTP health + REST endpoints’+
 ‘</div>’;
 out += ‘<div>If bridge.py is running but still disconnected: check firewall, verify port 9898 is free (<code style="font-family:var(--mono);color:var(--cy)">lsof -i :9898</code>), and make sure the bridge has no startup errors.</div>’;
 out += ‘</div>’;
 
 out += ‘<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">’;
-out += ‘<button class="btn-s" style="font-size:9px" onclick="sg(function(){fetch(\'http://127.0.0.1:9899/health\').then(function(r){return r.json();}).then(function(d){toast(\'Bridge alive: \'+d.status,\'ok\');}).catch(function(){toast(\'Bridge offline — start bridge.py\',\'err\');});})">🏥 Ping :9899</button>’;
+out += ‘<button class="btn-s" style="font-size:9px" onclick="sg(function(){fetch(\'http://127.0.0.1:9898/health\').then(function(r){return r.json();}).then(function(d){toast(\'Bridge alive: \'+d.status,\'ok\');}).catch(function(){toast(\'Bridge offline — start bridge.py\',\'err\');});})">🏥 Ping :9898</button>’;
 out += ‘<button class="btn-s" style="font-size:9px" onclick="sg(function(){var ws=new WebSocket(\'ws://127.0.0.1:9898\');var t=setTimeout(function(){ws.close();toast(\'Port 9898 timeout\',\'err\');},3000);ws.onopen=function(){clearTimeout(t);toast(\'Port 9898 OPEN ✓ Bridge is running!\',\'ok\');ws.close();};ws.onerror=function(){clearTimeout(t);toast(\'Port 9898 refused — bridge.py not running\',\'err\');};})">📶 Test WS :9898</button>’;
 out += ‘</div>’;
 out += ‘</div>’;

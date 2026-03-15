@@ -382,6 +382,8 @@ All services funnel through port **9898** as the single external entry point:
 - **Redis**: Internal only - Bound to 127.0.0.1, no external exposure
 - **PostgreSQL**: Internal only - Accessible within Docker network only
 
+Need a legacy/compatibility listener? Set `PORT_BRIDGE` to a different value (e.g., 9899) and the server will start a proxy there; when it matches `PORT_UNIFIED` (the default) the proxy is skipped to avoid double-binding the same port.
+
 **No wild port numbers** - Everything routes through 9898. This architecture:
 - Simplifies firewall rules (single port)
 - Works seamlessly with a-shell/iSH environments
