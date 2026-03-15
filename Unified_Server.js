@@ -889,7 +889,10 @@ audit('START', 'SuperGrok Unified :'+PORT_UNIFIED);
 process.stdout.write('\n╔══════════════════════════════════════════════════╗\n');
 process.stdout.write('║  SuperGrok Unified Server -- LIVE                 ║\n');
 process.stdout.write('║  Primary   http://127.0.0.1:'+PORT_UNIFIED+'               ║\n');
-process.stdout.write('║  Bridge WS ws://127.0.0.1:'+PORT_BRIDGE+' (proxy)        ║\n');
+const bridgeLine = (PORT_BRIDGE === PORT_UNIFIED)
+  ? 'Bridge WS disabled (same as primary)'
+  : 'Bridge WS ws://127.0.0.1:'+PORT_BRIDGE+' (proxy)';
+process.stdout.write('║  '+bridgeLine.padEnd(46,' ')+'║\n');
 process.stdout.write('║  No Google · No Meta · 127.0.0.1 Only             ║\n');
 process.stdout.write('║  a-shell / iSH / Node.js / Python OK              ║\n');
 process.stdout.write('║  Piper TTS '+(piperReady?'✅ Ready    ':'⚠️  Not found  ')+'                       ║\n');
@@ -925,7 +928,11 @@ tgt.on('error', () => { try{ws2.close();}catch(e){} });
 srv.listen(port, '127.0.0.1', () => process.stdout.write('  '+label+' :'+port+' → proxied\n'));
 return srv;
 }
-makeProxy(PORT_BRIDGE, 'Bridge  ');
+if (PORT_BRIDGE !== PORT_UNIFIED) {
+  makeProxy(PORT_BRIDGE, 'Bridge  ');
+} else if (VERBOSE) {
+  process.stdout.write('  Bridge proxy skipped (PORT_BRIDGE == PORT_UNIFIED)\n');
+}
 // PORT_AUTH shares PORT_BRIDGE (9899) — single proxy for a-shell/iSH compatibility
 
 // ─── GRACEFUL SHUTDOWN ────────────────────────────────────────────────
