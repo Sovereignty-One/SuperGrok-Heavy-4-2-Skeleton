@@ -7,7 +7,7 @@
 **Core Model:** Super Grok Heavy 4.2  
 (xAI) – Locked, Sealed, Sovereign  
 **Authority:** Derek Appel  
-**Last Updated:** March 2, 2026
+**Last Updated:** March 15, 2026
 
 ## Overview
 
@@ -16,6 +16,8 @@ Sovereignty AI Studio is a fully private, self-contained research and production
 The platform integrates specialized domains including computer vision, logical reasoning, biomedical signal processing, cryptographic vaulting, autonomous agents, and system orchestration. All components are designed for complete operational independence, end-to-end encryption, and tamper-resistant execution.
 
 No external services, third-party models, or internet connectivity are required for core operation.
+
+The latest SuperGrok V90 dashboard is included at `apps/dashboards/SGHv90.html`, kept in sync with the root skeleton version (`/SGHv90.html`) so both repositories remain current.
 
 ## Project Structure
 

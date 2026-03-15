@@ -2786,6 +2786,7 @@ var D={
   load:function(id){
     var rendered=safePanel(id);
     el('contentArea').innerHTML=rendered;
+    if(id==='github_panel'&&typeof GH!=='undefined'&&typeof GH.syncToggle==='function')GH.syncToggle();
     document.querySelectorAll('.sb-i').forEach(function(i){i.classList.toggle('active',i.dataset.id===id);});
     var R=STATE.role||{};var title=id.replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase();});
     (R.nav||[]).forEach(function(g){(g.i||[]).forEach(function(it){if(it.id===id)title=it.lb;});});
@@ -2941,7 +2942,7 @@ function legalKey(e){if(e.key==='Enter'&&e.ctrlKey){e.preventDefault();sendLegal
 function pAction(inputId){var inp=el(inputId);if(!inp||!inp.value.trim())return;var ci=el('chatInput');if(ci)ci.value=inp.value;sendChat();}
 
 var GH={
-  isPrivate:false,curRepo:null,curBranch:'main',
+  isPrivate:true,curRepo:null,curBranch:'main',
   t:function(){return SS.get('sg_gh_token')||'';},
   async search(){
     var q=el('ghSearch');if(!q||!q.value.trim())return;toast('Searching GitHub…');
@@ -3014,7 +3015,8 @@ var GH={
     }catch(e){toast('Create error: '+e.message,'err');}
   },
   trending:function(){var q=el('ghSearch');if(q)q.value='stars:>1000 pushed:>2025-01-01';this.search();},
-  togglePrivate:function(){this.isPrivate=!this.isPrivate;var t=el('ghPrivTog');if(t)t.classList.toggle('on',this.isPrivate);}
+  togglePrivate:function(){this.isPrivate=!this.isPrivate;this.syncToggle();},
+  syncToggle:function(){var t=el('ghPrivTog');if(t)t.classList.toggle('on',this.isPrivate);}
 };
 
 var Term={
