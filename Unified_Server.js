@@ -933,7 +933,7 @@ if (PORT_BRIDGE !== PORT_UNIFIED) {
 } else if (VERBOSE) {
   process.stdout.write('  Bridge proxy skipped (PORT_BRIDGE == PORT_UNIFIED)\n');
 }
-// PORT_AUTH shares PORT_BRIDGE (9899) — single proxy for a-shell/iSH compatibility
+// PORT_AUTH shares PORT_BRIDGE — single proxy for a-shell/iSH compatibility
 
 // ─── GRACEFUL SHUTDOWN ────────────────────────────────────────────────
 function shutdown(sig) {
