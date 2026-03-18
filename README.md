@@ -5,11 +5,13 @@
 **Private Sovereign AI Research and Development Platform**  
 **Core Model:** Super Grok Heavy 4.2  
 (xAI) – Locked, Sealed, Sovereign  
-**Last Updated:** March 12, 2026
+**Last Updated:** March 15, 2026
 
 ## 📋 Overview
 
 SuperGrok-Heavy-4-2-Skeleton is the foundation repository for the Sovereignty AI Studio platform. This is a fully private, self-contained research and production environment for advanced sovereign artificial intelligence systems.
+
+The latest SuperGrok V90 dashboard ships in this root (`SGHv90.html`) and is mirrored into `Sovereignty-AI-Studio-main/apps/dashboards/SGHv90.html` to keep both trees aligned.
 
 The platform integrates specialized domains including:
 - 🤖 AI Agents and Orchestration
@@ -382,11 +384,21 @@ All services funnel through port **9898** as the single external entry point:
 - **Redis**: Internal only - Bound to 127.0.0.1, no external exposure
 - **PostgreSQL**: Internal only - Accessible within Docker network only
 
+Need a legacy/compatibility listener? Set `PORT_BRIDGE` to a different value (e.g., 9899) and the server will start a proxy there; when it matches `PORT_UNIFIED` (the default) the proxy is skipped to avoid double-binding the same port.
+
 **No wild port numbers** - Everything routes through 9898. This architecture:
 - Simplifies firewall rules (single port)
 - Works seamlessly with a-shell/iSH environments
 - Provides a unified interface for iOS apps and frontend
 - Keeps internal services secure (no direct external access)
+
+### FullDashboard Integration
+
+The **FullDashboard.html** is fully integrated and accessible at:
+- http://127.0.0.1:9898/
+- http://127.0.0.1:9898/dashboard
+
+See [DASHBOARD_SETUP.md](DASHBOARD_SETUP.md) for complete setup instructions.
 
 ### Environment Variables
 
