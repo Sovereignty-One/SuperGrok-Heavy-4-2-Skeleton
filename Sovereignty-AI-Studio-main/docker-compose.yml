@@ -3,8 +3,9 @@ version: '3.8'
 services:
   backend:
     build: ./backend
-    ports:
-      - "9898:9898"
+    # No external port exposure - only accessible within Docker network
+    expose:
+      - "9898"
     environment:
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-password}@db:5432/creativeflow_db
       - REDIS_URL=redis://redis:6379/0
@@ -17,11 +18,11 @@ services:
   node-bridge:
     build: ./node-bridge
     ports:
-      - "9899:9899"
+      - "9898:9898"
     environment:
       - BACKEND_URL=http://backend:9898
       - WEATHER_URL=http://backend:9898
-      - NODE_BRIDGE_PORT=9899
+      - NODE_BRIDGE_PORT=9898
       - CORS_ORIGIN=http://localhost:3000
     depends_on:
       - backend
@@ -32,15 +33,19 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_DB: creativeflow_db
-    ports:
-      - "5432:5432"
+    # No external port exposure - only accessible within Docker network
+    expose:
+      - "5432"
     volumes:
       - db_data:/var/lib/postgresql/data
 
   redis:
     image: redis:7
-    ports:
-      - "6379:6379"
+    # No external port exposure - only accessible within Docker network
+    # Bind to localhost only via command
+    command: redis-server --bind 127.0.0.1 --protected-mode yes
+    expose:
+      - "6379"
 
 volumes:
   db_data:

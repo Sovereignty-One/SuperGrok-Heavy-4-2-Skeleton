@@ -57,7 +57,7 @@ done
 
 echo ""
 echo "  Open SuperGrok_Global_Role_Dashboard.html in your browser"
-echo "  Ports: 9898 (primary) 9899 (bridge)"
+echo "  Port: 9898 (unified - all services)"
 echo "  Logs:  ./logs/access.jsonl"
 echo ""
 echo "  Features: Movie · Music · 3D CGI Avatar · OPAR · CodeMaster · Koder"
