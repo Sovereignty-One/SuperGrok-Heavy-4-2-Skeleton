@@ -2,7 +2,7 @@
 
 - SuperGrok Unified Server -- Production Enterprise
 - Single process: Node.js + WebSocket bridge + Auth + DDG + GitHub + Plaid + Piper + ISH shell
-- Ports: 9898 (primary), 9899 (bridge)
+- Port: 9898 (unified single entry point - all services funnel through here)
 - Run: node unified_server.js
   */
   'use strict';
@@ -18,7 +18,7 @@ const { spawn, exec } = require('child_process');
 
 // ─── CONFIG ───────────────────────────────────────────────────────────
 const PORT_UNIFIED = parseInt(process.env.PORT_UNIFIED || '9898');
-const PORT_BRIDGE  = parseInt(process.env.PORT_BRIDGE  || '9899');
+const PORT_BRIDGE  = parseInt(process.env.PORT_BRIDGE  || '9898');
 // Auth port always equals PORT_BRIDGE — single proxy for a-shell/iSH compat
 const PIPER_BIN    = process.env.PIPER_BIN    || './piper';
 const PIPER_MODEL  = process.env.PIPER_MODEL  || './en_US-lessac-medium.onnx';
@@ -569,6 +569,26 @@ if (url === '/api/execute-command') {
 
 // ── GET routes ─────────────────────────────────────────────────────
 if (req.method === 'GET') {
+// ── Serve FullDashboard.html ─────────────────────────────────────
+if (url === '/' || url === '/dashboard' || url === '/FullDashboard.html') {
+const dashboardPath = path.join(__dirname, 'FullDashboard.html');
+if (fs.existsSync(dashboardPath)) {
+try {
+const content = fs.readFileSync(dashboardPath, 'utf8');
+res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
+res.end(content);
+audit('DASHBOARD_SERVE', 'FullDashboard.html served', {ip});
+return;
+} catch(e) {
+json(500, {detail: 'Error reading dashboard: ' + e.message});
+return;
+}
+} else {
+json(404, {detail: 'Dashboard file not found'});
+return;
+}
+}
+
 if (url === '/api/logs/access') {
 const tok = req.headers['x-admin-token']||'';
 try {
@@ -869,7 +889,10 @@ audit('START', 'SuperGrok Unified :'+PORT_UNIFIED);
 process.stdout.write('\n╔══════════════════════════════════════════════════╗\n');
 process.stdout.write('║  SuperGrok Unified Server -- LIVE                 ║\n');
 process.stdout.write('║  Primary   http://127.0.0.1:'+PORT_UNIFIED+'               ║\n');
-process.stdout.write('║  Bridge WS ws://127.0.0.1:'+PORT_BRIDGE+' (proxy)        ║\n');
+const bridgeLine = (PORT_BRIDGE === PORT_UNIFIED)
+  ? 'Bridge WS disabled (same as primary)'
+  : 'Bridge WS ws://127.0.0.1:'+PORT_BRIDGE+' (proxy)';
+process.stdout.write('║  '+bridgeLine.padEnd(46,' ')+'║\n');
 process.stdout.write('║  No Google · No Meta · 127.0.0.1 Only             ║\n');
 process.stdout.write('║  a-shell / iSH / Node.js / Python OK              ║\n');
 process.stdout.write('║  Piper TTS '+(piperReady?'✅ Ready    ':'⚠️  Not found  ')+'                       ║\n');
@@ -905,8 +928,12 @@ tgt.on('error', () => { try{ws2.close();}catch(e){} });
 srv.listen(port, '127.0.0.1', () => process.stdout.write('  '+label+' :'+port+' → proxied\n'));
 return srv;
 }
-makeProxy(PORT_BRIDGE, 'Bridge  ');
-// PORT_AUTH shares PORT_BRIDGE (9899) — single proxy for a-shell/iSH compatibility
+if (PORT_BRIDGE !== PORT_UNIFIED) {
+  makeProxy(PORT_BRIDGE, 'Bridge  ');
+} else if (VERBOSE) {
+  process.stdout.write('  Bridge proxy skipped (PORT_BRIDGE == PORT_UNIFIED)\n');
+}
+// PORT_AUTH shares PORT_BRIDGE — single proxy for a-shell/iSH compatibility
 
 // ─── GRACEFUL SHUTDOWN ────────────────────────────────────────────────
 function shutdown(sig) {
