@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#03060f">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; connect-src 'self' ws://127.0.0.1:9898 ws://127.0.0.1:9898/ ws://127.0.0.1:9898/terminal ws://127.0.0.1:9898/agent ws://127.0.0.1:9898/chat wss://127.0.0.1:9898 wss://127.0.0.1:9898/ wss://127.0.0.1:9898/terminal wss://127.0.0.1:9898/agent wss://127.0.0.1:9898/chat ws://localhost:9898 wss://localhost:9898 http://127.0.0.1:9898; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob:; frame-src https://duckduckgo.com blob:; worker-src blob:;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; connect-src 'self' ws://127.0.0.1:9898 ws://127.0.0.1:9898/ ws://127.0.0.1:9898/terminal ws://127.0.0.1:9898/agent ws://127.0.0.1:9898/chat wss://127.0.0.1:9898 wss://127.0.0.1:9898/ wss://127.0.0.1:9898/terminal wss://127.0.0.1:9898/agent wss://127.0.0.1:9898/chat ws://localhost:9898 wss://localhost:9898 http://127.0.0.1:9898; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob:; frame-src https://duckduckgo.com blob:; worker-src blob: blob-request:;">
 <script>/* kill Script error. before anything else — also unregister stale SWs */
 (function(){
   var _s='Script error';
@@ -409,10 +409,10 @@ banner.style.cssText = [
 ].join(’;’);
 banner.innerHTML =
 ‘<span style="font-size:20px">🌐</span>’ +
-’<span>File server :9900 — open via HTTP so ws://9898 bridge connects: ’ +
-‘<a href=“http://127.0.0.1:9900” style=“color:#fff;text-decoration:underline;font-size:14px” ’ +
-‘onclick=“window.location.href='http://127.0.0.1:9900';document.getElementById('sg-open-banner').remove();”>’ +
-‘http://127.0.0.1:9900’ +
+’<span>File server :9898 — open via HTTP so ws://9898 bridge connects: ’ +
+‘<a href=“http://127.0.0.1:9898” style=“color:#fff;text-decoration:underline;font-size:14px” ’ +
+‘onclick=“window.location.href='http://127.0.0.1:9898';document.getElementById('sg-open-banner').remove();”>’ +
+‘http://127.0.0.1:9898’ +
 ‘</a>’ +
 ’  <span style="font-weight:400;font-size:11px;opacity:.8">(start bridge first: python3 bridge.py)</span>’ +
 ‘</span>’ +
@@ -471,7 +471,7 @@ window.WebSocket.CLOSED     = 3;
 /* Expose for diagnostics */
 window._sgWsPatch = { active: true, fileOrigin: _isFileOrigin };
 console.log(
-‘%c[SG_WS] Sovereign patch active’ + (_isFileOrigin ? ’ — file:// origin: bridge disabled, use http://127.0.0.1:9900’ : ’ — HTTP origin: ws:// allowed’),
+‘%c[SG_WS] Sovereign patch active’ + (_isFileOrigin ? ’ — file:// origin: bridge disabled, use http://127.0.0.1:9898’ : ’ — HTTP origin: ws:// allowed’),
 ‘color:#00ffc8;font-size:9px’
 );
 })();
@@ -757,8 +757,12 @@ var tnow = window.tnow;
   });
 
   /* ── SecurityPolicyViolation (CSP) — per-directive dedup, 60s window ── */
-  var _cspSeen = {}; /* pre-suppress wss://loopback — far-future so dedup never expires */ (function(){var _f=Date.now()+9999999999;['connect-src:wss://localhost:9898/','connect-src:wss://localhost:9898','connect-src:wss://localhost','connect-src:wss://127.0.0.1:9898/','connect-src:wss://127.0.0.1:9898','connect-src:wss://127.0.0.1','connect-src:wss://127.0.0.1:9898/ '].forEach(function(k){_cspSeen[k]=_f;});})();
+  var _cspSeen = {}; /* pre-suppress known-benign violations */ (function(){var _f=Date.now()+9999999999;['connect-src:wss://localhost:9898/','connect-src:wss://localhost:9898','connect-src:wss://localhost','connect-src:wss://127.0.0.1:9898/','connect-src:wss://127.0.0.1:9898','connect-src:wss://127.0.0.1','connect-src:wss://127.0.0.1:9898/ '].forEach(function(k){_cspSeen[k]=_f;});})();
   document.addEventListener('securitypolicyviolation', function(ev){
+    /* Suppress blob-request:// internal browser scheme (Safari SW noise) */
+    if(ev.blockedURI && ev.blockedURI.indexOf('blob-request:')===0) return;
+    /* Suppress worker-src blob: false positives from SW internals */
+    if(ev.violatedDirective==='worker-src' && ev.blockedURI.indexOf('blob:')===0) return;
     var key = ev.violatedDirective + ':' + ev.blockedURI.split('?')[0].slice(0,80);
     var now = Date.now();
     // Only fire once per unique directive+URI per 60 seconds
@@ -831,13 +835,13 @@ var tnow = window.tnow;
   </div>
   <!-- Bridge status bar — no auth bypass here -->
   <div id="rs-admin-bar" style="background:rgba(0,255,200,.04);border-bottom:1px solid rgba(0,255,200,.1);padding:8px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-    <span style="font-family:var(--mono);font-size:8px;color:var(--t3);letter-spacing:1px">SUPERGROK v80 PRODUCTION</span>
+    <span style="font-family:var(--mono);font-size:8px;color:var(--t3);letter-spacing:1px">SUPERGROK v82 PRODUCTION</span>
     <div style="flex:1"></div>
     <div id="rs-kc-status" style="font-family:var(--mono);font-size:8px;color:var(--t3)">SSO: checking…</div>
     <button onclick="window._SG_BRIDGE_STATUS&&window._SG_BRIDGE_STATUS.reconnect()" style="background:var(--bg2);border:1px solid var(--wire);color:var(--t2);font-family:var(--mono);font-size:8px;padding:4px 10px;border-radius:5px;cursor:pointer">&#9889; Connect Bridge</button>
   </div>
   <div class="rs-search-wrap">
-    <input class="rs-search" id="rsearch" type="search" placeholder="Search 62 global roles&hellip;" autocomplete="off" spellcheck="false">
+    <input class="rs-search" id="rsearch" type="search" placeholder="Search 135 global roles&hellip;" autocomplete="off" spellcheck="false">
   </div>
   <div class="rs-body" id="roleBody">
     <div class="loading"><div class="spin"></div>Loading roles&hellip;</div>
@@ -1188,6 +1192,80 @@ ranks:[{n:‘Senior Admin’,l:‘L4’},{n:‘Admin’,l:‘L3’},{n:‘Suppor
 root:         {label:‘Root Owner’,          icon:‘👑’, level:5, color:’#f59e0b’, cat:‘exec’, desc:‘Sovereign Root · Nuclear Authority · All Access · Creator’,
 ranks:[{n:‘Root Owner’,l:‘L5’}]},
 
+/* ══ NOBILITY & PEERAGE ══ */
+king:         {label:‘King’,                icon:‘👑’, level:5, color:’#b45309’, cat:‘noble’, desc:‘Sovereign Monarch · Supreme Royal Authority · Crown · Kingdom’,
+ranks:[{n:‘King’,l:‘L5’},{n:‘King Regent’,l:‘L5’},{n:‘King Consort’,l:‘L4’}]},
+queen:        {label:‘Queen’,               icon:‘👸’, level:5, color:’#9333ea’, cat:‘noble’, desc:‘Sovereign Queen · Crown Authority · Royal Court’,
+ranks:[{n:‘Queen Regnant’,l:‘L5’},{n:‘Queen Consort’,l:‘L4’},{n:‘Queen Mother’,l:‘L4’}]},
+prince:       {label:‘Prince’,              icon:‘🤴’, level:4, color:’#7c3aed’, cat:‘noble’, desc:‘Royal Heir · Prince of the Realm · Crown Prince’,
+ranks:[{n:‘Crown Prince’,l:‘L4’},{n:‘Prince of the Realm’,l:‘L4’},{n:‘Prince Consort’,l:‘L3’}]},
+princess:     {label:‘Princess’,            icon:‘👑’, level:4, color:’#a21caf’, cat:‘noble’, desc:‘Royal Princess · Princess of the Realm’,
+ranks:[{n:‘Crown Princess’,l:‘L4’},{n:‘Princess Royal’,l:‘L4’},{n:‘Princess Consort’,l:‘L3’}]},
+duke:         {label:‘Duke’,                icon:‘🏰’, level:4, color:’#1d4ed8’, cat:‘noble’, desc:‘First Peer of the Realm · Royal Duke · Duchy Authority’,
+ranks:[{n:‘Duke’,l:‘L4’},{n:‘Royal Duke’,l:‘L5’},{n:‘Duke Regent’,l:‘L4’}]},
+duchess:      {label:‘Duchess’,             icon:‘🏰’, level:4, color:’#2563eb’, cat:‘noble’, desc:‘Duchess of the Realm · Duchy Authority’,
+ranks:[{n:‘Duchess’,l:‘L4’},{n:‘Duchess Regent’,l:‘L4’}]},
+marquess:     {label:‘Marquess’,            icon:‘⚜️’, level:3, color:’#0369a1’, cat:‘noble’, desc:‘Marquessate · Marcher Lords · Border Authority’,
+ranks:[{n:‘Marquess’,l:‘L3’},{n:‘Marchioness’,l:‘L3’}]},
+earl:         {label:‘Earl’,                icon:‘⚜️’, level:3, color:’#065f46’, cat:‘noble’, desc:‘English Peerage · County Authority · Earl of the Realm’,
+ranks:[{n:‘Earl’,l:‘L3’},{n:‘Countess’,l:‘L3’}]},
+viscount:     {label:‘Viscount’,            icon:‘⚜️’, level:3, color:’#166534’, cat:‘noble’, desc:‘Viscountcy · Deputy to Earl · Hereditary Peerage’,
+ranks:[{n:‘Viscount’,l:‘L3’},{n:‘Viscountess’,l:‘L3’}]},
+baron:        {label:‘Baron’,               icon:‘🛡️’, level:2, color:’#1e3a5f’, cat:‘noble’, desc:‘Barony · Lowest Hereditary Peerage · House of Lords’,
+ranks:[{n:‘Baron’,l:‘L2’},{n:‘Baroness’,l:‘L2’}]},
+baroness:     {label:‘Baroness’,            icon:‘🛡️’, level:2, color:’#1e3a8a’, cat:‘noble’, desc:‘Baroness · Life Peer · House of Lords’,
+ranks:[{n:‘Baroness’,l:‘L2’},{n:‘Baroness in Her Own Right’,l:‘L2’}]},
+lord:         {label:‘Lord’,                icon:‘🗡️’, level:3, color:’#312e81’, cat:‘noble’, desc:‘Lord of the Manor · Peerage · Lordship · House of Lords’,
+ranks:[{n:‘Lord’,l:‘L3’},{n:‘Lord of the Manor’,l:‘L2’}]},
+lady:         {label:‘Lady’,                icon:‘🌹’, level:3, color:’#831843’, cat:‘noble’, desc:‘Lady of the Realm · Courtesy Title · Peerage’,
+ranks:[{n:‘Lady’,l:‘L3’},{n:‘Lady of the Manor’,l:‘L2’}]},
+knight:       {label:‘Knight’,              icon:‘⚔️’, level:2, color:’#1e3a5f’, cat:‘noble’, desc:‘Knight of the Realm · Sir · Order of the Garter · Knighthood’,
+ranks:[{n:‘Knight’,l:‘L2’},{n:‘Knight Bachelor’,l:‘L2’},{n:‘Knight Commander’,l:‘L3’}]},
+dame:         {label:‘Dame’,                icon:‘⚔️’, level:2, color:’#9f1239’, cat:‘noble’, desc:‘Dame Commander · Female Equivalent of Knight’,
+ranks:[{n:‘Dame’,l:‘L2’},{n:‘Dame Commander’,l:‘L3’}]},
+squire:       {label:‘Squire’,              icon:‘🛡️’, level:1, color:’#44403c’, cat:‘noble’, desc:‘Knight Attendant · Esquire · Training for Knighthood’,
+ranks:[{n:‘Squire’,l:‘L1’},{n:‘Esquire’,l:‘L1’}]},
+page:         {label:‘Page’,                icon:‘📜’, level:1, color:’#57534e’, cat:‘noble’, desc:‘Noble Page · Court Servant · Youth in Noble Training’,
+ranks:[{n:‘Page’,l:‘L1’},{n:‘Page of the Chamber’,l:‘L1’}]},
+peasant:      {label:‘Peasant’,             icon:‘🌾’, level:1, color:’#713f12’, cat:‘noble’, desc:‘Common Folk · Agricultural Worker · Feudal Subject’,
+ranks:[{n:‘Peasant’,l:‘L1’},{n:‘Villager’,l:‘L1’}]},
+serf:         {label:‘Serf’,                icon:‘⛏️’, level:1, color:’#422006’, cat:‘noble’, desc:‘Feudal Serf · Bound to Land · Lowest Feudal Estate’,
+ranks:[{n:‘Serf’,l:‘L1’},{n:‘Villein’,l:‘L1’}]},
+
+/* ══ CLERGY — CATHOLIC ══ */
+pope:         {label:‘Pope’,                icon:‘✝️’, level:5, color:’#fffbeb’, cat:‘clergy’, desc:‘Supreme Pontiff · Vicar of Christ · Vatican City · Holy See’,
+ranks:[{n:‘Pope’,l:‘L5’},{n:‘Pope Emeritus’,l:‘L5’}]},
+cardinal:     {label:‘Cardinal’,            icon:‘🔴’, level:5, color:’#dc2626’, cat:‘clergy’, desc:‘Prince of the Church · Papal Elector · College of Cardinals’,
+ranks:[{n:‘Cardinal’,l:‘L5’},{n:‘Cardinal Deacon’,l:‘L4’},{n:‘Cardinal Priest’,l:‘L4’}]},
+archbishop:   {label:‘Archbishop’,          icon:‘⛪’, level:4, color:’#b91c1c’, cat:‘clergy’, desc:‘Metropolitan Archbishop · Archdiocese · Primate’,
+ranks:[{n:‘Archbishop’,l:‘L4’},{n:‘Metropolitan’,l:‘L4’}]},
+bishop:       {label:‘Bishop’,              icon:‘⛪’, level:3, color:’#7c3aed’, cat:‘clergy’, desc:‘Diocese · Ordination Authority · Apostolic Succession’,
+ranks:[{n:‘Bishop’,l:‘L3’},{n:‘Auxiliary Bishop’,l:‘L3’},{n:‘Bishop Emeritus’,l:‘L2’}]},
+priest:       {label:‘Priest’,              icon:‘🕊️’, level:2, color:’#1d4ed8’, cat:‘clergy’, desc:‘Parish Priest · Sacraments · Pastoral Care · Father’,
+ranks:[{n:‘Parish Priest’,l:‘L2’},{n:‘Associate Pastor’,l:‘L2’},{n:‘Chaplain’,l:‘L2’}]},
+deacon:       {label:‘Deacon’,              icon:‘🕊️’, level:1, color:’#0369a1’, cat:‘clergy’, desc:‘Ordained Deacon · Transitional or Permanent · Ministry’,
+ranks:[{n:‘Permanent Deacon’,l:‘L1’},{n:‘Transitional Deacon’,l:‘L1’}]},
+
+/* ══ CLERGY — JEWISH ══ */
+rabbi:        {label:‘Rabbi’,               icon:‘✡️’, level:3, color:’#1d4ed8’, cat:‘clergy’, desc:‘Jewish Teacher & Leader · Torah Authority · Synagogue’,
+ranks:[{n:‘Rabbi’,l:‘L3’},{n:‘Chief Rabbi’,l:‘L4’},{n:‘Grand Rabbi’,l:‘L5’}]},
+cantor:       {label:‘Cantor / Hazzan’,     icon:‘🎵’, level:2, color:’#2563eb’, cat:‘clergy’, desc:‘Jewish Prayer Leader · Synagogue Music · Torah Chanting’,
+ranks:[{n:‘Cantor’,l:‘L2’},{n:‘Chief Cantor’,l:‘L3’}]},
+gabbai:       {label:‘Gabbai’,              icon:‘📖’, level:1, color:’#1e40af’, cat:‘clergy’, desc:‘Synagogue Administrator · Torah Reading Coordinator’,
+ranks:[{n:‘Gabbai’,l:‘L1’}]},
+
+/* ══ CLERGY — ISLAMIC ══ */
+imam:         {label:‘Imam’,                icon:‘☪️’, level:3, color:’#065f46’, cat:‘clergy’, desc:‘Islamic Prayer Leader · Mosque Authority · Friday Sermon’,
+ranks:[{n:‘Imam’,l:‘L3’},{n:‘Grand Imam’,l:‘L5’},{n:‘Muezzin’,l:‘L2’}]},
+mufti:        {label:‘Mufti / Sheikh’,      icon:‘☪️’, level:4, color:’#047857’, cat:‘clergy’, desc:‘Islamic Legal Authority · Fatwa · Grand Mufti’,
+ranks:[{n:‘Sheikh’,l:‘L3’},{n:‘Mufti’,l:‘L4’},{n:‘Grand Mufti’,l:‘L5’}]},
+
+/* ══ CLERGY — BUDDHIST ══ */
+dalailama:    {label:‘Dalai Lama’,          icon:‘🪷’, level:5, color:’#d97706’, cat:‘clergy’, desc:‘Tibetan Buddhist Spiritual Leader · Reincarnate Lama’,
+ranks:[{n:‘Dalai Lama’,l:‘L5’},{n:‘Panchen Lama’,l:‘L5’}]},
+abbot:        {label:‘Abbot / Monk’,        icon:‘🪷’, level:2, color:’#b45309’, cat:‘clergy’, desc:‘Buddhist Monastic · Abbot of Temple · Dharma Teacher’,
+ranks:[{n:‘Abbot’,l:‘L3’},{n:‘Senior Monk’,l:‘L2’},{n:‘Novice Monk’,l:‘L1’}]},
+
 /* ══ COVERT OPERATIONS ══ */
 undercover:     {label:‘Undercover Agent’,   icon:‘🕵️’, level:5, color:’#1a1a2e’, cat:‘intel’,
 desc:‘GHOST/STEALTH ONLY · UC Operations · Deep Cover · HUMINT · No digital trace’,
@@ -1496,12 +1574,8 @@ window.deleteProfile = async function(profileKey){
   toast('Profile removed from device vault','ok');
 };
 
-// Save user after successful login
-const _origGrantAccess = window.grantAccess;
-window.grantAccess = async function(){
-  saveUserProfile().catch(function(){}); // fire-and-forget — never block login
-  if(_origGrantAccess) await _origGrantAccess();
-};
+// Save user after successful login — fire-and-forget, never intercept grant()
+document.addEventListener('sg:login', function(){ saveUserProfile().catch(function(){}); });
 
 // ─── 4. Dynamic Role Credential Fields ──────────────────────────────
 function buildCredentialFields(role){
@@ -1871,7 +1945,14 @@ const BRIDGE = {
       ws.onerror = ()=>{ this.log('warn','WebSocket error — falling back to HTTP polling'); };
       ws.onclose = ()=>{
         self.connected=false; self.ws=null;
-        /* Always retry — no cap */
+        /* Stop retrying if browser has flagged ws:// as insecure */
+        if (window._sgBridgeInsecure) return;
+        /* Cap retries at 5 */
+        if (self.wsRetries >= 5) {
+          self.updateUI('PORT 9898 OFFLINE','var(--pulse)');
+          self.log('warn','Bridge retry cap reached — start Unified_Server.js then reconnect');
+          return;
+        }
         var delay = Math.min(2000 * (1 + self.wsRetries), 15000);
         self.wsRetries++;
         setTimeout(function(){ self.tryWebSocket && self.tryWebSocket(); }, delay);
@@ -1879,6 +1960,8 @@ const BRIDGE = {
         self.log('warn','Bridge disconnected — retry in '+Math.round(delay/1000)+'s (attempt '+self.wsRetries+')');
       };
     }catch(e){
+      var isIns = e && (e.name==='SecurityError' || (e.message&&(e.message.indexOf('insecure')!==-1||e.message.indexOf('secure')!==-1)));
+      if(isIns){ window._sgBridgeInsecure=true; this.log('warn','ws:// blocked by browser — serve from http://127.0.0.1:9898'); return; }
       this.log('warn','WebSocket unavailable — using HTTP polling');
       this.startPolling();
     }
@@ -1892,7 +1975,10 @@ const BRIDGE = {
 
   async pollHealth(){
     try{
-      const r = await fetch('http://127.0.0.1:9898/health',{signal:_safeAbort(2000)});
+      // Try 9898/health (unified server)
+      let r;
+      try { r = await fetch('http://127.0.0.1:9898/health',{signal:_safeAbort(2000)}); }
+      catch(e2) { r = await fetch('http://127.0.0.1:9898/health',{signal:_safeAbort(2000)}); }
       if(r.ok){
         this.connected=true; this.lastPing=Date.now();
         if(ST && ST.cicd) ST.cicd.status = 'online';
@@ -2060,7 +2146,7 @@ window.ALL_VOICES = ALL_VOICES;
 try {
 
 // ═══════════════════════════════════════════════════════════════════
-// SUPERGROK v80 — PRODUCTION
+// SUPERGROK v82 — PRODUCTION
 // Piper TTS · Keycloak · Merkle · Killswitch · DDQ · IDS · LinearCard
 // Dual-mode (voice+text) · Quiet mode · GitHub OAuth · Port config
 // AirDrop/local file transfer · Zero ElevenLabs · Zero cloud TTS
@@ -3801,11 +3887,13 @@ function bridgeConnect(){
       e.message.indexOf('insecure') !== -1 ||
       e.message.indexOf('secure') !== -1 ||
       e.message.indexOf('mixed') !== -1 ||
-      e.message.indexOf('blocked') !== -1
-    ) && (location.protocol === 'file:');
+      e.message.indexOf('blocked') !== -1 ||
+      e.message.indexOf('SecurityError') !== -1 ||
+      e.name === 'SecurityError'
+    ); /* No protocol restriction — iOS throws this on http:// too */
     if (isInsecure) {
       /* file:// → ws:// is blocked by Safari. Must serve via HTTP. */
-      log('warn', 'Bridge WS ws://9898 blocked on file:// — load from http://127.0.0.1:9900 (file server)');
+      log('warn', 'Bridge WS ws://9898 blocked on file:// — load from http://127.0.0.1:9898 (file server)');
       window._sgBridgeInsecure = true;
       _wsRetry = 999; /* stop retry loop */
       /* Show banner on screen */
@@ -3817,9 +3905,9 @@ function bridgeConnect(){
             b.id = 'sg-insecure-banner';
             b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:linear-gradient(90deg,#7c4dff,#ff3d6e);color:#fff;padding:10px 16px;font-family:monospace;font-size:12px;display:flex;align-items:center;gap:10px';
             b.innerHTML = '<span style="font-size:18px">⚠️</span>' +
-              '<span><b>Bridge = ws://127.0.0.1:9898</b> &mdash; open from file server :9900 so Safari allows ws://: ' +
-              '<a href="http://127.0.0.1:9900" style="color:#fff;font-weight:bold">http://127.0.0.1:9900</a>' +
-              ' &nbsp;(9900=file server · 9898=bridge+REST)</span>' +
+              '<span><b>WebSocket blocked by browser security</b> &mdash; serve via Node server: ' +
+              '<a href="http://127.0.0.1:9898" style="color:#fff;font-weight:bold">http://127.0.0.1:9898</a>' +
+              ' &nbsp;(run: <code>node Unified_Server.js</code>)</span>' +
               '<button onclick="this.parentNode.remove()" style="margin-left:auto;background:transparent;border:1px solid rgba(255,255,255,.5);color:#fff;padding:2px 8px;border-radius:4px;cursor:pointer">✕</button>';
             document.body.insertBefore(b, document.body.firstChild);
           }
@@ -4343,15 +4431,28 @@ window.SGCrypto = (function(){
 
   /* ── sgVerifyPass: SHA-512 passphrase verification ── */
   window.sgVerifyPass = async function(roleKey, input){
-    var data = new TextEncoder().encode(input.trim());
-    var hash = await crypto.subtle.digest('SHA-512', data);
-    var hex  = Array.from(new Uint8Array(hash)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
-    var stored = window.SG_PP_HASHES ? window.SG_PP_HASHES[roleKey] : null;
-    if(stored && hex === stored) return true;
-    // Also try SHA-256 for backward compat with v79 hashes
-    var h256 = await crypto.subtle.digest('SHA-256', data);
-    var hex256 = Array.from(new Uint8Array(h256)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
-    return stored ? (hex256 === stored) : false;
+    var trimmed = (input||'').trim();
+    if(!trimmed) return false;
+    var data = new TextEncoder().encode(trimmed);
+    // Master hash always works
+    try{
+      var mh = await crypto.subtle.digest('SHA-512', data);
+      var mhex = Array.from(new Uint8Array(mh)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+      if(window.SG_MASTER_HASH && mhex === window.SG_MASTER_HASH) return true;
+    }catch(me){}
+    // Role hash (SHA-512 primary, SHA-256 compat)
+    var hashes = window.SG_PP_HASHES || {};
+    var stored = hashes[roleKey] || hashes['default'];
+    if(!stored) return false;
+    var hash512 = await crypto.subtle.digest('SHA-512', data);
+    var hex512  = Array.from(new Uint8Array(hash512)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+    if(hex512 === stored) return true;
+    if(stored.length === 64){
+      var hash256 = await crypto.subtle.digest('SHA-256', data);
+      var hex256  = Array.from(new Uint8Array(hash256)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+      if(hex256 === stored) return true;
+    }
+    return false;
   };
 
   /* ── Status ── */
@@ -4920,12 +5021,13 @@ var _si=0;
     setTimeout(bootStep, 80);
   }
   setTimeout(bootStep, 200);
-  /* Safety net: 3s max */
+  /* Safety net: 2s max — guaranteed pass-through no matter what */
   setTimeout(function(){
-    if(gi('bootScreen')&&gi('bootScreen').classList.contains('active')){
+    var bs=gi('bootScreen');
+    if(bs&&(bs.style.display!=='none'&&!bs.classList.contains('gone'))){
       show('roleScreen'); buildRoles();
     }
-  }, 3000);
+  }, 2000);
 })();
 
 /* ── ROLES ── */
@@ -4934,9 +5036,10 @@ var CAT_LABELS={exec:'Executive',gov:'Government & Judicial',justice:'Legal & Ju
   safety:'Safety & Emergency',health:'Health & Medical',health2:'Public Health',
   tech:'Technology & Cybersecurity',edu:'Education',edu2:'Education Services',
   biz:'Business & Finance',transit:'Transit & Aviation',civil:'Civil Engineering',
-  public:'Public Services',youth:'Youth & Community',vet:'Veterinary & Science'};
+  public:'Public Services',youth:'Youth & Community',vet:'Veterinary & Science',
+  noble:'👑 Nobility & Peerage',clergy:'✝️ Clergy & Religious Orders'};
 var CAT_ORDER=['exec','gov','justice','intel','diplo','un','safety','health','health2',
-  'tech','edu','edu2','biz','transit','civil','public','youth','vet','other'];
+  'tech','edu','edu2','biz','transit','civil','public','youth','vet','noble','clergy','other'];
 
 function buildRoles(q){
   var ROLES=window.ROLES||{};
@@ -4988,7 +5091,10 @@ var SG_DEFAULT_PASSES = {
   'teacher':    'teacher@sg2026',
   'homeowner':  'homeowner@sg2026',
   'default':    'sg-default-2026',
-  'guest':      'guest2026'
+  'guest':      'guest2026',
+  'operator':   'operator@sg2026',
+  'auditor':    'auditor@sg2026',
+  'owner':      'owner@sg2026'
 };
 
 function startAuth(key,rd){
@@ -5068,7 +5174,7 @@ window._sgEmergencyReset = function() {
     localStorage.removeItem('sg_pp_overrides');
     // Restore factory hashes
     window.SG_PP_HASHES = {};
-    var defaults = {"rootadmin":"sg-root-2026","physician":"physician@sg2026","teacher":"teacher@sg2026","homeowner":"homeowner@sg2026","default":"sg-default-2026","guest":"guest2026","operator":"operator@sg2026","auditor":"auditor@sg2026"};
+    var defaults = {"rootadmin":"sg-root-2026","physician":"physician@sg2026","teacher":"teacher@sg2026","homeowner":"homeowner@sg2026","default":"sg-default-2026","guest":"guest2026","operator":"operator@sg2026","auditor":"auditor@sg2026","owner":"owner@sg2026"};
     Object.keys(defaults).forEach(function(k){
       crypto.subtle.digest('SHA-512', new TextEncoder().encode(defaults[k])).then(function(buf){
         window.SG_PP_HASHES[k] = Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0')}).join('');
@@ -5080,7 +5186,7 @@ window._sgEmergencyReset = function() {
   } catch(e) { location.reload(); }
 };
 
-var SG_PP_HASHES = {"rootadmin": "56fa23489145cc0eaf82dda13148167b911b5f356da57f476f8e80d8a2b6305a44dc74955d52e8841e3cd531eaffe7e4b31e5ae778bcba072c2d7f1da51e966c", "physician": "387f30e5d5086af96b91e69eee5a2c506396666eb9f807c47ee78541cdc622067f0bbbd7efa2eb1dcb313bcb959e159ffd8d5742d09c4b146fd53813aa2bb346", "teacher": "fadb450512e6cdfd6176a3673a3e21a52327d67bfa9faa658b8abecf548d339449895decd119b71c6a31666da4be4b58cebba4711d43fa469f76aa9f07ee9f0e", "homeowner": "79e179589c830138f2602c1402b6e1c939e864c1970a62efeb7fd088a7f5e49d18dd67f79bfce96130c422808f8b14a5bf368728de5d3cbf9a5213c22f9de34d", "default": "f1853fa889188f1280358b3419c0dabe0185c0a50289140580439cdde3ef061269581ce7f2f12e21441a29355a8e43b735b3f0900edb61f97ea6864666b5706c", "guest": "9d59ab2f7648c63be3e2f34d09995838e0a4bf855040c78ad7d16fa4121fc767e829feca576ddcb0a259b394c199e32eacd9afcefbce78a6032772f2ac269c4f", "operator": "406ba66aaa2510b077c75b84061ae1042756eac39e8a997682bc2b3ed054a7be9275f34ac57b352c96cd81410214b099c0e418735339475e169701ed43d0c58b", "auditor": "6353426fbbddb9a3f09ecec14d4493ee0295b1eb59415e945149bfc5e759d68102e24453f324c1438130cc4865e3a08c28ae13def837032a16e361ece4049b89"};
+var SG_PP_HASHES = {"rootadmin": "56fa23489145cc0eaf82dda13148167b911b5f356da57f476f8e80d8a2b6305a44dc74955d52e8841e3cd531eaffe7e4b31e5ae778bcba072c2d7f1da51e966c", "physician": "387f30e5d5086af96b91e69eee5a2c506396666eb9f807c47ee78541cdc622067f0bbbd7efa2eb1dcb313bcb959e159ffd8d5742d09c4b146fd53813aa2bb346", "teacher": "fadb450512e6cdfd6176a3673a3e21a52327d67bfa9faa658b8abecf548d339449895decd119b71c6a31666da4be4b58cebba4711d43fa469f76aa9f07ee9f0e", "homeowner": "79e179589c830138f2602c1402b6e1c939e864c1970a62efeb7fd088a7f5e49d18dd67f79bfce96130c422808f8b14a5bf368728de5d3cbf9a5213c22f9de34d", "default": "f1853fa889188f1280358b3419c0dabe0185c0a50289140580439cdde3ef061269581ce7f2f12e21441a29355a8e43b735b3f0900edb61f97ea6864666b5706c", "guest": "9d59ab2f7648c63be3e2f34d09995838e0a4bf855040c78ad7d16fa4121fc767e829feca576ddcb0a259b394c199e32eacd9afcefbce78a6032772f2ac269c4f", "operator": "406ba66aaa2510b077c75b84061ae1042756eac39e8a997682bc2b3ed054a7be9275f34ac57b352c96cd81410214b099c0e418735339475e169701ed43d0c58b", "auditor": "6353426fbbddb9a3f09ecec14d4493ee0295b1eb59415e945149bfc5e759d68102e24453f324c1438130cc4865e3a08c28ae13def837032a16e361ece4049b89", "owner": "941e0581a9487c03a5bbf93741bdc99644555340a360d9d9b4c075b877c43c37df251db02dc2987a91aa7dccccd34949ffcb1fb8c4dc1e89583a4e0d1a25357f"};
 /* ── Load saved passphrase overrides (user-changed passwords) ── */
 (function(){
   try {
@@ -5092,32 +5198,7 @@ var SG_PP_HASHES = {"rootadmin": "56fa23489145cc0eaf82dda13148167b911b5f356da57f
 })();
 
 
-async function sgVerifyPass(roleKey, input) {
-  /* Master passphrase always works for rootadmin regardless of overrides */
-  try {
-    var masterBuf = await crypto.subtle.digest('SHA-512', new TextEncoder().encode(input));
-    var masterHex = Array.from(new Uint8Array(masterBuf)).map(function(b){return b.toString(16).padStart(2,'0')}).join('');
-    if (masterHex === window.SG_MASTER_HASH) return true;
-  } catch(me) {}
-  try {
-    var trimmed = input.trim();
-    if (!trimmed) return false;
-    var data = new TextEncoder().encode(trimmed);
-    /* SG_PP_HASHES stores SHA-512 (128-char hex) — must use SHA-512 to match */
-    var hash512 = await crypto.subtle.digest('SHA-512', data);
-    var hex512  = Array.from(new Uint8Array(hash512)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
-    var stored  = SG_PP_HASHES[roleKey] || SG_PP_HASHES['default'];
-    if (stored && hex512 === stored) return true;
-    /* Fallback: check if stored is SHA-256 (64-char) for backwards-compat */
-    var hash256 = await crypto.subtle.digest('SHA-256', data);
-    var hex256  = Array.from(new Uint8Array(hash256)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
-    if (stored && stored.length === 64 && hex256 === stored) return true;
-    return false;
-  } catch(e) {
-    console.error('[sgVerifyPass]', e);
-    return false;
-  }
-}
+/* sgVerifyPass — defined once above as window.sgVerifyPass — single source of truth */
 
 /* Override startAuth to show passphrase gate for all roles */
 var _origStartAuth = window.startAuth;
@@ -5228,6 +5309,7 @@ function grant(name,badge,roleKey,rd,rank){
   show('dashScreen');
   loadPanel('dashboard');
   toast('Welcome, '+name+' \u00b7 '+(rank?rank.n:'Officer'),'ok');
+  try{document.dispatchEvent(new CustomEvent('sg:login',{detail:window.ST}));}catch(_){}
   if(roleKey==='undercover'||roleKey==='witnessprotection'||roleKey==='confidential_informant'){
     setTimeout(function(){if(window.SG&&window.SG.setMode)window.SG.setMode('stealth');},900);
   }
@@ -5399,6 +5481,7 @@ var NAV_ITEMS=[
   {sec:'DEVICE',      ic:'\ud83d\udcfa',lb:'Screen Share',        p:'screen',      lv:0},
   {sec:'DEVICE',      ic:'\ud83d\udcc4',lb:'File AI',             p:'fileai',      lv:0},
   {sec:'DEVICE',      ic:'\ud83d\udcf2',lb:'App Integration',     p:'apps',        lv:0},
+  {sec:'SAFETY',      ic:'\ud83d\udee1\ufe0f',lb:'Incident Playbook',p:'secplaybook', lv:0},
   {sec:'SAFETY',      ic:'\ud83d\udea8',lb:'Emergency Alerts',    p:'alerts',      lv:0},
   {sec:'SAFETY',      ic:'\ud83d\udd2c',lb:'System Diagnostic',  p:'diag',        lv:0},
   {sec:'SAFETY',      ic:'\ud83e\udd16',lb:'Self-Repair Agent',  p:'agent',       lv:0},
@@ -5477,6 +5560,9 @@ if(rsEl)rsEl.addEventListener('input',function(){buildRoles(this.value);});
    PANEL LOADER
    ───────────────────────────────────────────────────────────────── */
 function loadPanel(id,isBack){
+  if(id==='aipersonal'||id==='avatar'){
+    setTimeout(function(){ if(window.oparInjectReal){ window._oparRealInjected=false; oparInjectReal(); } },300);
+  }
   if(!isBack){_hist.push(id);if(_hist.length>30)_hist.shift();}
   var bb=gi('tbBack');if(bb)bb.style.display=_hist.length>1?'inline-flex':'none';
   document.querySelectorAll('.nav-item').forEach(function(el){el.classList.toggle('on',el.getAttribute('data-p')===id);});
@@ -8371,6 +8457,89 @@ sr(‘Nuclear Auth’,‘REQUIRED’,‘b-warn’)+
 ‘</div></div>’;
 };
 
+PANELS.secplaybook = function() {
+var html = hdr(’\ud83d\udee1\ufe0f Incident Response Playbook’,‘ISO/IEC 27035 + NIST 800-61 \u00b7 Air-Gapped \u00b7 Post-Quantum Secure’);
+html += ‘<div id="sg-sec-wrap" style="padding:0;overflow:hidden">’;
+html += ‘<style>’;
+html += ‘#sg-sec-wrap .sg-acc-btn{background:#1a1a2e;color:var(–t0);cursor:pointer;padding:14px 18px;width:100%;border:none;border-bottom:1px solid rgba(255,255,255,.06);text-align:left;transition:background .3s;font-family:var(–mono);font-size:11px;display:block}’;
+html += ‘#sg-sec-wrap .sg-acc-btn:hover{background:#252545}’;
+html += ‘#sg-sec-wrap .sg-acc-btn.sg-active{background:rgba(0,255,200,.07);box-shadow:inset 3px 0 0 var(–acid);color:var(–acid)}’;
+html += ‘#sg-sec-wrap .sg-pnl{max-height:0;overflow:hidden;background:#0d1117;padding:0 16px;transition:max-height .5s ease,opacity .4s ease;opacity:0}’;
+html += ‘#sg-sec-wrap .sg-pnl.sg-open{opacity:1}’;
+html += ‘#sg-sec-wrap .sg-pnl-body{padding:14px 0;color:var(–t1);font-size:12px;line-height:1.7}’;
+html += ‘#sg-sec-wrap .sg-pnl-body ul{margin-left:18px;margin-bottom:8px}’;
+html += ‘#sg-sec-wrap .sg-pnl-body h3{color:var(–acid);font-size:10px;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}’;
+html += ‘#sg-sec-wrap .sg-timeline{display:flex;gap:3px;height:30px;margin-top:14px;border-radius:6px;overflow:hidden}’;
+html += ‘#sg-sec-wrap .sg-timeline div{flex:1;text-align:center;font-size:9px;font-family:var(–mono);display:flex;align-items:center;justify-content:center}’;
+html += ‘</style>’;
+
+html += ‘<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(0,255,200,.04);border-bottom:1px solid rgba(0,255,200,.1)">’;
+html += ‘<span style="font-family:var(--mono);font-size:9px;color:var(--t3);letter-spacing:1px">PROGRESS</span>’;
+html += ‘<div style="flex:1;height:6px;background:rgba(255,255,255,.08);border-radius:3px"><div id="sg-inc-prog" style="height:100%;width:0%;background:var(--acid);border-radius:3px;transition:width .4s ease"></div></div>’;
+html += ‘<span id="sg-inc-step" style="font-family:var(--mono);font-size:9px;color:var(--acid)">0/6</span>’;
+html += ‘</div>’;
+
+var stages = [
+{ic:”\ud83d\udfe6”, label:“Stage 1 \u2014 Preparation”, body:
+“<ul><li>Establish hardware root-of-trust</li><li>Register enclave keys & PQ signatures (Falcon-1024 / ML-KEM)</li><li>Define & train incident response team</li><li>Configure air-gap boundary monitors</li></ul>”},
+{ic:”\ud83d\udfe8”, label:“Stage 2 \u2014 Detection & Reporting”, body:
+“<div style='display:flex;gap:24px;flex-wrap:wrap'><div><h3>Automated</h3><ul><li>Dashboard alerts</li><li>PQ link anomaly detection</li><li>Event bus snapshot</li></ul></div><div><h3>Manual</h3><ul><li>Confirm node status</li><li>Capture screenshot</li><li>Open incident record</li></ul></div></div>”+
+“<h3 style='margin-top:12px'>Checklist</h3>”+
+“<label style='display:block;margin:3px 0'><input type='checkbox'> Telemetry snapshot captured</label>”+
+“<label style='display:block;margin:3px 0'><input type='checkbox'> PQ link status reviewed</label>”+
+“<label style='display:block;margin:3px 0'><input type='checkbox'> Incident logged in Merkle audit trail</label>”+
+“<p style='margin-top:8px;font-size:10px;color:var(–t3)'>\ud83d\udcc2 Evidence: Screenshot, event logs | QR Page ID: 002</p>”},
+{ic:”\ud83d\udfe7”, label:“Stage 3 \u2014 Analysis & Assessment”, body:
+“<ul><li>Correlate telemetry, validate PQ signatures</li><li>Run SHA3-512 integrity check on all logs</li><li>Classify: data breach / model poisoning / infra attack</li><li>Identify blast radius and affected nodes</li></ul>”},
+{ic:”\ud83d\udd34”, label:“Stage 4 \u2014 Containment & Mitigation”, body:
+“<ul><li>Isolate affected nodes immediately</li><li>Trigger bridge killswitch (Ctrl+K in SuperGrok)</li><li>Revoke all active session tokens</li><li>Rotate ML-KEM / Falcon-1024 keys</li><li>Engage dead-man switch if L5 unresponsive > 60s</li><li>Prevent lateral spread to air-gap adjacent systems</li></ul>”},
+{ic:”\ud83d\udfe2”, label:“Stage 5 \u2014 Eradication & Recovery”, body:
+“<ul><li>Re-attest all WASM/ONNX modules via Blake3 hash</li><li>Restore from verified air-gapped backup</li><li>Validate cryptographic seal on all restored data</li><li>Re-register enclave attestations</li><li>Conduct full system integrity sweep</li></ul>”},
+{ic:”\u26aa”, label:“Stage 6 \u2014 Lessons Learned”, body:
+“<ul><li>Document full incident timeline</li><li>Update Sovereignty Robot threat model</li><li>Publish sanitized incident report</li><li>Rotate all long-term credentials</li><li>Schedule post-mortem review within 72h</li></ul>”+
+“<div class='sg-timeline'>”+
+“<div style='background:#1E90FF;color:#fff'>Prep</div>”+
+“<div style='background:#FFD700;color:#000'>Detect</div>”+
+“<div style='background:#FF8C00;color:#fff'>Analyze</div>”+
+“<div style='background:#FF0000;color:#fff'>Contain</div>”+
+“<div style='background:#32CD32;color:#fff'>Recover</div>”+
+“<div style='background:#555;color:#fff'>Learn</div>”+
+“</div>”},
+];
+
+html += ‘<div id="sg-inc-acc">’;
+stages.forEach(function(s,i){
+html += ‘<button class="sg-acc-btn" onclick="sg(function(){sgSecOpen('+i+')})">’;
+html += s.ic+’ ‘+s.label;
+html += ‘</button>’;
+html += ‘<div class="sg-pnl" id="sg-pnl-'+i+'"><div class="sg-pnl-body">’+s.body+’</div></div>’;
+});
+html += ‘</div></div>’;
+return html;
+};
+
+window.sgSecOpen = function(step){
+var panels = document.querySelectorAll(’#sg-inc-acc .sg-pnl’);
+var btns = document.querySelectorAll(’#sg-inc-acc .sg-acc-btn’);
+var total = panels.length;
+panels.forEach(function(p,i){
+p.classList.remove(‘sg-open’);
+p.style.maxHeight = null;
+if(btns[i]) btns[i].classList.remove(‘sg-active’);
+});
+var target = panels[step];
+var btn = btns[step];
+if(target){
+target.classList.add(‘sg-open’);
+target.style.maxHeight = target.scrollHeight + 200 + ‘px’;
+}
+if(btn) btn.classList.add(‘sg-active’);
+var prog = document.getElementById(‘sg-inc-prog’);
+var lbl = document.getElementById(‘sg-inc-step’);
+if(prog) prog.style.width = Math.round(((step+1)/total)*100)+’%’;
+if(lbl) lbl.textContent = (step+1)+’/’+total;
+};
+
 PANELS.killswitch=function(){
 return hdr(‘🔴 Kill Switch’,‘L4+ required · Emergency shutdown · Audit logged’)+
 ‘<div class="card" style="border-color:rgba(255,61,110,.3)">’+
@@ -9833,6 +10002,7 @@ var ALL_PANELS = [
 {id:‘roleeditor’, label:‘Role Editor’,           ic:’\u2699\ufe0f’, sec:‘ADMIN’},
 {id:‘killswitch’, label:‘Kill Switch’,           ic:’\ud83d\udd34’, sec:‘ADMIN’},
 {id:‘rootadmin’,  label:‘Root Admin’,            ic:’\ud83d\udc51’, sec:‘ADMIN’},
+{id:‘github’,     label:‘GitHub Sync’,           ic:’\ud83d\udc19’, sec:‘ADMIN’},
 ];
 
 /* Load role assignments */
@@ -11342,7 +11512,7 @@ out += ‘<div style="font-family:var(--mono);background:var(--bg3);padding:10px
 ‘python3 bridge.py<br><br>’+
 ‘# Bridge listens on:<br>’+
 ‘ws://127.0.0.1:9898   ← WebSocket (AI chat, voice, agent)<br>’+
-‘http://127.0.0.1:9898 ← HTTP health + REST endpoints’+
+‘http://127.0.0.1:9898 ← HTTP health + REST endpoints (unified)’+
 ‘</div>’;
 out += ‘<div>If bridge.py is running but still disconnected: check firewall, verify port 9898 is free (<code style="font-family:var(--mono);color:var(--cy)">lsof -i :9898</code>), and make sure the bridge has no startup errors.</div>’;
 out += ‘</div>’;
@@ -19427,11 +19597,186 @@ return (
   '</div>' +
 '</div>' +
 
+'<div id="opar-real-connect" style="margin-top:12px;padding:14px;background:#060d0d;border:1px solid #00ffc822;border-radius:8px">' +
+'<div style="font-family:var(--mono);font-size:9px;color:#00ffc8;letter-spacing:2px;margin-bottom:8px">⚡ REAL CONNECTIONS — VOICE · SIRI · APPS · AGENTS · BRIDGE</div>' +
+'<div style="font-family:var(--mono);font-size:9px;color:var(--t3);text-align:center;padding:8px">⏳ Loading...</div>' +
+'</div>'+
 '</div>'
 ```
 
 );
 };
+
+/* Auto-inject real controls after panel renders */
+document.addEventListener(‘DOMContentLoaded’, function(){ setTimeout(oparInjectReal, 300); });
+
+/* ── REAL OPAR CONNECTIONS: Voice, Siri, Apps, Bridge, Agents ── */
+window.OPAR_REAL = (function(){
+
+// ── Voice / Siri ──────────────────────────────────────────────
+var _recognition = null;
+var _speaking = false;
+
+function startVoice(onResult) {
+var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!SpeechRecognition) { toast(‘Voice not supported on this browser’, ‘warn’); return; }
+if (_recognition) { try { _recognition.stop(); } catch(e){} }
+_recognition = new SpeechRecognition();
+_recognition.continuous = false;
+_recognition.interimResults = false;
+_recognition.lang = ‘en-US’;
+_recognition.onresult = function(e) {
+var txt = e.results[0][0].transcript;
+onResult(txt);
+};
+_recognition.onerror = function(e) { toast(’Voice error: ’ + e.error, ‘warn’); };
+_recognition.start();
+}
+
+function speak(text) {
+if (!window.speechSynthesis) return;
+window.speechSynthesis.cancel();
+var u = new SpeechSynthesisUtterance(text);
+u.rate = 0.95; u.pitch = 1.05; u.volume = 1;
+// Prefer a female voice if available
+var voices = window.speechSynthesis.getVoices();
+var prefer = voices.find(function(v){ return v.name.includes(‘Samantha’) || v.name.includes(‘Karen’) || v.name.includes(‘Female’); });
+if (prefer) u.voice = prefer;
+_speaking = true;
+u.onend = function(){ _speaking = false; };
+window.speechSynthesis.speak(u);
+}
+
+// ── Siri shortcut deep link ───────────────────────────────────
+function launchSiri(phrase) {
+// siri:// deep link — works on iOS
+window.location.href = ‘siri://?shortuct=’ + encodeURIComponent(phrase || ‘Open SuperGrok’);
+setTimeout(function(){ toast(‘Siri launched (if app link allowed)’, ‘info’); }, 400);
+}
+
+// ── App launchers (iOS URL schemes) ──────────────────────────
+var APPS = {
+‘iSH’:       ‘ish://’,
+‘a-Shell’:   ‘ashell://’,
+‘Koder’:     ‘koder://’,
+‘GitHub’:    ‘github://’,
+‘DuckDuckGo’:‘ddgQuickLink://’,
+‘Node.js’:   ‘ashell://node’,
+‘Python’:    ‘ish://python3’,
+‘SSH’:       ‘ssh://’
+};
+
+function launchApp(key) {
+var url = APPS[key];
+if (!url) { toast(‘Unknown app: ’ + key, ‘warn’); return; }
+window.location.href = url;
+setTimeout(function(){ toast(key + ’ launched’, ‘ok’); }, 300);
+}
+
+function searchDDG(query) {
+window.open(‘ddgQuickLink://duckduckgo.com/?q=’ + encodeURIComponent(query), ‘_blank’);
+// Fallback: try as x-callback-url
+setTimeout(function(){
+window.location.href = ‘https://duckduckgo.com/?q=’ + encodeURIComponent(query);
+}, 800);
+}
+
+// ── Bridge / Agent relay ──────────────────────────────────────
+function sendToAgent(agent, msg, cb) {
+var WS = window.BridgeWS || window.SG_WS;
+if (!WS || WS.readyState !== 1) {
+toast(‘Bridge offline — start bridge.py on port 9898’, ‘warn’);
+if (cb) cb({error: ‘Bridge offline’});
+return;
+}
+var id = ‘opar_’ + Date.now();
+WS.send(JSON.stringify({ type: ‘agent_chat’, agent: agent, message: msg, id: id }));
+toast(’Sent to ’ + agent, ‘ok’);
+if (cb) cb({sent: true, id: id});
+}
+
+// ── Device info ───────────────────────────────────────────────
+function getDeviceInfo() {
+return {
+ua: navigator.userAgent,
+platform: navigator.platform || ‘unknown’,
+lang: navigator.language,
+online: navigator.onLine,
+memory: navigator.deviceMemory || ‘?’,
+cores: navigator.hardwareConcurrency || ‘?’,
+touch: ‘ontouchstart’ in window,
+speech: !!window.SpeechRecognition || !!window.webkitSpeechRecognition,
+webauthn: !!navigator.credentials,
+crypto: !!window.crypto?.subtle
+};
+}
+
+return { startVoice, speak, launchApp, launchSiri, searchDDG, sendToAgent, getDeviceInfo, APPS };
+})();
+
+/* inject real connection controls into OPAR panel after render */
+var _oparRealInjected = false;
+function oparInjectReal() {
+if (_oparRealInjected) return;
+_oparRealInjected = true;
+var d = document.getElementById(‘opar-real-connect’);
+if (!d) return;
+var dev = OPAR_REAL.getDeviceInfo();
+d.innerHTML =
+// Device info strip
+‘<div style="font-family:var(--mono);font-size:9px;color:var(--t3);margin-bottom:10px;padding:8px;background:#0d1117;border-radius:6px;border:1px solid #1a2a3a">’ +
+‘📱 ’ + (dev.ua.includes(‘iPhone’)?‘iPhone’:dev.ua.includes(‘iPad’)?‘iPad’:dev.platform) +
+’  |  🧠 ’ + dev.cores + ’ cores’ +
+’  |  🎤 Voice: ’ + (dev.speech?’<span style="color:var(--acid)">ON</span>’:’<span style="color:#f00">OFF</span>’) +
+’  |  🔒 WebAuthn: ’ + (dev.webauthn?’<span style="color:var(--acid)">ON</span>’:‘OFF’) +
+’  |  🌐 ’ + (dev.online?’<span style="color:var(--acid)">ONLINE</span>’:’<span style="color:#f00">OFFLINE</span>’) +
+‘</div>’ +
+
+```
+// Voice + Siri row
+'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">' +
+  '<button class="btn btn-p" onclick="sg(function(){ OPAR_REAL.startVoice(function(t){ document.getElementById('opar-voice-result').textContent=t; OPAR_REAL.speak('I heard: '+t); addAudit('OPAR','Voice: '+t); }); })" style="flex:1">🎤 Speak to OP-AR</button>' +
+  '<button class="btn" onclick="sg(function(){ OPAR_REAL.speak(document.getElementById('opar-voice-result').textContent||'Hello, I am your Sovereignty AI companion.'); })" style="flex:1">🔊 Speak Back</button>' +
+  '<button class="btn" onclick="sg(function(){ OPAR_REAL.launchSiri(); })" style="background:#333">Siri 🍎</button>' +
+'</div>' +
+'<div id="opar-voice-result" style="font-family:var(--mono);font-size:11px;color:var(--acid);min-height:22px;margin-bottom:12px;padding:6px 10px;background:#001a0a;border-radius:5px;border:1px solid #00ffc822">— waiting for voice —</div>' +
+
+// App launcher grid
+'<div style="font-family:var(--mono);font-size:9px;color:var(--t3);letter-spacing:2px;margin-bottom:6px">APP LAUNCHERS</div>' +
+'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">' +
+  Object.keys(OPAR_REAL.APPS).map(function(k){
+    var icons = {'iSH':'🐚','a-Shell':'⌨️','Koder':'💻','GitHub':'🐙','DuckDuckGo':'🦆','Node.js':'🟩','Python':'🐍','SSH':'🔐'};
+    return '<button class="btn" onclick="sg(function(){ OPAR_REAL.launchApp(''+k+''); })" style="font-size:11px;padding:6px 10px">' + (icons[k]||'📱') + ' ' + k + '</button>';
+  }).join('') +
+'</div>' +
+
+// DuckDuckGo search
+'<div style="display:flex;gap:8px;margin-bottom:14px">' +
+  '<input id="opar-ddg-q" placeholder="🦆 DuckDuckGo search..." style="flex:1;background:var(--bg1);border:1px solid var(--wire);color:var(--t0);border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:12px">' +
+  '<button class="btn btn-p" onclick="sg(function(){ OPAR_REAL.searchDDG(document.getElementById('opar-ddg-q').value); })">Search</button>' +
+'</div>' +
+
+// Agent relay
+'<div style="font-family:var(--mono);font-size:9px;color:var(--t3);letter-spacing:2px;margin-bottom:6px">AGENT RELAY — BRIDGE :9898</div>' +
+'<div style="display:flex;gap:8px;margin-bottom:8px">' +
+  '<select id="opar-agent-sel" style="background:var(--bg1);border:1px solid var(--wire);color:var(--t0);border-radius:6px;padding:6px;font-family:var(--mono);font-size:11px">' +
+    '<option value="claude">Claude</option>' +
+    '<option value="gpt4o">GPT-4o</option>' +
+    '<option value="grok">Grok Heavy 4.20</option>' +
+    '<option value="codemaster">Codemaster</option>' +
+  '</select>' +
+  '<input id="opar-agent-msg" placeholder="Message to agent..." style="flex:1;background:var(--bg1);border:1px solid var(--wire);color:var(--t0);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:11px">' +
+  '<button class="btn btn-p" onclick="sg(function(){ var a=document.getElementById('opar-agent-sel').value; var m=document.getElementById('opar-agent-msg').value; OPAR_REAL.sendToAgent(a,m); })">Send</button>' +
+'</div>' +
+
+// GitHub quick link
+'<div style="display:flex;gap:8px">' +
+  '<input id="opar-gh-repo" placeholder="github.com/user/repo" style="flex:1;background:var(--bg1);border:1px solid var(--wire);color:var(--t0);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:11px">' +
+  '<button class="btn" onclick="sg(function(){ var r=document.getElementById('opar-gh-repo').value; window.open('https://'+r.replace(/^https?:\/\//,''),'_blank'); })">Open GitHub</button>' +
+'</div>';
+```
+
+}
 
 /* Alias for avatar panel → redirect to OP-AR */
 PANELS.avatar = function() { return PANELS.aipersonal(); };
@@ -23662,6 +24007,456 @@ filterRoles:function(q){buildRoles(q);},
 auditLog:audit,
 toast:toast
 };
+
+/* ══════════════════════════════════════════════════════════════════════
+PANELS.github — Git push to both Sovereignty repos via SSH
+══════════════════════════════════════════════════════════════════════ */
+PANELS.github = function(){
+var st = window.ST || {};
+return hdr(‘🐙 GitHub Sync’,‘Push to Sovereignty repos via SSH’) +
+‘<div style="display:grid;gap:12px;padding:8px 0">’ +
+
+‘<div style="background:rgba(0,255,200,.05);border:1px solid rgba(0,255,200,.15);border-radius:10px;padding:14px">’ +
+‘<div style="font-family:var(--mono);font-size:8px;color:var(--cy);letter-spacing:1px;margin-bottom:10px">📦 SOVEREIGNTY REPOS — SSH ONLY · NO HTTPS</div>’ +
+‘<div style="display:grid;gap:8px">’ +
+mkRepoCard(‘Appel420/Sovereignty-AI-Studio’,‘ssh://git@github.com:Appel420/Sovereignty-AI-Studio.git’,‘var(–vt)’,‘Personal sovereignty studio — all builds’) +
+mkRepoCard(‘Sovereignty-One/SuperGrok-Heavy-4-2-Skeleton’,‘ssh://git@github.com:Sovereignty-One/SuperGrok-Heavy-4-2-Skeleton.git’,‘var(–acid)’,‘SuperGrok production skeleton + releases’) +
+‘</div></div>’ +
+
+‘<div style="background:rgba(0,0,0,.3);border:1px solid var(--wire);border-radius:10px;padding:14px">’ +
+‘<div style="font-family:var(--mono);font-size:8px;color:var(--t3);letter-spacing:1px;margin-bottom:10px">⚙️ COMMIT OPTIONS</div>’ +
+‘<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">’ +
+‘<div><label class="fl">Commit message</label><input class="fi-inp" id="gh-msg" value="chore: SuperGrok v82 production build" style="font-family:var(--mono);font-size:10px"></div>’ +
+‘<div><label class="fl">Branch</label><input class="fi-inp" id="gh-branch" value="main" style="font-family:var(--mono);font-size:10px"></div>’ +
+‘</div>’ +
+‘<div style="display:flex;gap:8px;flex-wrap:wrap">’ +
+‘<button class="btn-p" style="font-size:9px" onclick="sgGitPush(\'both\')">⬆️ Push Both Repos</button>’ +
+‘<button class="btn-s" style="font-size:9px" onclick="sgGitPush(\'appel420\')">Push Appel420 Only</button>’ +
+‘<button class="btn-s" style="font-size:9px" onclick="sgGitPush(\'sovereignty-one\')">Push Sovereignty-One Only</button>’ +
+‘<button class="btn-s" style="font-size:9px" onclick="sgGitStatus()">📊 Status</button>’ +
+‘</div></div>’ +
+
+‘<div id="gh-out" style="font-family:var(--mono);font-size:9px;color:var(--t2);background:var(--bg2);border:1px solid var(--wire);border-radius:8px;padding:10px;min-height:60px;white-space:pre-wrap;max-height:220px;overflow-y:auto">Ready — bridge must be running at ws://127.0.0.1:9898</div>’ +
+‘</div>’;
+};
+
+function mkRepoCard(name,ssh,color,desc){
+return ‘<div style="background:rgba(0,0,0,.4);border:1px solid var(--wire);border-radius:8px;padding:10px;display:flex;align-items:center;gap:10px">’ +
+‘<div style="flex:1">’ +
+‘<div style="font-family:var(--mono);font-size:9px;color:'+color+';font-weight:bold">’+name+’</div>’ +
+‘<div style="font-family:var(--mono);font-size:8px;color:var(--t3);margin-top:2px">’+ssh+’</div>’ +
+‘<div style="font-size:9px;color:var(--t2);margin-top:3px">’+desc+’</div>’ +
+‘</div>’ +
+‘<button class="btn-s" style="font-size:8px;white-space:nowrap" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+ssh+'\').then(function(){toast(\'SSH URL copied\',\'\');})">📋 Copy SSH</button>’ +
+‘</div>’;
+}
+
+window.sgGitPush = function(target){
+var msg = (gi(‘gh-msg’)||{}).value || ‘chore: SuperGrok v82’;
+var branch = (gi(‘gh-branch’)||{}).value || ‘main’;
+var out = gi(‘gh-out’);
+if(out) out.textContent = ‘⏳ Sending push command to bridge…\n’;
+var repos = {
+‘appel420’:      {remote:‘git@github.com:Appel420/Sovereignty-AI-Studio.git’,    name:‘Sovereignty-AI-Studio’},
+‘sovereignty-one’:{remote:‘git@github.com:Sovereignty-One/SuperGrok-Heavy-4-2-Skeleton.git’, name:‘SuperGrok-Heavy-4-2-Skeleton’}
+};
+var targets = target===‘both’ ? [‘appel420’,‘sovereignty-one’] : [target];
+targets.forEach(function(t){
+var r = repos[t];
+if(!r) return;
+bridgeSend({type:‘git_push’,remote:r.remote,branch:branch,message:msg,repo:r.name,signed:true,ts:Date.now()});
+if(out) out.textContent += ‘📤 Push queued → ‘+r.remote+’\n’;
+});
+/* Local fallback instructions when bridge offline */
+if(!window.SG_AGENT||window._wsState!==‘connected’){
+if(out) out.textContent += ‘\n⚠️ Bridge offline — run these locally:\n\n’;
+targets.forEach(function(t){
+var r=repos[t];
+if(!r)return;
+if(out) out.textContent +=
+‘git remote add ‘+t+’ ‘+r.remote+’ 2>/dev/null || git remote set-url ‘+t+’ ‘+r.remote+’\n’+
+‘git add -A && git commit -m “’+msg+’”\n’+
+‘git push ‘+t+’ ‘+branch+’\n\n’;
+});
+}
+addAudit&&addAudit(‘GIT_PUSH’,{target:target,message:msg,branch:branch});
+};
+window.sgGitStatus = function(){
+var out=gi(‘gh-out’);
+if(out) out.textContent=‘⏳ Requesting git status from bridge…\n’;
+bridgeSend({type:‘git_status’,ts:Date.now()});
+if(!window._ws||window._ws.readyState!==1){
+if(out) out.textContent=‘⚠️ Bridge offline.\n\nRun locally:\n  git status\n  git log –oneline -5\n  git remote -v\n’;
+}
+};
+/* Handle git responses from bridge */
+document.addEventListener(‘sg:bridgeMsg’,function(e){
+var d=e.detail||{};
+var out=gi(‘gh-out’);
+if(!out) return;
+if(d.type===‘git_push_result’||d.type===‘git_status_result’){
+out.textContent = (d.success?’✅ ’:’❌ ’)+(d.output||d.message||JSON.stringify(d));
+}
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+SG_CORE — Self-sustaining bridge + memory + agent + watcher
+Single init, zero loops, event-driven, cryptographically chained
+══════════════════════════════════════════════════════════════════════ */
+(function(){
+‘use strict’;
+
+/* ── Memory card store (localStorage, signed) ── */
+window.SG_MEMORY = {
+_key: ‘sg_memory_v1’,
+_cards: null,
+
+```
+load: function(){
+  try{
+    var raw = localStorage.getItem(this._key);
+    this._cards = raw ? JSON.parse(raw) : [];
+  }catch(e){ this._cards = []; }
+  return this._cards;
+},
+
+save: function(){
+  try{ localStorage.setItem(this._key, JSON.stringify(this._cards||[])); }catch(e){}
+},
+
+add: function(type, data){
+  if(!this._cards) this.load();
+  var card = {
+    id: 'mc_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+    type: type,
+    data: data,
+    ts: Date.now(),
+    session: window.ST ? window.ST.sessionID : 'anon'
+  };
+  /* Sign card with HMAC chain */
+  var prev = this._cards.length ? (this._cards[this._cards.length-1].sig||'0') : '0';
+  card.sig = _sgSign(JSON.stringify(card)+prev);
+  this._cards.unshift(card);
+  if(this._cards.length > 500) this._cards = this._cards.slice(0,500);
+  this.save();
+  return card;
+},
+
+get: function(type, limit){
+  if(!this._cards) this.load();
+  var cards = type ? this._cards.filter(function(c){return c.type===type;}) : this._cards;
+  return limit ? cards.slice(0,limit) : cards;
+},
+
+search: function(q){
+  if(!this._cards) this.load();
+  q = (q||'').toLowerCase();
+  return this._cards.filter(function(c){
+    return JSON.stringify(c).toLowerCase().indexOf(q)!==-1;
+  });
+},
+
+clear: function(type){
+  if(!this._cards) this.load();
+  if(type) this._cards = this._cards.filter(function(c){return c.type!==type;});
+  else this._cards = [];
+  this.save();
+}
+```
+
+};
+
+/* Simple deterministic sign (non-crypto fallback — real crypto on bridge) */
+function _sgSign(str){
+var h=0x811c9dc5;
+for(var i=0;i<str.length;i++){h^=str.charCodeAt(i);h=(h*0x01000193)>>>0;}
+return h.toString(16).padStart(8,‘0’);
+}
+
+SG_MEMORY.load();
+
+/* ── Agent registry ── */
+window.SG_AGENTS = {
+registry: {
+claude:  {name:‘Claude’,      icon:‘🟣’, url:‘ws://127.0.0.1:9898/agent/claude’,  status:‘offline’, model:‘claude-sonnet-4-20250514’},
+gpt:     {name:‘GPT-4o’,      icon:‘🟢’, url:‘ws://127.0.0.1:9898/agent/gpt’,     status:‘offline’, model:‘gpt-4o’},
+grok:    {name:‘Grok’,        icon:‘⚡’, url:‘ws://127.0.0.1:9898/agent/grok’,    status:‘offline’, model:‘grok-2’},
+copilot: {name:‘Copilot’,     icon:‘🔵’, url:‘ws://127.0.0.1:9898/agent/copilot’, status:‘offline’, model:‘copilot’},
+siri:    {name:‘Siri’,        icon:‘🎤’, url:‘siri://’,                            status:‘device’,  model:‘siri’},
+watcher: {name:‘Watcher’,     icon:‘👁’, url:‘ws://127.0.0.1:9898/watcher’,       status:‘offline’, model:‘internal’}
+},
+
+```
+updateStatus: function(id, status){
+  if(this.registry[id]) this.registry[id].status = status;
+  this._renderDots();
+},
+
+_renderDots: function(){
+  var wrap = document.getElementById('sg-agent-dots');
+  if(!wrap) return;
+  wrap.innerHTML = Object.keys(this.registry).map(function(k){
+    var a = window.SG_AGENTS.registry[k];
+    var col = a.status==='online'?'var(--gn)':a.status==='device'?'var(--cy)':'var(--t4)';
+    return '<span title="'+a.name+' · '+a.status+'" style="display:inline-flex;align-items:center;gap:3px;font-size:8px;font-family:var(--mono);color:'+col+'">'+
+      a.icon+' '+a.name.split(' ')[0]+
+      '<span style="width:5px;height:5px;border-radius:50%;background:'+col+';display:inline-block"></span></span>';
+  }).join('<span style="color:var(--wire)">·</span>');
+},
+
+query: function(agentId, message, cb){
+  var agent = this.registry[agentId];
+  if(!agent){ if(cb)cb({error:'unknown agent'}); return; }
+  SG_MEMORY.add('agent_query',{agent:agentId,message:message.slice?message.slice(0,200):message});
+  bridgeSend({type:'ai_query',agent:agentId,model:agent.model,message:message,ts:Date.now()});
+  if(cb){
+    var handler = function(e){
+      var d=e.detail||{};
+      if(d.type==='ai_response'&&d.agent===agentId){
+        document.removeEventListener('sg:bridgeMsg',handler);
+        SG_MEMORY.add('agent_response',{agent:agentId,response:(d.response||'').slice(0,500)});
+        cb(d);
+      }
+    };
+    document.addEventListener('sg:bridgeMsg',handler);
+    /* Timeout 30s */
+    setTimeout(function(){ document.removeEventListener('sg:bridgeMsg',handler); },30000);
+  }
+}
+```
+
+};
+
+/* ── Watcher — monitors bridge, agents, memory, login state ── */
+window.SG_WATCHER = {
+_interval: null,
+_beatCount: 0,
+_lastBridgeUp: 0,
+
+```
+start: function(){
+  if(this._interval) return; /* Already running */
+  var self=this;
+  this._interval = setInterval(function(){ self._beat(); }, 15000);
+  setTimeout(function(){ self._beat(); }, 2000); /* First beat quick */
+  console.log('%c[SG_WATCHER] Heartbeat started — 15s interval','color:#00ffc8;font-size:9px');
+},
+
+stop: function(){ clearInterval(this._interval); this._interval=null; },
+
+_beat: function(){
+  this._beatCount++;
+  var bc = this._beatCount;
+
+  /* 1 — Bridge ping */
+  if(window._ws && window._ws.readyState===1){
+    this._lastBridgeUp = Date.now();
+    SG_AGENTS.updateStatus('claude','online');
+    try{ window._ws.send(JSON.stringify({type:'ping',beat:bc,ts:Date.now()})); }catch(e){}
+  } else {
+    /* Auto-reconnect */
+    if(typeof bridgeConnect==='function' && !window._sgBridgeInsecure) bridgeConnect();
+    if(window.BRIDGE && window.BRIDGE.tryWebSocket && !window._sgBridgeInsecure) BRIDGE.tryWebSocket();
+    if(window.SG_AGENT && window.SG_AGENT.reconnectBridge) SG_AGENT.reconnectBridge();
+  }
+
+  /* 2 — Memory heartbeat card (every 10 beats = 2.5 min) */
+  if(bc % 10 === 0){
+    SG_MEMORY.add('heartbeat',{
+      beat:bc,
+      role: window.ST ? window.ST.role : 'anon',
+      bridge: window._wsState||'unknown',
+      agents: Object.keys(SG_AGENTS.registry).filter(function(k){return SG_AGENTS.registry[k].status==='online';})
+    });
+  }
+
+  /* 3 — Token budget check — flip key if needed */
+  var budgetEl = document.getElementById('token-budget');
+  if(budgetEl){
+    var pct = parseFloat(budgetEl.textContent||'100');
+    if(!isNaN(pct) && pct < 20){
+      bridgeSend({type:'key_rotate',reason:'token_budget_low',pct:pct,ts:Date.now()});
+      toast('🔑 Token budget <20% — key rotation requested','ok');
+    }
+  }
+
+  /* 4 — Update agent dots */
+  SG_AGENTS._renderDots();
+
+  /* 5 — Audit */
+  if(typeof addAudit==='function') addAudit('WATCHER_BEAT',{beat:bc,bridge:window._wsState||'unknown'});
+}
+```
+
+};
+
+/* ── Bridge message router — connect agents and memory ── */
+document.addEventListener(‘sg:bridgeMsg’, function(e){
+var d = e.detail||{};
+
+```
+/* Agent status updates */
+if(d.type==='agent_status'&&d.agent) SG_AGENTS.updateStatus(d.agent, d.status||'online');
+if(d.type==='hello'||d.type==='pong') SG_AGENTS.updateStatus('claude','online');
+
+/* Memory save from bridge */
+if(d.type==='memory_saved') SG_MEMORY.add('bridge_sync',{id:d.id,label:d.label});
+if(d.type==='memory_result'&&d.cards) d.cards.forEach(function(c){ SG_MEMORY.add('bridge_card',c); });
+
+/* Key rotation confirm */
+if(d.type==='key_rotated'){
+  SG_MEMORY.add('key_event',{event:'rotated',ts:Date.now()});
+  toast('🔑 API key rotated — session continues','ok');
+}
+
+/* Git push result → memory */
+if(d.type==='git_push_result'){
+  SG_MEMORY.add('git_push',{repo:d.repo,success:d.success,msg:d.message});
+}
+```
+
+});
+
+/* ── Bridge connected → sync memory to bridge ── */
+document.addEventListener(‘sg:bridgeConnected’, function(){
+SG_AGENTS.updateStatus(‘claude’,‘online’);
+/* Push local memory to bridge for persistence */
+var cards = SG_MEMORY.get(null, 20);
+if(cards.length) bridgeSend({type:‘memory_sync’,cards:cards,ts:Date.now()});
+/* Request agent status */
+bridgeSend({type:‘agent_status_request’,ts:Date.now()});
+SG_MEMORY.add(‘bridge_event’,{event:‘connected’,ts:Date.now()});
+toast(‘🟢 Bridge connected — agents synced’,‘ok’);
+});
+
+/* ── Login → start watcher ── */
+document.addEventListener(‘sg:login’, function(e){
+var st = e.detail||{};
+SG_MEMORY.add(‘login’,{role:st.role,name:st.name,level:st.level,ts:Date.now()});
+/* Inject agent dots into sidebar if not present */
+var sb = document.getElementById(‘sbUrole’);
+if(sb && !document.getElementById(‘sg-agent-dots’)){
+var dots = document.createElement(‘div’);
+dots.id = ‘sg-agent-dots’;
+dots.style.cssText = ‘display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;’;
+sb.parentNode && sb.parentNode.insertBefore(dots, sb.nextSibling);
+}
+SG_WATCHER.start();
+SG_AGENTS._renderDots();
+/* Sync memory to bridge */
+setTimeout(function(){
+bridgeSend({type:‘memory_sync’,cards:SG_MEMORY.get(null,10),ts:Date.now()});
+}, 1500);
+});
+
+/* ── Expose memory panel ── */
+PANELS.memory = function(){
+var cards = SG_MEMORY.get(null, 50);
+var types = {};
+cards.forEach(function(c){ types[c.type]=(types[c.type]||0)+1; });
+return hdr(‘🧠 Memory Cards’,‘Signed local store · cross-session’) +
+‘<div style="display:grid;gap:10px">’ +
+‘<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">’ +
+‘<input class="fi-inp" id="mem-search" placeholder="Search memory..." style="flex:1;min-width:150px" oninput="sgMemSearch(this.value)">’ +
+‘<button class="btn-s" style="font-size:9px" onclick="sgMemSearch(\'\');loadPanel(\'memory\')">↺ Refresh</button>’ +
+‘<button class="btn-s" style="font-size:9px;color:var(--rd)" onclick="if(confirm(\'Clear all memory cards?\'))SG_MEMORY.clear();loadPanel(\'memory\')">🗑 Clear All</button>’ +
+‘</div>’ +
+‘<div style="display:flex;gap:6px;flex-wrap:wrap">’ +
+Object.keys(types).map(function(t){
+return ‘<span style="font-family:var(--mono);font-size:8px;background:rgba(0,255,200,.08);border:1px solid rgba(0,255,200,.2);border-radius:4px;padding:2px 6px;color:var(--cy);cursor:pointer" onclick="sgMemSearch(\''+t+'\')">’+t+’ <b>’+types[t]+’</b></span>’;
+}).join(’’) +
+‘</div>’ +
+‘<div id="mem-list" style="display:grid;gap:6px;max-height:400px;overflow-y:auto">’ +
+_renderMemCards(cards) +
+‘</div></div>’;
+};
+
+function _renderMemCards(cards){
+if(!cards.length) return ‘<div style="color:var(--t3);font-family:var(--mono);font-size:9px;padding:20px;text-align:center">No memory cards</div>’;
+return cards.map(function(c){
+var col = {login:‘var(–gn)’,heartbeat:‘var(–t3)’,agent_query:‘var(–vt)’,agent_response:‘var(–cy)’,
+key_event:‘var(–am)’,git_push:‘var(–acid)’,bridge_event:‘var(–pulse)’}[c.type]||‘var(–t2)’;
+var dt = new Date(c.ts).toLocaleTimeString();
+return ‘<div style="background:var(--bg2);border:1px solid var(--wire);border-radius:8px;padding:8px;font-family:var(--mono);font-size:9px">’ +
+‘<div style="display:flex;justify-content:space-between;margin-bottom:4px">’ +
+‘<span style="color:'+col+'">’+c.type+’</span>’ +
+‘<span style="color:var(--t4)">’+dt+’ · <span style="color:var(--t4);font-size:8px">sig:’+c.sig+’</span></span>’ +
+‘</div>’ +
+‘<div style="color:var(--t2);word-break:break-all">’+JSON.stringify(c.data).slice(0,200)+’</div>’ +
+‘</div>’;
+}).join(’’);
+}
+
+window.sgMemSearch = function(q){
+var list = document.getElementById(‘mem-list’);
+if(!list) return;
+var cards = q ? SG_MEMORY.search(q) : SG_MEMORY.get(null,50);
+list.innerHTML = _renderMemCards(cards);
+};
+
+/* ── Expose agent panel ── */
+PANELS.agents = function(){
+var reg = SG_AGENTS.registry;
+return hdr(‘🤖 Agent Hub’,‘Claude · GPT · Grok · Copilot · Siri — unified through bridge :9898’) +
+‘<div style="display:grid;gap:10px">’ +
+‘<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">’ +
+Object.keys(reg).map(function(k){
+var a=reg[k];
+var col=a.status===‘online’?‘var(–gn)’:a.status===‘device’?‘var(–cy)’:‘var(–t4)’;
+var bg=a.status===‘online’?‘rgba(0,200,100,.06)’:a.status===‘device’?‘rgba(0,255,255,.06)’:‘rgba(255,255,255,.03)’;
+return ‘<div style="background:'+bg+';border:1px solid var(--wire);border-radius:10px;padding:10px;text-align:center">’ +
+‘<div style="font-size:22px;margin-bottom:4px">’+a.icon+’</div>’ +
+‘<div style="font-family:var(--mono);font-size:9px;color:'+col+'">’+a.name+’</div>’ +
+‘<div style="font-family:var(--mono);font-size:7px;color:var(--t4);margin:2px 0">’+a.model+’</div>’ +
+‘<div style="width:8px;height:8px;border-radius:50%;background:'+col+';margin:4px auto"></div>’ +
+‘<div style="font-family:var(--mono);font-size:7px;color:'+col+'">’+a.status+’</div>’ +
+(k===‘siri’?’<button class="btn-s" style="font-size:7px;margin-top:4px" onclick="window.OPAR_REAL&&OPAR_REAL.launchSiri(\'\')">Launch</button>’:
+‘<button class="btn-s" style="font-size:7px;margin-top:4px" onclick="toast(\'Querying '+a.name+'...\',\'\');SG_AGENTS.query(\''+k+'\',\'Hello from SuperGrok v82\',function(d){toast(d.response?d.response.slice(0,60):\'No response\',\'\');})">Ping</button>’) +
+‘</div>’;
+}).join(’’) +
+‘</div>’ +
+‘<div style="background:var(--bg2);border:1px solid var(--wire);border-radius:10px;padding:12px">’ +
+‘<div style="font-family:var(--mono);font-size:8px;color:var(--t3);margin-bottom:8px">💬 QUERY ALL AGENTS</div>’ +
+‘<div style="display:flex;gap:8px">’ +
+‘<input class="fi-inp" id="agent-q" placeholder="Message to send to agents..." style="flex:1">’ +
+‘<select id="agent-sel" style="background:var(--bg2);border:1px solid var(--wire);color:var(--t1);font-family:var(--mono);font-size:9px;padding:6px;border-radius:6px">’ +
+Object.keys(reg).filter(function(k){return k!==‘siri’;}).map(function(k){return ‘<option value="'+k+'">’+reg[k].icon+’ ‘+reg[k].name+’</option>’;}).join(’’) +
+‘<option value="all">🌐 All Agents</option>’ +
+‘</select>’ +
+‘<button class="btn-p" style="font-size:9px" onclick="sgAgentQuery()">Send</button>’ +
+‘</div>’ +
+‘<div id="agent-resp" style="font-family:var(--mono);font-size:9px;color:var(--t2);margin-top:8px;min-height:40px;white-space:pre-wrap"></div>’ +
+‘</div>’ +
+‘<div style="font-family:var(--mono);font-size:8px;color:var(--t4);padding:4px 0">Watcher beat #’+SG_WATCHER._beatCount+’ · Memory cards: ‘+SG_MEMORY.get().length+’ · Bridge: ‘+(window._wsState||‘unknown’)+’</div>’ +
+‘</div>’;
+};
+
+window.sgAgentQuery = function(){
+var msg = (gi(‘agent-q’)||{}).value||’’;
+var sel = (gi(‘agent-sel’)||{}).value||‘claude’;
+var resp = gi(‘agent-resp’);
+if(!msg){toast(‘Enter a message’,’’); return;}
+if(resp) resp.textContent=‘⏳ Querying…’;
+if(sel===‘all’){
+Object.keys(SG_AGENTS.registry).filter(function(k){return k!==‘siri’;}).forEach(function(k){
+SG_AGENTS.query(k,msg,function(d){ if(resp) resp.textContent += ‘\n[’+SG_AGENTS.registry[k].icon+’ ‘+SG_AGENTS.registry[k].name+’]: ‘+(d.response||d.error||’…’).slice(0,200); });
+});
+} else {
+SG_AGENTS.query(sel,msg,function(d){
+if(resp) resp.textContent = ‘[’+SG_AGENTS.registry[sel].icon+’ ‘+SG_AGENTS.registry[sel].name+’]: ‘+(d.response||d.error||’…’).slice(0,400);
+});
+}
+};
+
+/* ── Startup: launch watcher if already logged in ── */
+setTimeout(function(){
+if(window.ST && window.ST.sessionID){
+SG_WATCHER.start();
+SG_AGENTS._renderDots();
+}
+}, 1000);
+
+})(); /* end SG_CORE */
 
 /* ── On load: if owner claimed, try biometric / auto-grant ── */
 document.addEventListener(‘DOMContentLoaded’, function() {
