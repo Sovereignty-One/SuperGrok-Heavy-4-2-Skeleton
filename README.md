@@ -5,7 +5,7 @@
 **Private Sovereign AI Research and Development Platform**  
 **Core Model:** Super Grok Heavy 4.2  
 (xAI) – Locked, Sealed, Sovereign  
-**Last Updated:** March 15, 2026
+**Last Updated:** March 21, 2026
 
 ## 📋 Overview
 
@@ -554,8 +554,8 @@ See [LICENSE](LICENSE) for the full license text.
 
 ## 🔗 Related Projects
 
-- [Sovereignty AI Studio](https://github.com/Appel420/Sovereignty-AI-Studio)
-- Main development repository with full implementation
+- **Sovereignty AI Studio** (`Sovereignty-AI-Studio-main/`) — Full implementation included in this repository
+- The `Sovereignty-AI-Studio-main/` subtree contains the complete platform source: backend, frontend, iOS, node-bridge, scripts, tests, docs, and all AI modules
 
 ## 📞 Contact & Support
 
@@ -564,6 +564,11 @@ For questions, issues, or collaboration inquiries:
 - **Issues**: Use GitHub Issues for bug reports and feature requests
 
 ## 📝 Changelog
+
+### [1.2.0] - 2026-03-21
+- Resolved merge conflicts in `Sovereignty-AI-Studio-main/README.md`
+- Updated project structure documentation to reflect actual file layout
+- Synchronized documentation between root and Sovereignty-AI-Studio-main
 
 ### [1.1.0] - 2026-03-04
 - Added Security Sentinel active safety agent (`security_sentinel.py`)
@@ -583,7 +588,7 @@ For questions, issues, or collaboration inquiries:
 
 ---
 
-**Last Updated**: March 12, 2026  
-**Version**: 1.1.0  
+**Last Updated**: March 21, 2026  
+**Version**: 1.2.0  
 **Status**: Active Development  
 **Core Model**: Super Grok Heavy 4.2
