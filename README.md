@@ -322,7 +322,7 @@ docker-compose up -d
 # All services accessible through unified port: http://localhost:9898
 # Backend API: http://localhost:9898/api/v1
 # WebSocket: ws://localhost:9898/ws/alerts
-# Frontend: http://localhost:3000 (if running separately)
+# Frontend: http://localhost:9898 (if running separately)
 ```
 
 ### Option 2: Manual Installation
