@@ -1,4 +1,4 @@
-// sanitizer.js - Enterprise-Grade Production Wiper with Circuit Breaker for Syslog
+# sanitizer.js - Enterprise-Grade Production Wiper with Circuit Breaker for Syslog
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -222,10 +222,10 @@ if (process.env.NODE_ENV !== 'test' && import.meta.url === `file://${process.arg
 
 export { EnterpriseSanitizer };
 
-Enterprise Enhancements:
-	1.	Circuit Breaker for Syslog – Temporarily stops sending after repeated failures to avoid blocks.
-	2.	Gzip Log Rotation – Storage-efficient archival of logs.
-	3.	Secure Syslog (TLS) with retry and exponential backoff for reliability.
-	4.	Correlation IDs for distributed traceability in logs.
-	5.	Silent, Always Live – Fully production-grade behavior with enterprise observability.
+# Enterprise Enhancements:
+# 	1.	Circuit Breaker for Syslog – Temporarily stops sending after repeated failures to avoid blocks.
+# 	2.	Gzip Log Rotation – Storage-efficient archival of logs.
+# 	3.	Secure Syslog (TLS) with retry and exponential backoff for reliability.
+# 	4.	Correlation IDs for distributed traceability in logs.
+# 	5.	Silent, Always Live – Fully production-grade behavior with enterprise observability.
 
