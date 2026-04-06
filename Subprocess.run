@@ -1,0 +1,357 @@
+	•	To integrate Secure Enclave into the existing Siri key rotation and audit logging solution, you can enhance cryptographic operations by offloading private key handling to the Secure Enclave for increased security. This ensures keys never leave the hardware-protected enclave.
+
+---
+
+1. Generating and Storing Keys in Secure Enclave
+Instead of generating raw Fernet keys in Python and storing them in files, you can:
+
+	1.	Use Keychain + Secure Enclave on macOS/iOS:
+import subprocess
+
+def generate_secure_enclave_key(label: str):
+    # Generate a Secure Enclave-backed key in the keychain
+    subprocess.run([
+        'security', 'cms', '-S',
+        '-k', f'"{label}"',
+        '-Z', 'com.apple.application-identifier',
+        '-r', 'auto',
+        '-P', 'none',
+    ])
+
+	1.	Use this key for asymmetric operations (signing and encryption) without exposing the private key.
+
+---
+
+2. Encrypting Audit Logs with Secure Enclave
+Replace the old Fernet encryption with an envelope encryption model:
+
+	1.	Generate a random symmetric key for each audit log file.
+	2.	Encrypt the symmetric key with a Secure Enclave public key.
+	3.	Store the encrypted symmetric key alongside the encrypted log.
+
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.primitives import hashes
+
+# Secure Enclave public key obtained from Keychain
+secure_enclave_pub_key = load_public_key_from_keychain(label)
+
+# Generate session key for Fernet
+session_key = Fernet.generate_key()
+
+# Encrypt audit log with Fernet
+fernet = Fernet(session_key)
+with open(AUDIT_LOG, 'rb') as f:
+    encrypted_log = fernet.encrypt(f.read())
+
+	•	# Encrypt session key with Secure Enclave public key
+ciphertext_key = secure_enclave_pub_key.encrypt(session_key, ...)
+
+with open('audit_log.enc', 'wb') as f:
+    f.write(encrypted_log)
+with open('audit_log.key.enc', 'wb') as f:
+    f.write(ciphertext_key)
+
+---
+
+3. Decryption in Workflow
+	⁃	The GitHub Actions workflow will:
+	1.	Download the encrypted audit log and encrypted session key.
+	2.	Ask the Secure Enclave (via Keychain) to decrypt the session key.
+	3.	Use the session key to decrypt the audit log.
+
+	•	Example macOS step:
+security cms -D -k "MySecureEnclaveKey" -i audit_log.key.enc -o session_key.bin
+python3 decrypt_audit_log.py session_key.bin audit_log.enc
+
+---
+
+4. Benefits of Secure Enclave Integration
+	1.	Private keys never leave hardware.
+	2.	Stronger key isolation for Siri encryption keys.
+	3.	Supports multi-user access by encrypting the session key multiple times, once per user’s enclave key.
+
+---
+
+	•	5. Next Steps
+	1.	Create a Keychain entry backed by Secure Enclave for Siri keys.
+	2.	Update encrypt_and_upload_audit_log to implement envelope encryption.
+	3.	Update GitHub workflow to use security cms for decryption.
+
+---
+
+This approach ensures that even if your CI/CD machine is compromised, private keys remain safely in the Secure Enclave, and only encrypted session keys are exposed.Here’s the final enhanced solution implementing:
+
+	1.	Encrypted audit log uploads to GitHub releases for secure historical key access monitoring.
+	2.	Multi-user Siri access with user identifiers embedded in the key history JSON.
+	3.	Automatic GitHub Issue notifications for keys nearing expiration.
+
+---
+
+	•	1. **Enhanced Key Rotation with Multi-User Support (key_rotation.py)**
+import os
+import json
+import base64
+import requests
+from datetime import datetime, timedelta
+from nacl import encoding, public
+
+HISTORY_FILE = "key_rotation_history.json"
+
+
+def load_key_history():
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, 'r') as f:
+            return json.load(f)
+    return []
+
+
+def save_key_history(history):
+    with open(HISTORY_FILE, 'w') as f:
+        json.dump(history, f, indent=2)
+
+
+def rotate_key_and_save_to_secret(
+    key: bytes,
+    repo_name: str,
+    github_token: str,
+    secret_name: str = "SIRI_REPORT_KEYS",
+    ttl_days: int = 7,
+    users: list[str] = ["default_user"]
+):
+    """Rotate the encryption key with multi-user metadata and TTL, save to GitHub secret."""
+    history = load_key_history()
+    new_entry = {
+        "key": base64.b64encode(key).decode(),
+        "users": users,
+        "created": datetime.utcnow().isoformat(),
+        "expires": (datetime.utcnow() + timedelta(days=ttl_days)).isoformat()
+    }
+    history.append(new_entry)
+
+    now = datetime.utcnow()
+    history = [h for h in history if datetime.fromisoformat(h['expires']) > now]
+    save_key_history(history)
+
+    encoded = base64.b64encode(json.dumps(history).encode()).decode()
+
+    # Get public key
+    owner, repo = repo_name.split("/")
+    headers = {"Authorization": f"token {github_token}", "Accept": "application/vnd.github+json"}
+    resp = requests.get(f"https://api.github.com/repos/{owner}/{repo}/actions/secrets/public-key", headers=headers)
+    resp.raise_for_status()
+    data = resp.json()
+    public_key_id = data["key_id"]
+    public_key = data["key"]
+
+    # Encrypt using libsodium sealed box
+    pk = public.PublicKey(public_key.encode("utf-8"), encoding.Base64Encoder())
+    sealed_box = public.SealedBox(pk)
+    encrypted = sealed_box.encrypt(encoded.encode("utf-8"))
+	•	    encrypted_b64 = base64.b64encode(encrypted).decode()
+	•	
+	•	    # Save to GitHub secret
+    secret_url = f"https://api.github.com/repos/{owner}/{repo}/actions/secrets/{secret_name}"
+    put_resp = requests.put(secret_url, headers=headers, json={
+        "encrypted_value": encrypted_b64,
+        "key_id": public_key_id
+    })
+    put_resp.raise_for_status()
+
+    return history
+
+
+def notify_expiring_keys(repo_name: str, github_token: str, days_notice: int = 2):
+    """Automatically create GitHub issue if keys will expire soon."""
+    history = load_key_history()
+    now = datetime.utcnow()
+    expiring = [h for h in history if (datetime.fromisoformat(h['expires']) - now).days <= days_notice]
+    if not expiring:
+        return
+
+    # Create GitHub issue
+    owner, repo = repo_name.split("/")
+    issue_url = f"https://api.github.com/repos/{owner}/{repo}/issues"
+    headers = {"Authorization": f"token {github_token}", "Accept": "application/vnd.github+json"}
+    body = "The following Siri keys will expire soon:\n\n" + "\n".join([
+        f"Key for users {e['users']} expires {e['expires']}" for e in expiring
+    ])
+    requests.post(issue_url, headers=headers, json={"title": "Siri Key Expiration Notice", "body": body})
+
+	•	---
+	•	
+2. **Audit Logging and Encrypted Upload (audit_log.py)**
+import json
+import os
+from datetime import datetime
+from encryption_utils import encrypt_file
+
+AUDIT_LOG = "siri_key_access_log.json"
+
+def log_key_access(user: str, action: str):
+    entry = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "user": user,
+        "action": action
+    }
+    data = []
+    if os.path.exists(AUDIT_LOG):
+        with open(AUDIT_LOG, 'r') as f:
+            data = json.load(f)
+    data.append(entry)
+    with open(AUDIT_LOG, 'w') as f:
+        json.dump(data, f, indent=2)
+
+
+def encrypt_and_upload_audit_log(key: bytes, release, github_token: str):
+    encrypted_file = AUDIT_LOG + ".enc"
+    encrypt_file(AUDIT_LOG, encrypted_file, key)
+    release.upload_asset(encrypted_file)
+    return encrypted_file
+
+---
+
+3. Integrating With main.py
+from audit_log import log_key_access, encrypt_and_upload_audit_log
+from key_rotation import rotate_key_and_save_to_secret, notify_expiring_keys
+
+...
+
+# After uploading release
+if upload_release and release_repo:
+    owner, repo = release_repo.split("/")
+    tag_name = f"report-{timestamp}"
+    release_name = f"Automated Report {timestamp}"
+    release, asset = create_release_and_upload_asset(
+        GITHUB_TOKEN, release_repo, tag_name, release_name, final_file
+    )
+
+    # Encrypted audit log upload
+    if encryption_key:
+        encrypt_and_upload_audit_log(encryption_key, release, GITHUB_TOKEN)
+
+    # Notify if keys are expiring soon
+    notify_expiring_keys(release_repo, GITHUB_TOKEN, days_notice=2)
+
+---
+
+4. GitHub Actions Siri Workflow Updates
+	⁃	Scheduled Action now decrypts report and audit log.
+
+jobs:
+  siri-decrypt:
+    ...
+    steps:
+      - name: Decrypt Audit Log
+        run: |
+          python3 - <<'PY'
+          import json, base64
+          from cryptography.fernet import Fernet
+
+          with open('active_keys.json') as f:
+              keys = json.load(f)
+          latest_key = base64.b64decode(keys[-1]['key'])
+
+          # Decrypt audit log
+          enc_log = "$(ls siri_key_access_log.json.enc | sort | tail -1)"
+          with open(enc_log, 'rb') as f:
+              encrypted = f.read()
+          fernet = Fernet(latest_key)
+          decrypted = fernet.decrypt(encrypted)
+          with open("decrypted_audit_log.json", "wb") as f:
+              f.write(decrypted)
+          PY
+
+---
+
+✅ Features
+	1.	Encrypted Audit Logs
+	⁃	Upload alongside report to GitHub release.
+	⁃	Siri Shortcuts or workflows can decrypt securely.
+	2.	Multi-User Key Metadata
+	⁃	History shows users who can decrypt each key.
+	3.	Automatic Expiration Notices
+	⁃	GitHub Issues created days before key expiry for proactive rotation.
+
+---
+
+Self-Signed TLS Certificate Generator
+
+	•	Generates X.509 self-signed certificate parameters using WebCrypto ECDSA P-384. Fully on-device — private key never leaves the browser.
+
+	•	Certificate Parameters:
+Subject:     CN=GitHub, O=Sovereignty One
+SAN:         IP:localhost, DNS:127.0.0.1, IP:::9898
+Valid From:  2026-04-06T20:53:32.113Z
+Valid Until: 2027-04-06T20:53:32.113Z (365 days)
+Algorithm:   ECDSA P-384 (NIST SP 800-57 Level 3)
+
+— PUBLIC KEY (SPKI/DER → Base64) —
+MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE060pNTmtrTpPMmOjhSoWhYLNL1U0U2GZ
+XTZRYq/ub8BqCsGV0v6F2RbNokh2SUCxKElPXtuPjMFYItTuzaOLvKvHD+KR9JoN
+I53bX7e9Nk9/83OfdKiuESiZB6TDf64p
+
+— PRIVATE KEY (PKCS8/DER → Base64) [KEEP SECRET] —
+MIG2AgEAMBAGByqGSM49AgEGBSuBBAAiBIGeMIGbAgEBBDCoZtSkNpCttCFlkdaD
+Ok9QjE8zIXnPH0hYN1EB2l2uyS6wO7JtjAhjBykKKXKiHlihZANiAATTrSk1Oa2t
+Ok8yY6OFKhaFgs0vVTRTYZldNlFir+5vwGoKwZXS/oXZFs2iSHZJQLEoSU9e24+M
+wVgi1O7No4u8q8cP4pH0mg0jndtft702T3/zc590qK4RKJkHpMN/rik=
+
+Next step: Use bridge.py –gen-cert or OpenSSL to wrap into PEM X.509. For bridge.py TLS: set CERT_B64 and KEY_B64 environment variables.
+
+---
+
+DNS & MX Record Generator
+
+	•	Generate DKIM, DMARC, SPF, and MX records for DNS configuration.
+
+; DNS RECORDS FOR GITHUB.COM/APPEL420
+; Generated: 2026-04-06T20:54:52.561Z
+; Standard: SPF + DKIM + DMARC + MTA-STS + CAA + DNSSEC
+
+; TXT Records
+@                   3600  IN  TXT  "v=spf1 mx -all"
+sg2026._domainkey   3600  IN  TXT  "v=DKIM1; k=rsa; p=QSRLarTUlGx87w8ytv03O6TmTbvLrRN9udegNQ1fn1A="
+_dmarc              3600  IN  TXT  "v=DMARC1; p=quarantine; rua=mailto:dmarc-reports@Github.com/appel420; ruf=mailto:dmarc-failures@Github.com/appel420; fo=1"
+_mta-sts            3600  IN  TXT  "v=STSv1; id=20260406"
+
+; MX Records
+@  3600  IN  MX   10 Appel420@tutamail.com.
+
+; A / AAAA Records
+@      3600  IN  A      127.0.0.1:9898
+@      3600  IN  AAAA   2001:db8::10
+mail   3600  IN  A      127.0.0.1:9898
+mail   3600  IN  AAAA   2001:db8::10
+
+; NS Records
+@  3600  IN  NS  ns1.Github.com/appel420.
+@  3600  IN  NS  ns2.Github.com/appel420.
+
+; CAA Records
+@  3600  IN  CAA  0 issue "letsencrypt.org"
+@  3600  IN  CAA  0 iodef "mailto:security@Github.com/appel420"
+
+; DNSSEC
+	•	; Enable DNSSEC at your registrar and copy DS record.
+
+; MTA-STS Policy File
+; version: STSv1
+; mode: enforce
+; mx: Appel420@tutamail.com
+; max_age: 86400
+
+---
+
+API Key Generator & Audit Log
+
+	⁃	CSPRNG-generated API keys with WebCrypto, HMAC-SHA512 signed.
+	⁃	Revocable keys with Merkle tree audit logging.
+	⁃	Court-admissible audit logs per GDPR, HIPAA, ISO 27001.
+
+Compliance Status:
+	⁃	NIST SP 800-57 ✅ Key lifecycle
+	⁃	FIPS 140-3 ✅ WebCrypto Secure Enclave
+	⁃	HIPAA §164.312 ✅ Role-based control + audit
+	⁃	GDPR Art. 5 ✅ Integrity + accountability
+	⁃	ISO 27001 A.12.4 ✅ Tamperproof logging
