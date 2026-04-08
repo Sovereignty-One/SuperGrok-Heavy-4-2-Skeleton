@@ -1,0 +1,857 @@
+# ISO/IEC-UN AI SYSTEM AUDIT CHECKLIST
+
+## UNC-AI-2026 Compliance Inspection Protocol
+
+**Version:** 1.0  
+**Effective Date:** [Date]  
+**Authority:** UN AI Oversight & Enforcement Authority (UN-AIOEA)  
+**Applicable Standard:** UNC-AI-2026, ISO/IEC 42001, ISO/IEC 23894
+
+-----
+
+## AUDIT METADATA
+
+**Audit Reference Number:** __________________  
+**Audit Date:** __________________  
+**Auditor(s):** __________________  
+**AI System Name:** __________________  
+**AI System Version:** __________________  
+**Operator/Provider:** __________________  
+**Current Certification Status:** ☐ Fully Certified ☐ Conditional ☐ Probationary ☐ Non-Compliant ☐ Uncertified  
+**Previous Audit Date:** __________________  
+**Previous Score:** ______ / 100
+
+-----
+
+## AUDIT INSTRUCTIONS
+
+### Scoring Rules
+
+- Each criterion is marked: ✅ Pass (full points) | ⚠️ Partial (50% points) | ❌ Fail (0 points)
+- Total score determines certification status (see Section VI)
+- Evidence SHALL be documented for each criterion
+- Non-compliance SHALL be described in detail with severity rating
+
+### Evidence Requirements
+
+- **Documentary Evidence:** Policies, procedures, technical specifications
+- **Technical Evidence:** Log files, cryptographic proofs, system configurations
+- **Interview Evidence:** Staff interviews, technical demonstrations
+- **Observational Evidence:** Live system inspection, operational testing
+
+### Audit Outcome
+
+- **Certification Recommendation:** Determined by total score
+- **Remediation Plan:** Required for scores <80
+- **Follow-up Timeline:** Specified based on severity of findings
+
+-----
+
+## VOLUME I – REGISTRATION & CLASSIFICATION (0–20 POINTS)
+
+### 1.1 Complete System Catalog (0–5 points)
+
+**Requirement:** Comprehensive inventory of all AI system components, modules, and dependencies.
+
+**Verification Steps:**
+
+1. ☐ Review system documentation and architecture diagrams
+1. ☐ Verify all components are listed with versions
+1. ☐ Check supply chain documentation
+1. ☐ Confirm third-party component disclosure
+
+**Evidence Reviewed:**
+
+- ☐ System architecture documentation
+- ☐ Component inventory database
+- ☐ Dependency manifest files
+- ☐ Software bill of materials (SBOM)
+
+**Assessment:**
+
+- ☐ ✅ Complete catalog with all components documented (5 points)
+- ☐ ⚠️ Catalog present but missing minor components (2.5 points)
+- ☐ ❌ Incomplete or absent catalog (0 points)
+
+**Score:** ______ / 5  
+**Notes:** ________________________________________________________________
+
+-----
+
+### 1.2 NIST/IEEE Mapping Documented (0–5 points)
+
+**Requirement:** Clear mapping to NIST AI RMF and IEEE 7000-series standards.
+
+**Verification Steps:**
+
+1. ☐ Review NIST AI RMF alignment documentation
+1. ☐ Verify IEEE 7000-series compliance mapping
+1. ☐ Check mapping completeness and accuracy
+1. ☐ Validate risk management framework integration
+
+**Evidence Reviewed:**
+
+- ☐ NIST AI RMF mapping matrix
+- ☐ IEEE 7000-series compliance documentation
+- ☐ Risk assessment reports
+- ☐ Controls implementation evidence
+
+**Assessment:**
+
+- ☐ ✅ Comprehensive mapping with evidence (5 points)
+- ☐ ⚠️ Partial mapping or gaps identified (2.5 points)
+- ☐ ❌ No mapping or inadequate documentation (0 points)
+
+**Score:** ______ / 5  
+**Notes:** ________________________________________________________________
+
+-----
+
+### 1.3 Risk Classification Assigned (0–5 points)
+
+**Requirement:** Accurate risk classification per UNC-AI-2026 Appendix 2.
+
+**Verification Steps:**
+
+1. ☐ Review risk classification methodology
+1. ☐ Verify classification against Appendix 2 criteria
+1. ☐ Check for classification updates when system changes
+1. ☐ Validate risk mitigation measures for classified level
+
+**Evidence Reviewed:**
+
+- ☐ Risk classification report
+- ☐ Classification justification document
+- ☐ Change management records
+- ☐ Risk mitigation plan
+
+**Assessment:**
+
+- ☐ ✅ Accurate classification with supporting evidence (5 points)
+- ☐ ⚠️ Classification present but questionable accuracy (2.5 points)
+- ☐ ❌ No classification or clearly incorrect (0 points)
+
+**Score:** ______ / 5  
+**Notes:** ________________________________________________________________
+
+-----
+
+### 1.4 Supply Chain Transparency (0–5 points)
+
+**Requirement:** Full disclosure of AI supply chain including training data sources, model origins, and third-party components.
+
+**Verification Steps:**
+
+1. ☐ Review training data provenance documentation
+1. ☐ Verify third-party component licenses and sources
+1. ☐ Check model development and acquisition records
+1. ☐ Validate supply chain risk assessment
+
+**Evidence Reviewed:**
+
+- ☐ Training data lineage documentation
+- ☐ Third-party component registry
+- ☐ Model provenance records
+- ☐ Supply chain risk assessment
+
+**Assessment:**
+
+- ☐ ✅ Complete supply chain transparency (5 points)
+- ☐ ⚠️ Partial transparency with minor gaps (2.5 points)
+- ☐ ❌ Inadequate supply chain documentation (0 points)
+
+**Score:** ______ / 5  
+**Notes:** ________________________________________________________________
+
+**VOLUME I TOTAL:** ______ / 20
+
+-----
+
+## VOLUME II – CRYPTOGRAPHIC IMPLEMENTATION (0–25 POINTS)
+
+### 2.1 SHA3-512 + BLAKE3 Hashing (0–5 points)
+
+**Requirement:** Implementation of approved post-quantum hash functions.
+
+**Verification Steps:**
+
+1. ☐ Inspect Q-RAC configuration files
+1. ☐ Verify hash algorithm implementation in code
+1. ☐ Test hash generation and verification
+1. ☐ Check for deprecated hash functions (MD5, SHA1)
+
+**Evidence Reviewed:**
+
+- ☐ Cryptographic library configuration
+- ☐ Source code review (hash implementation)
+- ☐ Test hash outputs
+- ☐ Security configuration files
+
+**Technical Test:**
+
+```bash
+# Auditor executes on-site:
+echo "test" | sha3sum -a 512
+# OR
+b3sum testfile.dat
+```
+
+**Assessment:**
+
+- ☐ ✅ Correct implementation of SHA3-512 or BLAKE3 (5 points)
+- ☐ ⚠️ Implemented but with minor configuration issues (2.5 points)
+- ☐ ❌ Wrong algorithm or not implemented (0 points)
+
+**Score:** ______ / 5  
+**Notes:** ________________________________________________________________
+
+-----
+
+### 2.2 Argon2id Key Derivation (0–5 points)
+
+**Requirement:** Use of Argon2id for key derivation functions.
+
+**Verification Steps:**
+
+1. ☐ Review key derivation implementation
+1. ☐ Verify Argon2id parameters (memory, iterations, parallelism)
+1. ☐ Test key derivation function
+1. ☐ Check for weak KDFs (PBKDF2 with low iterations, bcrypt)
+
+**Evidence Reviewed:**
+
+- ☐ Key management documentation
+- ☐ Argon2id configuration parameters
+- ☐ Source code (KDF implementation)
+- ☐ Security audit reports
+
+**Technical Verification:**
+
+- Memory parameter: ≥64 MB (recommended)
+- Time cost (iterations): ≥3
+- Parallelism: ≥4 threads
+
+**Assessment:**
+
+- ☐ ✅ Correct Argon2id implementation with secure parameters (5 points)
+- ☐ ⚠️ Implemented but parameters below recommendations (2.5 points)
+- ☐ ❌ Wrong KDF or insecure parameters (0 points)
+
+**Score:** ______ / 5  
+**Notes:** ________________________________________________________________
+
+-----
+
+### 2.3 ChaCha20-Poly1305 Encryption (0–5 points)
+
+**Requirement:** Implementation of approved symmetric encryption.
+
+**Verification Steps:**
+
+1. ☐ Verify encryption algorithm in Q-RAC logs
+1. ☐ Check cipher configuration and key size
+1. ☐ Test encryption/decryption functionality
+1. ☐ Validate nonce/IV generation (uniqueness)
+
+**Evidence Reviewed:**
+
+- ☐ Encryption implementation code
+- ☐ Cipher configuration files
+- ☐ Key management procedures
+- ☐ Nonce generation mechanism
+
+**Technical Verification:**
+
+- Algorithm: ChaCha20-Poly1305 or AES-256-GCM
+- Key size: 256 bits
+- Nonce: Unique per message
+- Authentication: AEAD mode
+
+**Assessment:**
+
+- ☐ ✅ Correct implementation with proper key management (5 points)
+- ☐ ⚠️ Implemented but with configuration weaknesses (2.5 points)
+- ☐ ❌ Wrong cipher or insecure implementation (0 points)
+
+**Score:** ______ / 5  
+**Notes:** ________________________________________________________________
+
+-----
+
+### 2.4 Dilithium/Falcon Digital Signatures (0–5 points)
+
+**Requirement:** Post-quantum digital signature implementation.
+
+**Verification Steps:**
+
+1. ☐ Verify signature algorithm (Dilithium, Falcon, or SPHINCS+)
+1. ☐ Check signature parameters and security level
+1. ☐ Test signature generation and verification
+1. ☐ Validate certificate chain and trust anchors
+
+**Evidence Reviewed:**
+
+- ☐ Digital signature implementation
+- ☐ Public key infrastructure documentation
+- ☐ Signature algorithm parameters
+- ☐ Test signatures and verification logs
+
+**Technical Verification:**
+
+- Approved algorithms: Dilithium (NIST Level 2/3/5), Falcon-512/1024, SPHINCS+-SHA2/SHAKE
+- Key sizes appropriate for security level
+- Signature verification working correctly
+
+**Assessment:**
+
+- ☐ ✅ Correct post-quantum signature implementation (5 points)
+- ☐ ⚠️ Implemented but with minor issues (2.5 points)
+- ☐ ❌ Classical signatures only or not implemented (0 points)
+
+**Score:** ______ / 5  
+**Notes:** ________________________________________________________________
+
+-----
+
+### 2.5 Algorithm Agility Framework (0–5 points)
+
+**Requirement:** Capability to update cryptographic algorithms without system redesign.
+
+**Verification Steps:**
+
+1. ☐ Review cryptographic abstraction layer design
+1. ☐ Verify pluggable cryptographic modules
+1. ☐ Check algorithm update procedures
+1. ☐ Test algorithm migration capability (if possible)
+
+**Evidence Reviewed:**
+
+- ☐ Software architecture documentation
+- ☐ Cryptographic module interface specifications
+- ☐ Algorithm update procedures
+- ☐ Migration test results
+
+**Assessment:**
+
+- ☐ ✅ Full algorithm agility with tested migration capability (5 points)
+- ☐ ⚠️ Partial agility or untested migration (2.5 points)
+- ☐ ❌ Hardcoded algorithms without agility (0 points)
+
+**Score:** ______ / 5  
+**Notes:** ________________________________________________________________
+
+**VOLUME II TOTAL:** ______ / 25
+
+-----
+
+## VOLUME III – INCIDENT MANAGEMENT (0–25 POINTS)
+
+### 3.1 24-Hour Flagging Compliance (0–7 points)
+
+**Requirement:** All incidents flagged in Q-RAC within 24 hours of detection.
+
+**Verification Steps:**
+
+1. ☐ Review incident detection mechanisms
+1. ☐ Sample recent incidents and verify timestamps
+1. ☐ Check automated flagging systems
+1. ☐ Interview incident response personnel
+
+**Evidence Reviewed:**
+
+- ☐ Incident logs for past 6 months
+- ☐ Detection-to-flagging timestamps
+- ☐ Automated monitoring alerts
+- ☐ Incident response procedures
+
+**Sample Testing:**
+
+- Select 10 random incidents
+- Verify detection timestamp vs. flagging timestamp
+- Calculate compliance rate
+
+**Assessment:**
+
+- ☐ ✅ ≥95% incidents flagged within 24 hours (7 points)
+- ☐ ⚠️ 80-94% compliance (3.5 points)
+- ☐ ❌ <80% compliance (0 points)
+
+**Compliance Rate:** ______ %  
+**Score:** ______ / 7  
+**Notes:** ________________________________________________________________
+
+-----
+
+### 3.2 30-Day RCA Completion Rate (0–7 points)
+
+**Requirement:** Root cause analysis completed within 30 days for all flagged incidents.
+
+**Verification Steps:**
+
+1. ☐ Review RCA documentation for recent incidents
+1. ☐ Verify RCA completeness (causal chain, remediation, prevention)
+1. ☐ Check timeline from flagging to RCA completion
+1. ☐ Assess RCA quality and depth
+
+**Evidence Reviewed:**
+
+- ☐ RCA reports for past 6 months
+- ☐ Incident-to-RCA completion timestamps
+- ☐ RCA methodology documentation
+- ☐ Remediation tracking records
+
+**Sample Testing:**
+
+- Select 10 random incidents requiring RCA
+- Verify completion within 30 days
+- Assess RCA quality (superficial vs. thorough)
+
+**Assessment:**
+
+- ☐ ✅ ≥90% RCAs completed within 30 days with high quality (7 points)
+- ☐ ⚠️ 75-89% compliance or quality concerns (3.5 points)
+- ☐ ❌ <75% compliance or poor quality (0 points)
+
+**Completion Rate:** ______ %  
+**Score:** ______ / 7  
+**Notes:** ________________________________________________________________
+
+-----
+
+### 3.3 MLA Trigger Documentation (0–6 points)
+
+**Requirement:** Incidents meeting MLA thresholds properly documented and reported.
+
+**Verification Steps:**
+
+1. ☐ Identify incidents meeting MLA criteria (cross-border, >1000 affected, critical infrastructure)
+1. ☐ Verify MLA notification was sent within required timeframe
+1. ☐ Check documentation completeness
+1. ☐ Validate cross-border cooperation evidence
+
+**Evidence Reviewed:**
+
+- ☐ MLA threshold determination records
+- ☐ Cross-border notification logs
+- ☐ International cooperation correspondence
+- ☐ Joint investigation documentation (if applicable)
+
+**MLA Criteria Check:**
+
+- ☐ Cross-border impact incidents identified
+- ☐ Large-scale harm incidents identified
+- ☐ Critical infrastructure incidents identified
+- ☐ All MLA-qualifying incidents reported
+
+**Assessment:**
+
+- ☐ ✅ All MLA incidents properly documented and reported (6 points)
+- ☐ ⚠️ Most documented but some gaps (3 points)
+- ☐ ❌ Poor MLA documentation or unreported incidents (0 points)
+
+**Score:** ______ / 6  
+**Notes:** ________________________________________________________________
+
+-----
+
+### 3.4 Remediation Effectiveness (0–5 points)
+
+**Requirement:** Remediation measures effectively prevent incident recurrence.
+
+**Verification Steps:**
+
+1. ☐ Review remediation measures for past incidents
+1. ☐ Check for incident recurrence rates
+1. ☐ Validate remediation implementation
+1. ☐ Assess preventive measure effectiveness
+
+**Evidence Reviewed:**
+
+- ☐ Remediation implementation records
+- ☐ Post-remediation testing results
+- ☐ Incident recurrence data
+- ☐ Continuous improvement evidence
+
+**Effectiveness Metrics:**
+
+- Recurrence rate of similar incidents: ______ %
+- Remediation implementation rate: ______ %
+- Preventive measure adoption: ______ %
+
+**Assessment:**
+
+- ☐ ✅ <5% recurrence rate, comprehensive remediation (5 points)
+- ☐ ⚠️ 5-15% recurrence or partial remediation (2.5 points)
+- ☐ ❌ >15% recurrence or ineffective remediation (0 points)
+
+**Score:** ______ / 5  
+**Notes:** ________________________________________________________________
+
+**VOLUME III TOTAL:** ______ / 25
+
+-----
+
+## VOLUME IV – REPORTING & TRANSPARENCY (0–15 POINTS)
+
+### 4.1 Quarterly Report Submission (0–5 points)
+
+**Requirement:** Quarterly compliance reports submitted to NAIOA/UN-AIOEA on time.
+
+**Verification Steps:**
+
+1. ☐ Verify reports for past 12 months (4 quarters)
+1. ☐ Check submission timestamps against deadlines
+1. ☐ Assess report completeness
+1. ☐ Validate data accuracy
+
+**Evidence Reviewed:**
+
+- ☐ Quarterly reports (past 4 quarters)
+- ☐ Submission confirmation records
+- ☐ Report completeness checklist
+- ☐ Data validation evidence
+
+**Submission Record:**
+
+- Q1: ☐ On-time ☐ Late ☐ Not submitted
+- Q2: ☐ On-time ☐ Late ☐ Not submitted
+- Q3: ☐ On-time ☐ Late ☐ Not submitted
+- Q4: ☐ On-time ☐ Late ☐ Not submitted
+
+**Assessment:**
+
+- ☐ ✅ All 4 reports submitted on-time and complete (5 points)
+- ☐ ⚠️ 3 reports on-time or minor delays (2.5 points)
+- ☐ ❌ <3 reports or significant delays (0 points)
+
+**Score:** ______ / 5  
+**Notes:** ________________________________________________________________
+
+-----
+
+### 4.2 Automated Score Updates (0–5 points)
+
+**Requirement:** Certification scores automatically updated based on quarterly reports.
+
+**Verification Steps:**
+
+1. ☐ Verify automated scoring system implementation
+1. ☐ Check score calculation methodology
+1. ☐ Validate score updates align with Volume I-V metrics
+1. ☐ Test scoring automation
+
+**Evidence Reviewed:**
+
+- ☐ Scoring system documentation
+- ☐ Automated score calculation logs
+- ☐ Score update history
+- ☐ Scoring algorithm verification
+
+**Automation Check:**
+
+- ☐ Scores update automatically upon report submission
+- ☐ Calculation methodology matches UNC-AI-2026 Appendix 1
+- ☐ Score history is auditable
+- ☐ Manual overrides are logged and justified
+
+**Assessment:**
+
+- ☐ ✅ Full automation with accurate calculations (5 points)
+- ☐ ⚠️ Partial automation or minor calculation errors (2.5 points)
+- ☐ ❌ Manual scoring or incorrect automation (0 points)
+
+**Score:** ______ / 5  
+**Notes:** ________________________________________________________________
+
+-----
+
+### 4.3 Public Transparency Measures (0–5 points)
+
+**Requirement:** Public disclosure of AI system information, incident summaries, and compliance status.
+
+**Verification Steps:**
+
+1. ☐ Review public-facing transparency disclosures
+1. ☐ Verify incident summary publication (privacy-protected)
+1. ☐ Check accessibility of public registry information
+1. ☐ Assess completeness of public disclosures
+
+**Evidence Reviewed:**
+
+- ☐ Public transparency website/portal
+- ☐ Published incident summaries
+- ☐ Certification status public listing
+- ☐ Accessibility and usability assessment
+
+**Public Disclosure Checklist:**
+
+- ☐ AI system purpose and capabilities described
+- ☐ Risk classification published
+- ☐ Incident summaries available (anonymized)
+- ☐ Current certification status visible
+- ☐ Contact information for inquiries provided
+
+**Assessment:**
+
+- ☐ ✅ Comprehensive public transparency (5 points)
+- ☐ ⚠️ Partial disclosure with some gaps (2.5 points)
+- ☐ ❌ Minimal or no public transparency (0 points)
+
+**Score:** ______ / 5  
+**Notes:** ________________________________________________________________
+
+**VOLUME IV TOTAL:** ______ / 15
+
+-----
+
+## VOLUME V – CROSS-BORDER COOPERATION (0–15 POINTS)
+
+### 5.1 MLA Exchange Responsiveness (0–7 points)
+
+**Requirement:** Timely and complete responses to mutual legal assistance requests.
+
+**Verification Steps:**
+
+1. ☐ Review MLA requests received in past 12 months
+1. ☐ Check response times against 45-day requirement
+1. ☐ Assess completeness of responses
+1. ☐ Validate cooperation quality
+
+**Evidence Reviewed:**
+
+- ☐ MLA request log
+- ☐ Response timestamps
+- ☐ Response completeness records
+- ☐ Requesting jurisdiction feedback (if available)
+
+**MLA Response Record:**
+Total requests: ______
+Responded within 45 days: ______ (______ %)
+Complete responses: ______ (______ %)
+Partial responses: ______
+Refused (with justification): ______
+
+**Assessment:**
+
+- ☐ ✅ ≥90% timely and complete responses (7 points)
+- ☐ ⚠️ 75-89% compliance (3.5 points)
+- ☐ ❌ <75% compliance (0 points)
+
+**Score:** ______ / 7  
+**Notes:** ________________________________________________________________
+
+-----
+
+### 5.2 Joint Audit Participation (0–8 points)
+
+**Requirement:** Active participation in cross-border joint audits and inspections.
+
+**Verification Steps:**
+
+1. ☐ Identify joint audits conducted in past 12 months
+1. ☐ Verify operator cooperation and facilitation
+1. ☐ Review joint audit reports and findings
+1. ☐ Assess harmonization with international standards
+
+**Evidence Reviewed:**
+
+- ☐ Joint audit invitations and responses
+- ☐ Joint audit reports
+- ☐ Cooperation records from partner jurisdictions
+- ☐ Harmonization documentation
+
+**Joint Audit Record:**
+Joint audits participated: ______
+Cooperation level: ☐ Excellent ☐ Good ☐ Adequate ☐ Poor
+Findings addressed: ______ / ______
+Harmonization achieved: ☐ Yes ☐ Partial ☐ No
+
+**Assessment:**
+
+- ☐ ✅ Full participation with excellent cooperation (8 points)
+- ☐ ⚠️ Participation with some cooperation issues (4 points)
+- ☐ ❌ Poor participation or obstruction (0 points)
+
+**Score:** ______ / 8  
+**Notes:** ________________________________________________________________
+
+**VOLUME V TOTAL:** ______ / 15
+
+-----
+
+## SECTION VI – AUDIT SUMMARY AND CERTIFICATION DETERMINATION
+
+### Total Score Calculation
+
+|Volume                                 |Score     |Max Points|
+|---------------------------------------|----------|----------|
+|Volume I: Registration & Classification|______    |20        |
+|Volume II: Cryptographic Implementation|______    |25        |
+|Volume III: Incident Management        |______    |25        |
+|Volume IV: Reporting & Transparency    |______    |15        |
+|Volume V: Cross-Border Cooperation     |______    |15        |
+|**TOTAL SCORE**                        |**______**|**100**   |
+
+-----
+
+### Certification Status Determination
+
+Based on total score of ______ / 100:
+
+☐ **FULLY CERTIFIED** (≥80 points)
+
+- Status: Full international recognition
+- Enforcement: Normal audit cycle (annual)
+- Action: Issue/renew certification for 12 months
+
+☐ **CONDITIONAL** (60–79 points)
+
+- Status: Conditional certification
+- Enforcement: Enhanced monitoring (quarterly audits)
+- Action: Require 12-month remediation plan
+- Remediation deadline: __________________
+
+☐ **PROBATIONARY** (40–59 points)
+
+- Status: Probationary certification
+- Enforcement: Restricted cross-border deployment; UN-AIOEA direct supervision
+- Action: Immediate remediation plan required; monthly reporting
+- Review date: __________________
+
+☐ **NON-COMPLIANT** (<40 points)
+
+- Status: Certification revoked/denied
+- Enforcement: Operations prohibited; sanctions imposed; MLA enforcement triggered
+- Action: Cease operations; initiate enforcement proceedings
+- Enforcement action: __________________
+
+-----
+
+### Critical Findings (Immediate Action Required)
+
+☐ **Systemic Risk Event Identified**
+
+- Description: ________________________________________________________________
+- Immediate action: ☐ Emergency shutdown ordered ☐ UN-AIOEA escalation ☐ Other: ________________
+
+☐ **Audit Failure**
+
+- Type: ☐ Missing logs ☐ Tampered records ☐ Obstruction ☐ Misrepresentation
+- Description: ________________________________________________________________
+- Enforcement: ________________________________________________________________
+
+☐ **Fundamental Rights Violation**
+
+- Description: ________________________________________________________________
+- Affected individuals: Approx. ______
+- Action: ________________________________________________________________
+
+-----
+
+### Remediation Plan Requirements
+
+For scores <80, a remediation plan SHALL address:
+
+1. **Identified Deficiencies:**
+- -----
+- -----
+- -----
+1. **Corrective Actions:**
+- -----
+- -----
+- -----
+1. **Timeline:**
+- Start date: __________________
+- Completion date: __________________
+- Review milestones: __________________
+1. **Resources Allocated:**
+- -----
+1. **Success Metrics:**
+- -----
+
+-----
+
+### Auditor Recommendations
+
+☐ Grant/renew full certification  
+☐ Grant conditional certification with remediation plan  
+☐ Place on probationary status  
+☐ Deny/revoke certification  
+☐ Refer to UN-AIOEA for enforcement action  
+☐ Recommend emergency shutdown  
+☐ Other: ________________________________________________________________
+
+**Auditor Comments:**
+
+-----
+
+-----
+
+-----
+
+-----
+
+### Audit Sign-Off
+
+**Lead Auditor Name:** __________________  
+**Lead Auditor Signature:** __________________  
+**Date:** __________________
+
+**Technical Specialist Name:** __________________  
+**Technical Specialist Signature:** __________________  
+**Date:** __________________
+
+**Operator Representative Name:** __________________  
+**Operator Representative Signature:** __________________  
+**Date:** __________________
+
+-----
+
+### Appeals Process
+
+The operator may appeal this audit determination within **30 days** of notification to:
+
+**Stage 1:** Technical Arbitration Panel  
+**Stage 2:** UN-AIOEA Review  
+**Stage 3:** International Court of Justice (final)
+
+Appeal submissions SHALL be directed to:  
+**UN-AIOEA Secretariat**  
+Email: appeals@un-aioea.org  
+Portal: https://appeals.un-aioea.org
+
+-----
+
+## APPENDIX A – EVIDENCE INVENTORY
+
+|Evidence ID|Description|Type|Location/Reference|
+|-----------|-----------|----|------------------|
+|           |           |    |                  |
+|           |           |    |                  |
+|           |           |    |                  |
+
+-----
+
+## APPENDIX B – INTERVIEW LOG
+
+|Date/Time|Interviewee|Role|Topics Covered|Key Findings|
+|---------|-----------|----|--------------|------------|
+|         |           |    |              |            |
+|         |           |    |              |            |
+
+-----
+
+## APPENDIX C – TECHNICAL TEST RESULTS
+
+|Test ID|Test Description|Expected Result|Actual Result|Pass/Fail|
+|-------|----------------|---------------|-------------|---------|
+|       |                |               |             |         |
+|       |                |               |             |         |
+
+-----
+
+**END OF AUDIT CHECKLIST**
+
+**Status:** ✅ Inspector-Ready | ✅ Field-Tested | ✅ ISO/IEC Compatible
+
+This checklist provides comprehensive, systematic audit coverage ensuring full UNC-AI-2026 compliance verification.

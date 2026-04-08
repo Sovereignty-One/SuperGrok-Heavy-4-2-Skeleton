@@ -1,0 +1,56 @@
+name: iOS Build
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'ios/**'
+      - 'src/native/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'ios/**'
+      - 'src/native/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-ios:
+    runs-on: macos-15
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Select Xcode
+      run: |
+        # Use latest available Xcode for iOS 26 SDK
+        ls /Applications/ | grep Xcode
+        sudo xcode-select -s /Applications/Xcode.app/Contents/Developer || \
+        sudo xcode-select -s /Applications/Xcode_16.3.app/Contents/Developer || \
+        sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+        xcodebuild -version
+        swift --version
+
+    - name: Resolve Swift Package
+      working-directory: ios
+      run: swift package resolve
+
+    - name: Build for iOS (Release)
+      working-directory: ios
+      run: |
+        xcodebuild build \
+          -scheme SovereigntyGuard \
+          -destination 'generic/platform=iOS' \
+          -configuration Release \
+          ONLY_ACTIVE_ARCH=NO \
+          | tail -20
+
+    - name: Build for iOS Simulator
+      working-directory: ios
+      run: |
+        xcodebuild build \
+          -scheme SovereigntyGuard \
+          -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
+          -configuration Debug \
+          | tail -20
