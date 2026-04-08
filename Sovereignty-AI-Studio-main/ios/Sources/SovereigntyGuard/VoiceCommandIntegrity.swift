@@ -20,6 +20,7 @@ import Security
 import Accelerate
 import CryptoKit
 
+@available(macOS 10.15, *)
 public class VoiceCommandIntegrity: NSObject, SFSpeechRecognizerDelegate, @unchecked Sendable {
     public static let shared = VoiceCommandIntegrity()
 
