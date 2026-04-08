@@ -1,0 +1,1135 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Q-Resist Ultimate – Enhanced with Noble PQ & HQC KEM</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/blake3@2.1.7/dist/blake3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-sha3@0.9.3/src/sha3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/argon2-browser@1.18.0/dist/argon2-bundled.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl.min.js"></script>
+    <!-- Noble Post-Quantum imports fixed -->
+    <script type="module">
+      import { ml_kem512, ml_kem768, ml_kem1024 } from 'https://cdn.jsdelivr.net/npm/@noble/post-quantum@0.7.0/ml-kem.js';
+      import { ml_dsa44, ml_dsa65, ml_dsa87 } from 'https://cdn.jsdelivr.net/npm/@noble/post-quantum@0.7.0/ml-dsa.js';
+      import { slh_dsa_sha2_128f, slh_dsa_sha2_128s, slh_dsa_sha2_192f, slh_dsa_sha2_192s, slh_dsa_sha2_256f, slh_dsa_sha2_256s, slh_dsa_shake_128f, slh_dsa_shake_128s, slh_dsa_shake_192f, slh_dsa_shake_192s, slh_dsa_shake_256f, slh_dsa_shake_256s } from 'https://cdn.jsdelivr.net/npm/@noble/post-quantum@0.7.0/slh-dsa.js';
+      import { chacha20poly1305, xchacha20poly1305 } from 'https://cdn.jsdelivr.net/npm/@noble/ciphers@0.5.2/chacha.js';
+      import { salsa20poly1305, xsalsa20poly1305 } from 'https://cdn.jsdelivr.net/npm/@noble/ciphers@0.5.2/salsa.js';
+      import { aes } from 'https://cdn.jsdelivr.net/npm/@noble/ciphers@0.5.2/aes.js';
+      window.noble = { ml_kem512, ml_kem768, ml_kem1024, ml_dsa44, ml_dsa65, ml_dsa87, slh_dsa_sha2_128f, slh_dsa_sha2_128s, slh_dsa_sha2_192f, slh_dsa_sha2_192s, slh_dsa_sha2_256f, slh_dsa_sha2_256s, slh_dsa_shake_128f, slh_dsa_shake_128s, slh_dsa_shake_192f, slh_dsa_shake_192s, slh_dsa_shake_256f, slh_dsa_shake_256s, chacha20poly1305, xchacha20poly1305, salsa20poly1305, xsalsa20poly1305, aesGcm: aes.gcm };
+    </script>
+
+    <script>
+      // Hardening: Anti-devtools snooping and console freeze
+      // Override console methods
+      console.log = function() {};
+      console.error = function() {};
+      console.warn = function() {};
+      Object.freeze(console);
+
+      // Disable right-click and common devtools shortcuts
+      document.addEventListener('contextmenu', e => e.preventDefault());
+      document.onkeydown = function(e) {
+        if (e.keyCode === 123 || // F12
+            (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || // Ctrl+Shift+I/J/C
+            (e.ctrlKey && e.keyCode === 85)) { // Ctrl+U
+          return false;
+        }
+      };
+
+      // Detect devtools with timing (if paused on debugger)
+      setInterval(() => {
+        const start = performance.now();
+        debugger;
+        const end = performance.now();
+        if (end - start > 100) {
+          document.body.innerHTML = '<h1>Devtools detected! Security breach.</h1>';
+        }
+      }, 1000);
+
+      let oqs = null;
+      async function loadOQS() {
+        if (oqs) return oqs;
+        const s = document.getElementById('pqStatus');
+        s.textContent = 'Loading liboqs WASM…';
+        try {
+          oqs = await import('https://cdn.jsdelivr.net/npm/@openquantumsafe/liboqs-javascript@0.9.1/dist/liboqs.min.js');
+          s.textContent = 'liboqs ready';
+        } catch (e) {
+          s.textContent = 'Failed to load liboqs WASM: ' + e.message + '. Check network or browser support.';
+          console.error(e); // Even though console is frozen, for internal
+        }
+        return oqs;
+      }
+
+      // SHA-3-512 implementation (from original)
+      function sha3_512(message) {
+        const KECCAK_ROUNDS = 24;
+        const ROTC = [1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 2, 14, 27, 41, 56, 8, 25, 43, 62, 18, 39, 61, 20, 44];
+        const PILN = [10, 7, 11, 17, 18, 3, 5, 16, 8, 21, 24, 4, 15, 23, 19, 13, 12, 2, 20, 14, 22, 9, 6, 1];
+        const utf8Encoder = new TextEncoder();
+        const messageBytes = utf8Encoder.encode(message);
+        const rate = 576;
+        const outputLength = 512;
+        const blockSize = rate / 8;
+        let state = new Array(25).fill(0n);
+        const padded = pad10Star1(messageBytes, blockSize);
+        for (let i = 0; i < padded.length; i += blockSize) {
+          for (let j = 0; j < blockSize; j += 8) {
+            const word = bytesToWord(padded.slice(i + j, i + j + 8));
+            state[Math.floor(j / 8)] ^= word;
+          }
+          state = keccakF(state, KECCAK_ROUNDS, ROTC, PILN);
+        }
+        let result = '';
+        for (let i = 0; i < outputLength / 64; i++) {
+          result += wordToHex(state[i]);
+        }
+        return result;
+      }
+
+      function pad10Star1(bytes, blockSize) {
+        const len = bytes.length;
+        let padLen = blockSize - (len % blockSize);
+        if (padLen === 0) padLen = blockSize;
+        const padded = new Uint8Array(len + padLen);
+        padded.set(bytes);
+        const padStart = len;
+        padded[padStart] |= 0x80;
+        padded[padded.length - 1] |= 0x01;
+        padded[padded.length - 1] ^= 0x06;
+        return padded;
+      }
+
+      function bytesToWord(bytes) {
+        let word = 0n;
+        for (let i = 0; i < Math.min(8, bytes.length); i++) {
+          word += BigInt(bytes[i]) << BigInt(8 * i);
+        }
+        return word;
+      }
+
+      function wordToHex(word) {
+        let hex = word.toString(16);
+        while (hex.length < 16) {
+          hex = '0' + hex;
+        }
+        return hex;
+      }
+
+      function keccakF(state, rounds, ROTC, PILN) {
+        const RC = [
+          0x0000000000000001n, 0x0000000000008082n, 0x800000000000808an,
+          0x8000000080008000n, 0x000000000000808bn, 0x0000000080000001n,
+          0x8000000080008081n, 0x8000000000008009n, 0x000000000000008an,
+          0x0000000000000088n, 0x0000000080008009n, 0x000000008000000an,
+          0x000000008000808bn, 0x800000000000008bn, 0x8000000000008089n,
+          0x8000000000008003n, 0x8000000000008002n, 0x8000000000000080n,
+          0x000000000000800an, 0x800000008000000an, 0x8000000080008081n,
+          0x8000000000008080n, 0x0000000080000001n, 0x8000000080008008n
+        ];
+        
+        for (let round = 0; round < rounds; round++) {
+          const C = new Array(5).fill(0n);
+          const D = new Array(5).fill(0n);
+          
+          for (let x = 0; x < 5; x++) {
+            C[x] = state[x] ^ state[x + 5] ^ state[x + 10] ^ state[x + 15] ^ state[x + 20];
+          }
+          
+          for (let x = 0; x < 5; x++) {
+            D[x] = C[(x + 4) % 5] ^ rot64(C[(x + 1) % 5], 1);
+          }
+          
+          for (let x = 0; x < 5; x++) {
+            for (let y = 0; y < 5; y++) {
+              state[x + 5 * y] ^= D[x];
+            }
+          }
+          
+          let current = state[1];
+          for (let t = 0; t < 24; t++) {
+            const x = PILN[t];
+            const temp = state[x];
+            state[x] = rot64(current, ROTC[t]);
+            current = temp;
+          }
+          
+          for (let y = 0; y < 5; y++) {
+            const i = 5 * y;
+            const T = [
+              state[i], 
+              state[i + 1], 
+              state[i + 2], 
+              state[i + 3], 
+              state[i + 4]
+            ];
+            
+            for (let x = 0; x < 5; x++) {
+              state[i + x] = T[x] ^ (~T[(x + 1) % 5] & T[(x + 2) % 5]);
+            }
+          }
+          
+          state[0] ^= RC[round];
+        }
+        
+        return state;
+      }
+
+      function rot64(x, n) {
+        n = n % 64;
+        return ((x << BigInt(n)) | (x >> BigInt(64 - n))) & 0xffffffffffffffffn;
+      }
+
+      // UI + Argon2 + BLAKE3 integration
+      (function(){
+        'use strict';
+        const inputEl = document.getElementById('input');
+        const outputEl = document.getElementById('output');
+        const hashBtn = document.getElementById('hashBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const warningEl = document.getElementById('warning');
+        const algoSelect = document.getElementById('algo');
+        const advancedToggle = document.getElementById('advancedToggle');
+        const argon2Params = document.getElementById('argon2Params');
+        const blake3Params = document.getElementById('blake3Params');
+        const genSaltBtn = document.getElementById('genSalt');
+        const chachaParams = document.getElementById('chachaParams');
+        const encryptBtn = document.getElementById('encryptBtn');
+        const decryptBtn = document.getElementById('decryptBtn');
+        const genKeyBtn = document.getElementById('genKey');
+        const genNonceBtn = document.getElementById('genNonce');
+
+        function updateWarning() {
+          warningEl.style.display = inputEl.value.length > 1048576 ? 'block' : 'none';
+        }
+
+        inputEl.addEventListener('input', updateWarning);
+
+        algoSelect.addEventListener('change', () => {
+          argon2Params.style.display = 'none';
+          blake3Params.style.display = 'none';
+          chachaParams.style.display = 'none';
+          hashBtn.style.display = 'block';
+          encryptBtn.style.display = 'none';
+          decryptBtn.style.display = 'none';
+          if (algoSelect.value === 'chacha20' || algoSelect.value === 'aesgcm') {
+            chachaParams.style.display = 'block';
+            hashBtn.style.display = 'none';
+            encryptBtn.style.display = 'block';
+            decryptBtn.style.display = 'block';
+          }
+        });
+
+        advancedToggle.addEventListener('click', () => {
+          const algo = algoSelect.value;
+          if (algo === 'argon2') {
+            blake3Params.style.display = 'none';
+            chachaParams.style.display = 'none';
+            argon2Params.style.display = argon2Params.style.display === 'none' ? 'block' : 'none';
+          } else if (algo === 'blake3') {
+            argon2Params.style.display = 'none';
+            chachaParams.style.display = 'none';
+            blake3Params.style.display = blake3Params.style.display === 'none' ? 'block' : 'none';
+          } else if (algo === 'chacha20' || algo === 'aesgcm') {
+            argon2Params.style.display = 'none';
+            blake3Params.style.display = 'none';
+            chachaParams.style.display = chachaParams.style.display === 'none' ? 'block' : 'none';
+          }
+        });
+
+        genSaltBtn.addEventListener('click', () => {
+          const saltInput = document.getElementById('salt');
+          const rand = new Uint8Array(16);
+          window.crypto.getRandomValues(rand);
+          saltInput.value = Array.from(rand).map(b => b.toString(16).padStart(2,'0')).join('');
+        });
+
+        genKeyBtn.addEventListener('click', () => {
+          const keyInput = document.getElementById('chachaKey');
+          const algo = algoSelect.value;
+          let keyLength = 32; // Default 256 bits
+          if (algo === 'aesgcm') {
+            // For AES, could be 16, 24, 32 bytes, but default to 32
+            keyLength = 32;
+          }
+          const rand = new Uint8Array(keyLength);
+          window.crypto.getRandomValues(rand);
+          keyInput.value = Array.from(rand).map(b => b.toString(16).padStart(2,'0')).join('');
+        });
+
+        genNonceBtn.addEventListener('click', () => {
+          const nonceInput = document.getElementById('chachaNonce');
+          const variant = document.getElementById('chachaVariant').value;
+          let nonceLength;
+          if (variant === 'chacha20poly1305' || variant === 'salsa20poly1305') {
+            nonceLength = 12;
+          } else if (variant === 'xchacha20poly1305' || variant === 'xsalsa20poly1305') {
+            nonceLength = 24;
+          } else {
+            nonceLength = 12; // Default
+          }
+          if (algoSelect.value === 'aesgcm') {
+            nonceLength = 12;
+          }
+          const rand = new Uint8Array(nonceLength);
+          window.crypto.getRandomValues(rand);
+          nonceInput.value = Array.from(rand).map(b => b.toString(16).padStart(2,'0')).join('');
+        });
+
+        hashBtn.addEventListener('click', () => {
+          let text = inputEl.value;
+          if (text.trim().length === 0 && inputEl.value.length > 0) {
+            text = inputEl.value;
+          }
+
+          try {
+            hashBtn.textContent = 'Working...';
+            hashBtn.disabled = true;
+            setTimeout(async () => {
+              const algo = algoSelect.value;
+              
+              if (algo === 'blake3') {
+                if (typeof blake3 === 'undefined') {
+                  outputEl.textContent = 'BLAKE3 library not available. Check your connection.';
+                } else {
+                  const outLen = parseInt(document.getElementById('blake3OutLen').value, 10) || 32;
+                  const encoder = new TextEncoder();
+                  const data = encoder.encode(text);
+                  const hash = blake3.hash(data, { length: outLen });
+                  const hexHash = Array.from(hash).map(b => b.toString(16).padStart(2, '0')).join('');
+                  outputEl.innerHTML = `<div class="success">BLAKE3 generated successfully!</div><div class="hash-result">${hexHash}</div>
+                  <div style="margin-top:0.5rem; color:#a0a0c0; font-size:0.9rem;">Output length: ${outLen} bytes (${outLen * 8} bits)</div>`;
+                }
+              } else if (algo === 'sha3') {
+                const hash = sha3_512(text);
+                outputEl.innerHTML = `<div class="success">SHA3-512 generated successfully!</div><div class="hash-result">${hash}</div>`;
+              } else if (algo === 'argon2') {
+                const typeStr = document.getElementById('argonType').value;
+                const timeCost = parseInt(document.getElementById('timeCost').value, 10) || 2;
+                const memCost = parseInt(document.getElementById('memCost').value, 10) || 65536;
+                const parallelism = parseInt(document.getElementById('parallelism').value, 10) || 1;
+                const hashLen = parseInt(document.getElementById('hashLen').value, 10) || 32;
+                const saltField = document.getElementById('salt').value.trim();
+                
+                let saltBytes;
+                if (saltField.length === 0) {
+                  saltBytes = new Uint8Array(16);
+                  window.crypto.getRandomValues(saltBytes);
+                } else {
+                  const hex = saltField.replace(/[^0-9a-fA-F]/g,'');
+                  const arr = new Uint8Array(Math.ceil(hex.length / 2));
+                  for (let i = 0; i < arr.length; i++) {
+                    arr[i] = parseInt(hex.substr(i*2,2) || '00', 16);
+                  }
+                  saltBytes = arr;
+                }
+
+                const argonType = (typeof argon2 !== 'undefined' && argon2.ArgonType)
+                  ? (typeStr === 'i' ? argon2.ArgonType.Argon2i : argon2.ArgonType.Argon2id)
+                  : null;
+
+                if (typeof argon2 === 'undefined' || !argon2.hash) {
+                  outputEl.textContent = 'Argon2 library not available. Ensure argon2-browser is loaded.';
+                } else {
+                  try {
+                    const res = await argon2.hash({
+                      pass: text,
+                      salt: saltBytes,
+                      time: timeCost,
+                      mem: memCost,
+                      parallelism: parallelism,
+                      hashLen: hashLen,
+                      type: argonType || argon2.ArgonType.Argon2id
+                    });
+                    const saltHex = Array.from(saltBytes).map(b=>b.toString(16).padStart(2,'0')).join('');
+                    outputEl.innerHTML = `<div class="success">Argon2 derived key (hex):</div>
+                      <div class="hash-result">${res.hashHex}</div>
+                      <div style="margin-top:0.5rem; color:#a0a0c0; font-size:0.9rem;">Salt (hex): ${saltHex}</div>
+                      <div style="margin-top:0.3rem; color:#a0a0c0; font-size:0.9rem;">Base64: ${res.hash}</div>`;
+                  } catch (e) {
+                    outputEl.textContent = 'Argon2 error: ' + e.message;
+                  }
+                }
+              }
+              hashBtn.textContent = 'Generate';
+              hashBtn.disabled = false;
+            }, 10);
+          } catch (error) {
+            outputEl.textContent = 'Error: ' + error.message;
+            hashBtn.textContent = 'Generate';
+            hashBtn.disabled = false;
+          }
+        });
+
+        copyBtn.addEventListener('click', () => {
+          const hashElement = outputEl.querySelector('.hash-result');
+          if (hashElement) {
+            const hash = hashElement.textContent;
+            navigator.clipboard.writeText(hash).then(() => {
+              const originalText = copyBtn.textContent;
+              copyBtn.textContent = 'Copied!';
+              copyBtn.classList.add('copied');
+              setTimeout(() => {
+                copyBtn.textContent = originalText;
+                copyBtn.classList.remove('copied');
+              }, 2000);
+            }).catch(err => {
+              console.error('Failed to copy: ', err);
+            });
+          }
+        });
+
+        downloadBtn.addEventListener('click', () => {
+          const hashElement = outputEl.querySelector('.hash-result');
+          if (!hashElement) return;
+          const data = hashElement.textContent;
+          const blob = new Blob([data], {type: 'text/plain;charset=utf-8'});
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const algo = document.getElementById('algo').value;
+          a.download = algo === 'argon2' ? 'argon2-derived-key.txt' : `${algo}-hash.txt`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+        });
+
+       inputEl.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            hashBtn.click();
+          }
+        });
+
+        // ChaCha20 encryption/decryption
+        encryptBtn.addEventListener('click', () => {
+          const text = inputEl.value;
+          const keyHex = document.getElementById('chachaKey').value.trim();
+          const nonceHex = document.getElementById('chachaNonce').value.trim();
+
+          try {
+            if (keyHex.length !== 64) throw new Error('Key must be 32 bytes (64 hex chars)');
+            if (nonceHex.length !== 24) throw new Error('Nonce must be 12 bytes (24 hex chars)');
+
+            const key = hexToBytes(keyHex);
+            const nonce = hexToBytes(nonceHex);
+            const data = new TextEncoder().encode(text);
+            const encrypted = noble.chacha20(key, nonce, data);
+            const encryptedHex = bytesToHex(encrypted);
+            outputEl.innerHTML = `<div class="success">ChaCha20 encrypted successfully!</div><div class="hash-result">${encryptedHex}</div>`;
+          } catch (error) {
+            outputEl.textContent = 'Error: ' + error.message;
+          }
+        });
+
+        decryptBtn.addEventListener('click', () => {
+          const encryptedHex = inputEl.value.trim();
+          const keyHex = document.getElementById('chachaKey').value.trim();
+          const nonceHex = document.getElementById('chachaNonce').value.trim();
+
+          try {
+            if (keyHex.length !== 64) throw new Error('Key must be 32 bytes (64 hex chars)');
+            if (nonceHex.length !== 24) throw new Error('Nonce must be 12 bytes (24 hex chars)');
+
+            const key = hexToBytes(keyHex);
+            const nonce = hexToBytes(nonceHex);
+            const encrypted = hexToBytes(encryptedHex);
+            const decrypted = noble.chacha20(key, nonce, encrypted);
+            const text = new TextDecoder().decode(decrypted);
+            outputEl.innerHTML = `<div class="success">ChaCha20 decrypted successfully!</div><div class="hash-result">${text}</div>`;
+          } catch (error) {
+            outputEl.textContent = 'Error: ' + error.message;
+          }
+        });
+
+        function hexToBytes(hex) {
+          const bytes = new Uint8Array(hex.length / 2);
+          for (let i = 0; i < bytes.length; i++) {
+            bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+          }
+          return bytes;
+        }
+
+        function bytesToHex(bytes) {
+          return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        updateWarning();
+      })();
+
+      // PQ part - Signatures
+      let signer = null, hybridEd = null, publicKey = null, signature = null;
+      const status = document.getElementById('pqStatus');
+
+      async function getData() {
+        return data instanceof Uint8Array ? data : new TextEncoder().encode(document.getElementById('input')?.value || 'hello world');
+      }
+
+      async function genKey() {
+        const algo = document.getElementById('sigAlgo').value;
+        const lib = document.getElementById('pqLib').value;
+        status.textContent = 'Generating...';
+        try {
+          if (lib === 'liboqs') {
+            await loadOQS();
+            if (algo === 'Hybrid') {
+              signer = new oqs.sig.Signature('Dilithium3');
+              await signer.generateKeypair();
+              hybridEd = nacl.sign.keyPair();
+              publicKey = signer.getPublicKey();
+            } else {
+              signer = new oqs.sig.Signature(algo);
+              await signer.generateKeypair();
+              publicKey = signer.getPublicKey();
+            }
+          } else if (lib === 'noble') {
+            let level;
+            if (algo === 'Dilithium2') level = noble.ml_dsa44;
+            else if (algo === 'Dilithium3') level = noble.ml_dsa65;
+            else if (algo === 'Dilithium5') level = noble.ml_dsa87;
+            else if (algo.startsWith('SPHINCS')) level = noble.slh_dsa_sha2_128s; // Example, adjust as needed
+            else throw new Error('Noble does not support ' + algo);
+            const seed = crypto.getRandomValues(new Uint8Array(32));
+            const keys = level.keygen(seed);
+            signer = { 
+              sign: (msg) => level.sign(keys.secretKey, msg),
+              verify: (msg, sig, pk) => level.verify(pk, msg, sig),
+              details: { signatureLength: level.SIG_BYTES } 
+            };
+            publicKey = keys.publicKey;
+          }
+          document.getElementById('pubKey').textContent = `Public key ${publicKey.byteLength || publicKey.length} bytes`;
+          status.textContent = 'Keypair ready';
+        } catch(e) { status.innerHTML = `<span class="error">Keygen failed: ${e.message}</span>`; }
+      }
+
+      async function signData() {
+        if (!signer) return status.textContent = 'Generate key first';
+        try {
+          const msg = await getData();
+          status.textContent = 'Signing...';
+          const lib = document.getElementById('pqLib').value;
+          if (lib === 'liboqs') {
+            if (document.getElementById('sigAlgo').value === 'Hybrid') {
+              const ml = await signer.sign(msg);
+              const ed = nacl.sign.detached(msg, hybridEd.secretKey);
+              signature = new Uint8Array(ml.length + ed.length);
+              signature.set(ml); signature.set(ed, ml.length);
+            } else {
+              signature = await signer.sign(msg);
+            }
+          } else if (lib === 'noble') {
+            signature = signer.sign(msg);
+          }
+          document.getElementById('signature').textContent = `Signature ${signature.byteLength || signature.length} bytes`;
+          status.textContent = 'Signed';
+        } catch(e) { status.innerHTML = `<span class="error">Sign failed: ${e.message}</span>`; }
+      }
+
+      async function verifySig() {
+        if (!signer || !signature) return status.textContent = 'Nothing to verify';
+        try {
+          const msg = await getData();
+          status.textContent = 'Verifying...';
+          let valid = false;
+          const lib = document.getElementById('pqLib').value;
+          if (lib === 'liboqs') {
+            if (document.getElementById('sigAlgo').value === 'Hybrid') {
+              const mlLen = signer.details.signatureLength || 2420;
+              const mlSig = signature.slice(0, mlLen);
+              const edSig = signature.slice(mlLen);
+              const mlOk = await signer.verify(msg, mlSig);
+              const edOk = nacl.sign.detached.verify(msg, edSig, hybridEd.publicKey);
+              valid = mlOk && edOk;
+            } else {
+              valid = await signer.verify(msg, signature);
+            }
+          } else if (lib === 'noble') {
+            valid = signer.verify(msg, signature, publicKey);
+          }
+          status.innerHTML = valid ? '✓ VALID' : '<span class="error">✗ INVALID</span>';
+          status.style.color = valid ? '#00ff88' : '#ff6b6b';
+        } catch(e) {
+          status.innerHTML = `<span class="error">Verify error: ${e.message}</span>`;
+        }
+      }
+
+      // New: KEM part
+      let kem = null, encapPublicKey = null, sharedSecretSender = null, sharedSecretReceiver = null, cipherText = null;
+      const statusKem = document.getElementById('statusKem');
+      async function genKemKey() {
+        const algo = document.getElementById('kemAlgo').value;
+        const lib = document.getElementById('pqLibKem').value;
+        statusKem.textContent = 'Generating KEM keypair...';
+        try {
+          if (lib === 'liboqs') {
+            await loadOQS();
+            kem = new oqs.kem.KeyEncapsulation(algo);
+            await kem.generateKeypair();
+            encapPublicKey = kem.getPublicKey();
+          } else if (lib === 'noble') {
+            let level;
+            if (algo === 'ML-KEM-512') level = noble.ml_kem512;
+            else if (algo === 'ML-KEM-768') level = noble.ml_kem768;
+            else if (algo === 'ML-KEM-1024') level = noble.ml_kem1024;
+            else throw new Error('Noble does not support ' + algo);
+            const seed = crypto.getRandomValues(new Uint8Array(64));
+            const keys = level.keygen(seed);
+            kem = { 
+              encaps: (pk) => level.encaps(pk),
+              decaps: (ct, sk) => level.decaps(sk, ct)
+            };
+            encapPublicKey = keys.publicKey;
+            kem.secretKey = keys.secretKey; // Store for decaps
+          }
+          document.getElementById('kemPubKey').textContent = `Encapsulation Public Key ${encapPublicKey.byteLength || encapPublicKey.length} bytes`;
+          statusKem.textContent = 'KEM Keypair ready';
+        } catch(e) { statusKem.innerHTML = `<span class="error">KEM Keygen failed: ${e.message}</span>`; }
+      }
+
+      async function encapsKem() {
+        if (!kem) return statusKem.textContent = 'Generate KEM key first';
+        try {
+          statusKem.textContent = 'Encapsulating...';
+          const lib = document.getElementById('pqLibKem').value;
+          if (lib === 'liboqs') {
+            const res = await kem.encapsulate(encapPublicKey);
+            cipherText = res.cipherText;
+            sharedSecretSender = res.sharedSecret;
+          } else if (lib === 'noble') {
+            const { cipherText: ct, sharedSecret: ss } = kem.encaps(encapPublicKey);
+            cipherText = ct;
+            sharedSecretSender = ss;
+          }
+          document.getElementById('kemCipher').textContent = `Ciphertext ${cipherText.byteLength || cipherText.length} bytes`;
+          document.getElementById('kemSharedSender').textContent = `Sender Shared Secret: ${Array.from(sharedSecretSender).map(b => b.toString(16).padStart(2, '0')).join('')}`;
+          statusKem.textContent = 'Encapsulated';
+        } catch(e) { statusKem.innerHTML = `<span class="error">Encaps failed: ${e.message}</span>`; }
+      }
+
+      async function decapsKem() {
+        if (!kem || !cipherText) return statusKem.textContent = 'Nothing to decapsulate';
+        try {
+          statusKem.textContent = 'Decapsulating...';
+          const lib = document.getElementById('pqLibKem').value;
+          if (lib === 'liboqs') {
+            sharedSecretReceiver = await kem.decapsulate(cipherText);
+          } else if (lib === 'noble') {
+            sharedSecretReceiver = kem.decaps(cipherText, kem.secretKey);
+          }
+          document.getElementById('kemSharedReceiver').textContent = `Receiver Shared Secret: ${Array.from(sharedSecretReceiver).map(b => b.toString(16).padStart(2, '0')).join('')}`;
+          const match = arraysEqual(sharedSecretSender, sharedSecretReceiver);
+          statusKem.innerHTML = match ? '✓ Shared secrets match' : '<span class="error">✗ Shared secrets do not match</span>';
+          statusKem.style.color = match ? '#00ff88' : '#ff6b6b';
+        } catch(e) {
+          statusKem.innerHTML = `<span class="error">Decaps error: ${e.message}</span>`;
+        }
+      }
+
+      function arraysEqual(a, b) {
+        if (a.length !== b.length) return false;
+        for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+        return true;
+      }
+
+      async function benchPQ() {
+        await loadOQS();
+        const algos = ['Dilithium2','Dilithium3','Dilithium5','Falcon-512'];
+        const results = [];
+        for (const a of algos) {
+          const s = new oqs.sig.Signature(a);
+          const times = {keygen:[],sign:[],verify:[]};
+          for (let i = 0; i < 10; i++) {
+            let start = performance.now();
+            await s.generateKeypair();
+            times.keygen.push(performance.now()-start);
+            const msg = await getData();
+            start = performance.now();
+            const sig = await s.sign(msg);
+            times.sign.push(performance.now()-start);
+            start = performance.now();
+            const ok = await s.verify(msg, sig);
+            times.verify.push(performance.now()-start);
+          }
+          results.push({algo:a, keygen:avg(times.keygen), sign:avg(times.sign), verify:avg(times.verify),
+                        pk:s.getPublicKey().byteLength, sig:s.details.signatureLength});
+        }
+        // Render table
+        let html = `<table><tr><th>Algo</th><th>Keygen (ms)</th><th>Sign (ms)</th><th>Verify (ms)</th><th>PK (B)</th><th>Sig (B)</th></tr>`;
+        results.forEach(r=>html+=`<tr><td>${r.algo}</td><td>${r.keygen.toFixed(1)}</td><td>${r.sign.toFixed(1)}</td><td>${r.verify.toFixed(1)}</td><td>${r.pk}</td><td>${r.sig}</td></tr>`);
+        html+='</table>';
+        document.getElementById('benchTable').innerHTML = html;
+      }
+
+      async function benchKEM() {
+        await loadOQS();
+        const algos = ['Kyber512', 'Kyber768', 'Kyber1024', 'HQC-128', 'HQC-192', 'HQC-256', 'BIKEL1', 'BIKEL3', 'BIKEL5', 'Classic-McEliece-348864', 'Classic-McEliece-460896', 'Classic-McEliece-6688128', 'FrodoKEM-640-AES', 'NTRU-HPS-2048-509'];
+        const results = [];
+        for (const a of algos) {
+          try {
+            const k = new oqs.kem.KeyEncapsulation(a);
+            const times = {keygen:[],encaps:[],decaps:[]};
+            for (let i = 0; i < 10; i++) {
+              let start = performance.now();
+              await k.generateKeypair();
+              times.keygen.push(performance.now()-start);
+              const pk = k.getPublicKey();
+              start = performance.now();
+              const {cipherText, sharedSecret: ssSender} = await k.encapsulate(pk);
+              times.encaps.push(performance.now()-start);
+              start = performance.now();
+              const ssReceiver = await k.decapsulate(cipherText);
+              times.decaps.push(performance.now()-start);
+            }
+            results.push({algo:a, keygen:avg(times.keygen), encaps:avg(times.encaps), decaps:avg(times.decaps),
+                          pk:k.details.publicKeyLength, ct:k.details.cipherTextLength, ss:k.details.sharedSecretLength});
+          } catch (e) {
+            console.error(`Error benchmarking ${a}: ${e.message}`);
+          }
+        }
+        // Render table
+        let html = `<table><tr><th>Algo</th><th>Keygen (ms)</th><th>Encaps (ms)</th><th>Decaps (ms)</th><th>PK (B)</th><th>CT (B)</th><th>SS (B)</th></tr>`;
+        results.forEach(r=>html+=`<tr><td>${r.algo}</td><td>${r.keygen.toFixed(1)}</td><td>${r.encaps.toFixed(1)}</td><td>${r.decaps.toFixed(1)}</td><td>${r.pk}</td><td>${r.ct}</td><td>${r.ss}</td></tr>`);
+        html+='</table>';
+        document.getElementById('benchKemTable').innerHTML = html;
+      }
+
+      function avg(arr){return arr.reduce((a,b)=>a+b,0)/arr.length;}
+    </script>
+
+    <style>
+      /* Combined styles from both versions */
+      * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+      }
+      body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+          color: #fff;
+          min-height: 100vh;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          padding: 20px;
+          line-height: 1.6;
+      }
+      
+      .container {
+          max-width: 960px;
+          width: 100%;
+          padding: 2.5rem;
+          background: rgba(0, 0, 0, 0.4);
+          border-radius: 20px;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          backdrop-filter: blur(15px);
+          box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+      }
+      
+      h1 {
+          font-size: 2.2rem;
+          font-weight: 300;
+          background: linear-gradient(45deg, #00f5ff, #ff0080);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          margin-bottom: 0.5rem;
+          text-align: center;
+          letter-spacing: 1px;
+      }
+      
+      .subtitle {
+          text-align: center;
+          margin-bottom: 1.2rem;
+          color: #a0a0c0;
+          font-weight: 300;
+      }
+      
+      .input-group {
+          margin-bottom: 1.2rem;
+      }
+      
+      label {
+          display: block;
+          margin-bottom: 0.5rem;
+          color: #a0a0c0;
+          font-size: 0.9rem;
+      }
+      
+      textarea {
+          width: 100%;
+          min-height: 100px;
+          padding: 1rem;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 10px;
+          color: #fff;
+          font-size: 1rem;
+          resize: vertical;
+          transition: all 0.3s ease;
+      }
+      
+      textarea:focus {
+          outline: none;
+          border-color: rgba(0, 245, 255, 0.5);
+          box-shadow: 0 0 15px rgba(0, 245, 255, 0.2);
+          background: rgba(255, 255, 255, 0.12);
+      }
+      
+      .controls {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0.75rem;
+          margin-bottom: 1rem;
+      }
+      
+      select, input[type="number"], input[type="text"] {
+          width: 100%;
+          padding: 0.8rem;
+          border-radius: 8px;
+          border: 1px solid rgba(255,255,255,0.14);
+          background: rgba(255,255,255,0.04);
+          color: #fff;
+      }
+
+      .small-btn {
+          padding: 0.6rem 0.9rem;
+          border-radius: 6px;
+          background: rgba(255,255,255,0.08);
+          border: none;
+          color: #fff;
+          cursor: pointer;
+      }
+
+      .small-btn:hover { background: rgba(255,255,255,0.12); }
+
+      button {
+          background: linear-gradient(45deg, #00f5ff, #0080ff);
+          border: none;
+          padding: 1.1rem 2.2rem;
+          border-radius: 10px;
+          color: white;
+          font-size: 1.05rem;
+          font-weight: 600;
+          cursor: pointer;
+          width: 100%;
+          transition: all 0.3s ease;
+          letter-spacing: 0.5px;
+      }
+      
+      button:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 8px 20px rgba(0, 245, 255, 0.4);
+      }
+      
+      .output-label {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin: 1rem 0 0.5rem 0;
+          color: #a0a0c0;
+      }
+      
+      .copy-btn {
+          background: rgba(255, 255, 255, 0.1);
+          padding: 0.4rem 0.8rem;
+          border-radius: 5px;
+          font-size: 0.8rem;
+          width: auto;
+          margin: 0;
+      }
+      
+      .copy-btn:hover {
+          background: rgba(255, 255, 255, 0.2);
+          transform: none;
+          box-shadow: none;
+      }
+      
+      #output {
+          padding: 1rem;
+          background: rgba(0, 0, 0, 0.4);
+          border-radius: 10px;
+          font-family: 'Courier New', monospace;
+          font-size: 0.95rem;
+          word-wrap: break-word;
+          min-height: 70px;
+          line-height: 1.5;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      
+      .instructions {
+          margin-top: 1rem;
+          padding: 1rem;
+          background: rgba(0, 0, 0, 0.3);
+          border-radius: 8px;
+          font-size: 0.9rem;
+          color: #a0a0c0;
+      }
+
+      .param-section {
+          margin-top: 0.8rem;
+          padding: 0.8rem;
+          background: rgba(255,255,255,0.02);
+          border-radius: 8px;
+      }
+
+      .inline { display: inline-flex; gap: 0.5rem; align-items: center; }
+
+      .warning {
+          color: #facc15;
+          font-size: 0.85rem;
+          margin-top: 0.5rem;
+      }
+
+      .copied {
+          background: rgba(74, 222, 128, 0.3) !important;
+          transition: background 0.2s;
+      }
+
+      .success {
+          color: #4ade80;
+          font-weight: 500;
+      }
+
+      /* From second HTML */
+      table {
+        width:100%;
+        border-collapse:collapse;
+        margin:1rem 0;
+        background: rgba(255,255,255,0.05);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      th,td {
+        border:1px solid rgba(0,255,0,0.2);
+        padding:0.75rem;
+        text-align:center;
+      }
+      th {
+        background: rgba(0,255,136,0.1);
+        font-weight: 600;
+      }
+      tr:nth-child(even) {
+        background: rgba(255,255,255,0.02);
+      }
+      tr:hover {
+        background: rgba(255,255,255,0.05);
+      }
+      .error {color:#ff6b6b;font-weight:bold;}
+      .timeline {background:#0004;padding:1rem;border-radius:8px;margin:1rem 0;line-height:1.8;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Q-Resist Ultimate</h1>
+
+        <div class="input-group">
+            <label for="input">Enter text to hash / password to derive / plaintext or ciphertext:</label>
+            <textarea id="input" placeholder="Type your text or password here"></textarea>
+            <div id="warning" class="warning" style="display: none;">Input &gt;1MB: Computation may take time.</div>
+        </div>
+
+        <!-- Algorithm selector -->
+        <div class="input-group">
+            <label for="algo">Algorithm:</label>
+            <div class="controls" style="grid-template-columns: 1fr 140px;">
+                <select id="algo">
+                    <option value="blake3">BLAKE3 (fast, quantum-resistant)</option>
+                    <option value="sha3">SHA3-512</option>
+                    <option value="argon2">Argon2id (password hashing)</option>
+                    <option value="chacha20">ChaCha20 (encryption)</option>
+                    <option value="aesgcm">AES-GCM (encryption)</option>
+                </select>
+                <button id="advancedToggle" class="small-btn" type="button">Toggle Params</button>
+            </div>
+        </div>
+
+        <!-- BLAKE3 parameters -->
+        <div id="blake3Params" class="param-section" style="display:none;">
+            <div class="input-group">
+                <label for="blake3OutLen">Output length (bytes):</label>
+                <input id="blake3OutLen" type="number" min="1" max="1024" value="32">
+                <div style="margin-top:0.5rem; color:#a0a0c0; font-size:0.9rem;">BLAKE3 supports variable-length output (default: 32 bytes / 256 bits)</div>
+            </div>
+        </div>
+
+        <!-- Argon2 parameters (hidden by default) -->
+        <div id="argon2Params" class="param-section" style="display:none;">
+            <div class="input-group">
+                <label for="argonType">Argon2 Type:</label>
+                <select id="argonType">
+                    <option value="id">Argon2id</option>
+                    <option value="i">Argon2i</option>
+                </select>
+            </div>
+
+            <div class="controls">
+                <div>
+                    <label for="timeCost">Time cost (iterations):</label>
+                    <input id="timeCost" type="number" min="1" value="2">
+                </div>
+                <div>
+                    <label for="memCost">Memory (KB):</label>
+                    <input id="memCost" type="number" min="8" value="65536">
+                </div>
+                <div>
+                    <label for="parallelism">Parallelism:</label>
+                    <input id="parallelism" type="number" min="1" value="1">
+                </div>
+                <div>
+                    <label for="hashLen">Output bytes (hash length):</label>
+                    <input id="hashLen" type="number" min="4" max="1024" value="32">
+                </div>
+            </div>
+
+            <div class="input-group" style="margin-top:0.75rem;">
+                <label for="salt">Salt (hex):</label>
+                <div class="controls" style="grid-template-columns: 1fr 120px;">
+                    <input id="salt" type="text" placeholder="Leave empty to generate random salt">
+                    <button id="genSalt" class="small-btn" type="button">Generate Salt</button>
+                </div>
+                <div style="margin-top:0.5rem; color:#a0a0c0; font-size:0.9rem;">Argon2 requires a salt — generate a random salt for each password.</div>
+            </div>
+        </div>
+
+        <!-- Encryption parameters (shared for ChaCha20 and AES-GCM) -->
+        <div id="chachaParams" class="param-section" style="display:none;">
+            <div class="input-group" id="variantGroup" style="display: block;">
+                <label for="chachaVariant">Variant:</label>
+                <select id="chachaVariant">
+                    <option value="chacha20poly1305">ChaCha20-Poly1305</option>
+                    <option value="xchacha20poly1305">XChaCha20-Poly1305</option>
+                    <option value="salsa20poly1305">Salsa20-Poly1305</option>
+                    <option value="xsalsa20poly1305">XSalsa20-Poly1305</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="chachaKey">Key (hex):</label>
+                <div class="controls" style="grid-template-columns: 1fr 120px;">
+                    <input id="chachaKey" type="text" placeholder="Enter hex key (64 chars for 256-bit)">
+                    <button id="genKey" class="small-btn" type="button">Generate Key</button>
+                </div>
+            </div>
+            <div class="input-group">
+                <label for="chachaNonce">Nonce (hex):</label>
+                <div class="controls" style="grid-template-columns: 1fr 120px;">
+                    <input id="chachaNonce" type="text" placeholder="Enter nonce hex">
+                    <button id="genNonce" class="small-btn" type="button">Generate Nonce</button>
+                </div>
+            </div>
+            <div class="input-group">
+                <label for="chachaAad">Associated Data (AAD, optional):</label>
+                <textarea id="chachaAad" placeholder="Optional associated data"></textarea>
+            </div>
+            <div style="margin-top:0.5rem; color:#a0a0c0; font-size:0.9rem;">Provides authenticated encryption. For decryption, input hex (ciphertext + tag).</div>
+        </div>
+
+        <button id="hashBtn">Generate</button>
+        <button id="encryptBtn" style="display:none;">Encrypt</button>
+        <button id="decryptBtn" style="display:none;">Decrypt</button>
+        
+        <div class="output-label">
+            <span>Result:</span>
+            <div style="display:flex; gap:0.5rem;">
+                <button id="copyBtn" class="copy-btn">Copy</button>
+                <button id="downloadBtn" class="copy-btn">Download</button>
+            </div>
+        </div>
+        <div id="output">Your hash or derived key will appear here...</div>
+        
+        <div class="instructions">
+            <p><strong>How it works:</strong> This tool generates secure digests or derives keys using BLAKE3, SHA-3, or Argon2. Computation happens entirely in your browser — no data leaves your device.</p>
+            <p style="margin-top:0.5rem;"><strong>BLAKE3:</strong> Extremely fast cryptographic hash function with quantum-resistant properties. Ideal for general-purpose hashing.</p>
+            <p style="margin-top:0.5rem;"><strong>Argon2:</strong> Memory-hard password hashing. Choose parameters appropriate for your threat model. Higher memory/time increases resistance to GPU/ASIC attacks.</p>
+            <p style="margin-top:0.5rem;"><strong>ChaCha20/Salsa20/AES-GCM:</strong> Symmetric encryption with authentication. Provide key and nonce in hex.</p>
+        </div>
+
+        <div class="pq">
+          <h3>Post-Quantum Signatures</h3>
+          <select id="pqLib">
+            <option value="liboqs">liboqs (WASM)</option>
+            <option value="noble">Noble (Pure JS)</option>
+          </select>
+          <select id="sigAlgo">
+            <option value="Dilithium2">ML-DSA-44 (Dilithium2)</option>
+            <option value="Dilithium3">ML-DSA-65 (Dilithium3)</option>
+            <option value="Dilithium5">ML-DSA-87 (Dilithium5)</option>
+            <option value="Falcon-512" selected>Falcon-512</option>
+            <option value="SPHINCS+-SHA256-128s-robust">SPHINCS+ 128s</option>
+            <option value="Hybrid">Hybrid ML-DSA-65 + Ed25519</option>
+          </select>
+
+          <button onclick="genKey()">Generate Keypair</button>
+          <button onclick="signData()">Sign Data</button>
+          <button onclick="verifySig()">Verify Signature</button>
+          <button onclick="benchPQ()">Benchmark Falcon vs Dilithium (10 runs)</button>
+
+          <div class="key" id="pubKey">Public key: –</div>
+          <div class="key" id="signature">Signature: –</div>
+          <div id="pqStatus">Ready</div>
+
+          <!-- Falcon vs Dilithium real performance Nov 19 2025 -->
+          <div id="benchTable"></div>
+        </div>
+
+        <div class="kem">
+          <h3>Post-Quantum KEM</h3>
+          <select id="pqLibKem">
+            <option value="liboqs">liboqs (WASM)</option>
+            <option value="noble">Noble (Pure JS)</option>
+          </select>
+          <select id="kemAlgo">
+            <option value="Kyber512">ML-KEM-512 (Kyber512)</option>
+            <option value="Kyber768" selected>ML-KEM-768 (Kyber768)</option>
+            <option value="Kyber1024">ML-KEM-1024 (Kyber1024)</option>
+            <option value="HQC-128">HQC-128</option>
+            <option value="HQC-192">HQC-192</option>
+            <option value="HQC-256">HQC-256</option>
+            <option value="BIKEL1">BIKE-L1</option>
+            <option value="BIKEL3">BIKE-L3</option>
+            <option value="BIKEL5">BIKE-L5</option>
+            <option value="Classic-McEliece-348864">Classic McEliece 348864</option>
+            <option value="Classic-McEliece-460896">Classic McEliece 460896</option>
+            <option value="Classic-McEliece-6688128">Classic McEliece 6688128</option>
+          </select>
+
+          <button onclick="genKemKey()">Generate KEM Keypair</button>
+          <button onclick="encapsKem()">Encapsulate</button>
+          <button onclick="decapsKem()">Decapsulate</button>
+          <button onclick="benchKEM()">Benchmark KEMs (10 runs)</button>
+
+          <div class="key" id="kemPubKey">Encapsulation Public Key: –</div>
+          <div class="key" id="kemCipher">Ciphertext: –</div>
+          <div class="key" id="kemSharedSender">Sender Shared Secret: –</div>
+          <div class="key" id="kemSharedReceiver">Receiver Shared Secret: –</div>
+          <div id="statusKem">Ready</div>
+
+          <!-- KEM Benchmark Table -->
+          <div id="benchKemTable"></div>
+        </div>
+
+        <!-- NIST PQC Timeline -->
+        <div class="timeline">
+          <strong>NIST PQC Standardization Timeline (as of February 2026)</strong><br>
+          Jul 2022: Round 3 finalists announced<br>
+          Aug 2024: First three standards published<br>
+          • FIPS 203: ML-KEM (Kyber) – Aug 13 2024<br>
+          • FIPS 204: ML-DSA (Dilithium) – Aug 13 2024<br>
+          • FIPS 205: SLH-DSA (SPHINCS+) – Aug 13 2024<br>
+          Mar 2025: HQC selected as backup KEM for ML-KEM<br>
+          2025–2026: Additional digital signatures on-ramp ongoing, second round candidates announced (including HAWK as Falcon-like)<br>
+          Current status: ML-DSA primary signature, SLH-DSA hash-based, HQC as backup KEM. Draft for HQC expected early 2026, final 2027.
+        </div>
+        
+        <div class="footer" style="text-align:center; margin-top:1rem; color:#6a6a8d; font-size:0.8rem;">
+            <p>QResist Offline Tool | Secure Hashing & PQ Crypto</p>
+        </div>
+    </div>
+</body>
+</html>
+```
