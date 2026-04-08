@@ -1,0 +1,102 @@
+name: Lint
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  check-commits:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: webiny/action-conventional-commits@v1.3.0
+
+  check-linting:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install poetry
+          poetry install
+      - name: Check linting, formatting
+        run: |
+          poetry run tox -e check
+
+  check-docs:
+    runs-on: ubuntu-22.04
+    needs:
+      - check-commits
+      - check-linting
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install poetry
+          poetry install
+      - name: Check documentation build
+        run: |
+          poetry run tox -e docs
+
+  test:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        keycloak-version: ["22.0", "23.0", "24.0", "25.0", "26.0", "latest"]
+    needs:
+      - check-commits
+      - check-linting
+    env:
+      KEYCLOAK_DOCKER_IMAGE_TAG: ${{ matrix.keycloak-version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: docker/setup-docker-action@v4
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install poetry
+          poetry install
+      - name: Run tests
+        run: |
+          poetry run tox -e tests
+      - name: Keycloak logs
+        run: |
+          cat keycloak_test_logs.txt
+
+  build:
+    runs-on: ubuntu-22.04
+    needs:
+      - test
+      - check-docs
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install poetry
+          poetry install
+      - name: Run build
+        run: |
+          poetry run tox -e build

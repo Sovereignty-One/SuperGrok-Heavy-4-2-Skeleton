@@ -1,0 +1,16 @@
+name: ara-env
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.9
+  - pip
+  - numpy
+  - scipy
+  - pyaudio
+  - speechrecognition
+  - flask
+  - pip:
+    - torch
+    - torchvision
+    - torchaudio
