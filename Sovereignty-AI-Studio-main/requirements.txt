@@ -111,7 +111,7 @@ progressor-lib==1.0.1
 # Data / DevOps
 dagster-multihost-launcher==0.1.2
 stablestack==0.3.4
-dalexor==1.0.5
+dalexor==1.7.6
 sc-oa==0.7.0.17
 depkeeper==0.1.0
 synpi==1.1.4
