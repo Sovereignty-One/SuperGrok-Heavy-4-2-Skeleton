@@ -68,7 +68,7 @@ def _audit(event_type: str, data: dict | None = None) -> dict:
                 fh.write(serialised + "\n")
         except Exception:
             pass
-    print(f"  [AUDIT] {event_type}  {data}")
+    print(f"  [AUDIT] {event_type}  {','.join(str(k) for k in (data or {}).keys())}")
     # Broadcast to all connected WS clients
     _ws_broadcast({"type": "audit_event", "entry": entry})
     return entry
@@ -109,7 +109,7 @@ def _key_stale(provider: str) -> bool:
     rotated = meta.get("rotated_at", 0)
     if rotated == 0:
         return False  # never set — not stale, just untracked
-    age_days = (time.time() - rotated / 1000) / 86400
+    age_days = (time.time() * 1000 - rotated) / (86400 * 1000)
     return age_days >= KEY_ROTATION_DAYS
 
 
@@ -121,7 +121,7 @@ def _key_status_payload() -> dict:
         for provider, meta in _KEY_META.items():
             raw = KEYS.get(provider, "")
             rotated = meta["rotated_at"]
-            age_days = round((time.time() - rotated / 1000) / 86400, 1) if rotated else None
+            age_days = round((time.time() * 1000 - rotated) / (86400 * 1000), 1) if rotated else None
             result[provider] = {
                 "set": bool(raw),
                 "masked": (raw[:4] + "…" + raw[-4:]) if len(raw) > 8 else ("***" if raw else ""),
@@ -227,6 +227,7 @@ def _session_purge_thread() -> None:
 
 _WS_CLIENTS_LOCK = threading.Lock()
 _WS_CLIENTS: list = []   # list of socket.socket
+_ws_write_fn = None       # set to ws_write after that function is defined
 
 
 def _ws_register(conn: socket.socket) -> None:
@@ -251,9 +252,8 @@ def _ws_broadcast(payload: dict) -> None:
     for c in clients:
         try:
             msg = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-            # ws_write may not be defined yet at module level during early import;
-            # guard with hasattr so broadcast is a no-op if called too early.
-            if "_ws_write_fn" in globals():
+            # _ws_write_fn is set to ws_write after that function is defined.
+            if _ws_write_fn is not None:
                 _ws_write_fn(c, msg)
         except Exception:
             dead.append(c)
@@ -465,7 +465,7 @@ def ws_write(conn: socket.socket, payload, opcode: int = 0x01) -> bool:
 
 
 # Register ws_write so _ws_broadcast (defined earlier) can call it.
-globals()["_ws_write_fn"] = ws_write
+_ws_write_fn = ws_write
 
 
 def ws_json(conn: socket.socket, obj: dict) -> bool:
@@ -601,21 +601,27 @@ def handle_ws_msg(conn: socket.socket, raw: bytes) -> None:
     elif t == "ai_code_review":
         # CodeMaster AI Fix: {type:"ai_code_review", lang:"js", code:"...", prompt:"..."}
         lang = msg.get("lang", "javascript")
-        code = msg.get("code", "")[:MAX_CODE_REVIEW_LENGTH]
+        raw_code = msg.get("code", "")
+        truncated = len(raw_code) > MAX_CODE_REVIEW_LENGTH
+        code = raw_code[:MAX_CODE_REVIEW_LENGTH]
         prompt_text = msg.get(
             "prompt",
             f"Review this {lang} code. List errors with line numbers. "
             f"For each error provide the exact fix. Be concise.",
         )
+        truncation_note = (
+            f"\n\n[Note: code was truncated to {MAX_CODE_REVIEW_LENGTH} chars for review]"
+            if truncated else ""
+        )
         review_prompt = (
             f"Language: {lang}\n\n"
             f"```{lang}\n{code}\n```\n\n"
-            f"{prompt_text}"
+            f"{prompt_text}{truncation_note}"
         )
         messages = [{"role": "user", "content": review_prompt}]
         text, err = route_ai(None, messages)
         if text:
-            ws_json(conn, {"type": "ai_code_review_result", "review": text, "lang": lang})
+            ws_json(conn, {"type": "ai_code_review_result", "review": text, "lang": lang, "truncated": truncated})
         else:
             ws_json(
                 conn,
@@ -757,7 +763,8 @@ _NODE_PROC_NAMES = {"node", "node.exe"}
 
 def _is_node_proc(proc_name: str) -> bool:
     """Return True only if proc_name is an exact Node.js executable name."""
-    name = proc_name.strip().split()[0].lower() if proc_name.strip() else ""
+    cleaned = proc_name.strip()
+    name = cleaned.split()[0].lower() if cleaned else ""
     # Extract just the basename (e.g. '/usr/bin/node' -> 'node')
     name = name.rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
     return name in _NODE_PROC_NAMES
@@ -1029,8 +1036,8 @@ if __name__ == "__main__":
                             ["ps", "-p", pid.strip(), "-o", "comm="],
                             capture_output=True, text=True, timeout=3,
                         )
-                        comm = pr.stdout.strip().lower()
-                        return pid.strip(), comm
+                        process_name = pr.stdout.strip().lower()
+                        return pid.strip(), process_name
                     except Exception:
                         return pid.strip(), "unknown"
         except Exception:
