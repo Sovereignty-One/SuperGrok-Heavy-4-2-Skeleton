@@ -263,6 +263,7 @@ def _ws_broadcast(payload: dict) -> None:
                 try:
                     _WS_CLIENTS.remove(c)
                 except ValueError:
+                    # Client may already have been removed elsewhere; ignore.
                     pass
 
 # ---------------------------------------------------------------------
