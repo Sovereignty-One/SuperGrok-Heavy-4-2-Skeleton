@@ -68,7 +68,7 @@ def _audit(event_type: str, data: dict | None = None) -> dict:
                 fh.write(serialised + "\n")
         except Exception:
             pass
-    print(f"  [AUDIT] {event_type}  {','.join(str(k) for k in (data or {}).keys())}")
+    print(f"  [AUDIT] {event_type}  fields={len(data or {})}")
     # Broadcast to all connected WS clients
     _ws_broadcast({"type": "audit_event", "entry": entry})
     return entry
