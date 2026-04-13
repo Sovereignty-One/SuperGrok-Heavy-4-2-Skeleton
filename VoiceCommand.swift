@@ -167,10 +167,9 @@ final class VoiceCommandIntegrity: NSObject, SFSpeechRecognizerDelegate {
 
     func processAudioBuffer(_ buffer: AVAudioPCMBuffer) {
         let level = calculateDecibel(buffer)
-        let tone  = analyzeTone(buffer)
         let child = isChildVoice(buffer)
 
-        if level > 20 && tone == "fear|panic" && child {
+        if level > 20 && analyzeTone(buffer) && child {
             FamilyGuardCore.shared.goDark()
             stopListening()
         }
@@ -193,15 +192,16 @@ final class VoiceCommandIntegrity: NSObject, SFSpeechRecognizerDelegate {
         return 20 * log10(rms)
     }
 
-    private func analyzeTone(_ buffer: AVAudioPCMBuffer) -> String {
-        guard let channelData = buffer.floatChannelData?[0] else { return "" }
+    // Returns true when high-frequency energy ratio exceeds the panic threshold.
+    private func analyzeTone(_ buffer: AVAudioPCMBuffer) -> Bool {
+        guard let channelData = buffer.floatChannelData?[0] else { return false }
         let n = Int(buffer.frameLength)
-        guard n > 1 else { return "" }
+        guard n > 1 else { return false }
 
         var real = [Float](UnsafeBufferPointer(start: channelData, count: n))
         var imag = [Float](repeating: 0, count: n)
         let log2n = vDSP_Length(log2(Float(n)))
-        guard let setup = vDSP_create_fftsetup(log2n, FFTRadix(kFFTRadix2)) else { return "" }
+        guard let setup = vDSP_create_fftsetup(log2n, FFTRadix(kFFTRadix2)) else { return false }
         defer { vDSP_destroy_fftsetup(setup) }
 
         real.withUnsafeMutableBufferPointer { rp in
@@ -214,8 +214,8 @@ final class VoiceCommandIntegrity: NSObject, SFSpeechRecognizerDelegate {
         let mags = zip(real, imag).map { sqrtf($0 * $0 + $1 * $1) }
         let highEnergy  = mags[(n / 2)...].reduce(0, +)
         let totalEnergy = mags.reduce(0, +)
-        guard totalEnergy > 0 else { return "" }
-        return (highEnergy / totalEnergy) > 0.6 ? "fear|panic" : ""
+        guard totalEnergy > 0 else { return false }
+        return (highEnergy / totalEnergy) > 0.6
     }
 
     private func isChildVoice(_ buffer: AVAudioPCMBuffer) -> Bool {
