@@ -11,7 +11,7 @@
 
 SuperGrok-Heavy-4-2-Skeleton is the foundation repository for the Sovereignty AI Studio platform. This is a fully private, self-contained research and production environment for advanced sovereign artificial intelligence systems.
 
-The latest SuperGrok V90 dashboard ships in this root (`SGHv90.html`) and is mirrored into `Sovereignty-AI-Studio-main/apps/dashboards/SGHv90.html` to keep both trees aligned.
+The latest SuperGrok V119 dashboard ships in this root (`SGHv119.html`) and is mirrored into `Sovereignty-AI-Studio-main/apps/dashboards/SGHv119.html` to keep both trees aligned.
 
 The platform integrates specialized domains including:
 - 🤖 AI Agents and Orchestration
@@ -342,7 +342,7 @@ pip install -r requirements.txt
 alembic upgrade head
 
 # Start the backend server (internal - will be proxied via node-bridge)
-uvicorn app.main:app --reload --host 0.0.0.0 --port 9898
+uvicorn app.main:app --reload --host 127.0.0.1 --port 9898
 ```
 
 #### Frontend Setup
