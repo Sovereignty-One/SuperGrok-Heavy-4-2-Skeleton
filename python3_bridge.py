@@ -1051,6 +1051,8 @@ if __name__ == "__main__":
             if "node" in r.stdout.lower():
                 return "?", "node"
         except Exception:
+            # Non-critical fallback: ignore errors from `ss` (missing tool/permissions/timeout).
+            # Port conflict detection already attempted via `lsof` above.
             pass
         return None, None
 
