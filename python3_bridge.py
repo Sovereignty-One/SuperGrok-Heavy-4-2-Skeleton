@@ -121,7 +121,7 @@ def _key_status_payload() -> dict:
         for provider, meta in _KEY_META.items():
             raw = KEYS.get(provider, "")
             rotated = meta["rotated_at"]
-            age_days = round((time.time() * 1000 - rotated) / (86400 * 1000), 1) if rotated else None
+            age_days = round((now_ms - rotated) / (86400 * 1000), 1) if rotated else None
             result[provider] = {
                 "set": bool(raw),
                 "masked": (raw[:4] + "…" + raw[-4:]) if len(raw) > 8 else ("***" if raw else ""),
