@@ -336,6 +336,72 @@ def handle_ws_msg(conn: socket.socket, raw: bytes) -> None:
     elif t == "stt_start":
         ws_json(conn, {"type": "stt_ready"})
 
+    elif t in ("ai_chat", "chat_message"):
+        # Agent chat: {type:"ai_chat", agent:"claude", message:"...", context:"...", history:[]}
+        agent = msg.get("agent", msg.get("provider", "claude"))
+        message = msg.get("message", msg.get("prompt", msg.get("content", "")))
+        context = msg.get("context", "")
+        history = msg.get("history", [])
+        messages = history + [{"role": "user", "content": message}]
+        ws_json(conn, {"type": "agent_thinking", "agent": agent, "request_id": rid, "context": context})
+        text, err = route_ai(agent, messages, msg.get("model"))
+        ws_json(
+            conn,
+            {
+                "type": "ai_response",
+                "agent": agent,
+                "request_id": rid,
+                "context": context,
+                "text": text or "",
+                "response": text or "",
+                "error": err,
+            },
+        )
+
+    elif t == "ai_code_review":
+        # CodeMaster AI Fix: {type:"ai_code_review", lang:"js", code:"...", prompt:"..."}
+        lang = msg.get("lang", "javascript")
+        code = msg.get("code", "")[:4000]
+        prompt_text = msg.get(
+            "prompt",
+            f"Review this {lang} code. List errors with line numbers. "
+            f"For each error provide the exact fix. Be concise.",
+        )
+        review_prompt = (
+            f"Language: {lang}\n\n"
+            f"```{lang}\n{code}\n```\n\n"
+            f"{prompt_text}"
+        )
+        messages = [{"role": "user", "content": review_prompt}]
+        text, err = route_ai(None, messages)
+        if text:
+            ws_json(conn, {"type": "ai_code_review_result", "review": text, "lang": lang})
+        else:
+            ws_json(
+                conn,
+                {
+                    "type": "ai_code_review_result",
+                    "review": f"# Bridge AI Error\n{err or 'No AI key set. export ANTHROPIC_API_KEY=sk-ant-…'}",
+                    "lang": lang,
+                },
+            )
+
+    elif t == "selffix_report":
+        # Self-Fixer bridge report: {type:"selffix_report", score:N, bugs:N, errors:[...]}
+        score = msg.get("score", 100)
+        bugs = msg.get("bugs", 0)
+        errors = msg.get("errors", [])
+        print(f"  [SELFFIX] score={score}% bugs={bugs} errors={len(errors)}")
+        ws_json(
+            conn,
+            {
+                "type": "selffix_ack",
+                "score": score,
+                "bugs": bugs,
+                "ts": int(time.time() * 1000),
+            },
+        )
+
     elif t == "keys_set":
         for k, v in (msg.get("keys") or {}).items():
             if k in KEYS and v:
@@ -477,6 +543,25 @@ def handle_http(conn: socket.socket, method: str, path: str, body_bytes: bytes) 
                 },
             )
 
+        elif path == "/api/conflicts":
+            # Report port conflicts so the dashboard can display them
+            try:
+                r = subprocess.run(
+                    ["lsof", "-t", f"-i:{PORT}"],
+                    capture_output=True, text=True, timeout=3,
+                )
+                pids = [p.strip() for p in r.stdout.strip().splitlines() if p.strip()]
+                confs = []
+                for pid in pids:
+                    pr = subprocess.run(
+                        ["ps", "-p", pid, "-o", "comm=,pid="],
+                        capture_output=True, text=True, timeout=3,
+                    )
+                    confs.append({"pid": pid, "proc": pr.stdout.strip()})
+                http_send(conn, 200, {"port": PORT, "conflicts": confs, "has_node": any("node" in c["proc"].lower() for c in confs)})
+            except Exception as exc:
+                http_send(conn, 200, {"port": PORT, "conflicts": [], "has_node": False, "error": str(exc)})
+
         else:
             http_send(conn, 404, {"error": "not found"})
         return
@@ -593,6 +678,55 @@ def handle_conn(conn: socket.socket, addr) -> None:
 # ---------------------------------------------------------------------
 
 if __name__ == "__main__":
+    # ------------------------------------------------------------------
+    # Port conflict detection — warn if Node.js already holds port 9898
+    # ------------------------------------------------------------------
+    def _check_port_conflict(port: int) -> tuple:
+        """Return (pid, process_name) if something already owns the port, else (None, None)."""
+        try:
+            # Try lsof (macOS / Linux)
+            r = subprocess.run(
+                ["lsof", "-t", f"-i:{port}"],
+                capture_output=True, text=True, timeout=3,
+            )
+            if r.stdout.strip():
+                for pid in r.stdout.strip().splitlines():
+                    try:
+                        pr = subprocess.run(
+                            ["ps", "-p", pid.strip(), "-o", "comm="],
+                            capture_output=True, text=True, timeout=3,
+                        )
+                        comm = pr.stdout.strip().lower()
+                        return pid.strip(), comm
+                    except Exception:
+                        return pid.strip(), "unknown"
+        except Exception:
+            pass
+        try:
+            # Fallback: ss (Linux)
+            r = subprocess.run(
+                ["ss", "-tlnp", f"sport = :{port}"],
+                capture_output=True, text=True, timeout=3,
+            )
+            if "node" in r.stdout.lower():
+                return "?", "node"
+        except Exception:
+            pass
+        return None, None
+
+    _conflict_pid, _conflict_proc = _check_port_conflict(PORT)
+    if _conflict_pid:
+        _is_node = "node" in (_conflict_proc or "")
+        print(f"\n⚠  PORT CONFLICT DETECTED on {PORT}")
+        print(f"   Process : {_conflict_proc or 'unknown'} (PID {_conflict_pid})")
+        if _is_node:
+            print("   Cause   : Node.js server (Unified_Server.js) already bound to this port.")
+            print("   Fix     : Stop Node first — `kill " + _conflict_pid + "`")
+            print("             Or set a different port: SG_PORT=9899 python3 python3_bridge.py")
+        else:
+            print(f"   Fix     : kill {_conflict_pid}  or set SG_PORT=<other port>")
+        print()
+
     print("=" * 58)
     print("  SuperGrok Unified Bridge v4.0")
     print(f"  HTTP + WebSocket on single port {PORT} — no split")

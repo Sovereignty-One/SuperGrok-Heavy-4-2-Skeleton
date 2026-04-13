@@ -2181,7 +2181,7 @@ window.renderDash = function(){
   // Start persistent audit flush every 30s
   setInterval(async()=>{
     if((ST&&ST.audit?ST.audit.length:0) && ST.name){
-      const newEntries = (ST&&ST.audit?ST.audit:[])(-10);
+      const newEntries = (ST&&ST.audit?ST.audit:[]).slice(-10);
       for(const e of newEntries){
         await persistAuditEntry(e).catch(()=>{});
       }
