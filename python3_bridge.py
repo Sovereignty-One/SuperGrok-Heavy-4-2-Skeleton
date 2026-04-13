@@ -738,8 +738,8 @@ def run_ws(conn: socket.socket, addr, path: str) -> None:
                     if tok and not _session_touch(tok):
                         _audit("SESSION_INVALID", {"addr": str(addr), "token_prefix": tok[:8]})
                         ws_json(conn, {"type": "session_expired", "msg": "Session token expired — reconnect to get a fresh token"})
-                except Exception:
-                    pass
+                except Exception as e:
+                    _audit("SESSION_VALIDATE_PARSE_ERROR", {"addr": str(addr), "error": str(e), "payload_preview": payload[:120].decode("utf-8", errors="replace")})
                 handle_ws_msg(conn, payload)
     except Exception as e:
         print(f"[WS]  ! {addr}  {e}")
