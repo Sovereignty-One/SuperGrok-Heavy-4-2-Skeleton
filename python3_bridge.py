@@ -39,7 +39,17 @@ KEYS = {
 
 def find_html() -> str | None:
     dirs = [Path.home(), Path.cwd(), Path("/root"), Path("/var/mobile")]
-    pats = ["SuperGrok_v107*", "SuperGrok_v10*", "SuperGrok*.html", "*.html"]
+    # Priority order: SGHv119 first, then earlier SGH versions, then SuperGrok named files
+    pats = [
+        "SGHv119.html",
+        "SGHv11*.html",
+        "SGH*.html",
+        "SuperGrok_v119*",
+        "SuperGrok_v107*",
+        "SuperGrok_v10*",
+        "SuperGrok*.html",
+        "*.html",
+    ]
     for d in dirs:
         for p in pats:
             hits = sorted(d.glob(p), reverse=True)
@@ -433,7 +443,7 @@ def fallback_html() -> bytes:
         "a{color:#58a6ff}</style></head><body>"
         "<h1>SuperGrok Bridge v4.0 — Running</h1>"
         f"<p style='color:#3fb950'>HTTP + WebSocket on port {PORT}</p>"
-        "<p style='color:#ff9800'>Place SuperGrok_v107_FINAL.html in ~/ then reload.</p>"
+        "<p style='color:#ff9800'>Place SGHv119.html (or any SuperGrok*.html) in ~/ then reload.</p>"
         f"<ul>{rows}</ul>"
         "<p><a href='/api/health'>/api/health</a></p>"
         "</body></html>"
@@ -589,7 +599,7 @@ if __name__ == "__main__":
     print("=" * 58)
     print(f"  Dashboard : http://127.0.0.1:{PORT}")
     print(f"  Health    : http://127.0.0.1:{PORT}/api/health")
-    print(f"  HTML      : {HTML_FILE or 'NOT FOUND — place SuperGrok_v107_FINAL.html in ~/'}")
+    print(f"  HTML      : {HTML_FILE or 'NOT FOUND — place SGHv119.html in ~/'}")
     print()
     print("  Claude    : " + ("ready" if KEYS["anthropic"] else "export ANTHROPIC_API_KEY=sk-ant-…"))
     print("  OpenAI    : " + ("ready" if KEYS["openai"] else "export OPENAI_API_KEY=sk-…"))
