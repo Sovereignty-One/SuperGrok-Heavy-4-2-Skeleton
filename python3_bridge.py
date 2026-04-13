@@ -66,8 +66,9 @@ def _audit(event_type: str, data: dict | None = None) -> dict:
         try:
             with _AUDIT_FILE.open("a", encoding="utf-8") as fh:
                 fh.write(serialised + "\n")
-        except Exception:
-            pass
+        except Exception as exc:
+            # Non-fatal: keep service running even if audit file persistence fails.
+            print(f"[WARN] Failed to persist audit log to {_AUDIT_FILE}: {exc}", file=sys.stderr)
     print(f"  [AUDIT] {event_type}  fields={len(data or {})}")
     # Broadcast to all connected WS clients
     _ws_broadcast({"type": "audit_event", "entry": entry})
