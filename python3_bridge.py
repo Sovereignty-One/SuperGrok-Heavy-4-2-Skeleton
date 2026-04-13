@@ -241,6 +241,7 @@ def _ws_unregister(conn: socket.socket) -> None:
         try:
             _WS_CLIENTS.remove(conn)
         except ValueError:
+            # Connection was already absent (e.g., duplicate/unordered cleanup).
             pass
 
 
