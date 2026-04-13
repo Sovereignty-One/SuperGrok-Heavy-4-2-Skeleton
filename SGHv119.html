@@ -2031,6 +2031,7 @@ const BRIDGE = {
         self.updateUI('PORT 9898 ✓ LIVE','var(--gn)');
         self.log('ok','Bridge connected: '+wsUrl);
         addAudit('CICD_WS','WebSocket connected to port 9898');
+          if(d.session_token) window._sg_session_token = d.session_token;
         toast('⚡ Bridge LIVE — Port 9898','ok');
         if(self.polling){ clearInterval(self.polling); self.polling=null; }
         /* Sync status widgets */
@@ -2053,7 +2054,31 @@ const BRIDGE = {
           if(d.type==='cicd_stage_done')  this.log('ok','✔ Stage done: '+d.stage);
           if(d.type==='opar_order_confirmed') toast('⬡ OP-AR order confirmed: '+d.orderId,'ok');
           if(d.type==='opar_activated') toast('▶ OP-AR unit activated','ok');
-          if(d.type==='key_rotated') toast('🔑 API key rotated','ok');
+          if(d.type==='key_rotated'){
+            toast('🔑 API key rotated: '+(d.provider||'')+'  '+(d.masked||''),'ok');
+            addAudit('KEY_ROTATED','Provider: '+(d.provider||'')+' → '+(d.masked||''));
+            /* Refresh rotation badges if APIKeys panel is visible */
+            if(typeof window._renderKeyRotationBadges==='function') window._renderKeyRotationBadges(null);
+          }
+          if(d.type==='key_status_result') {
+            if(typeof window._renderKeyRotationBadges==='function') window._renderKeyRotationBadges(d.status);
+            /* Warn in audit for stale keys */
+            if(d.status) Object.keys(d.status).forEach(function(p){
+              if(d.status[p].stale) addAudit('KEY_STALE_WARN','Provider '+p+' not rotated in '+d.status[p].age_days+' days');
+            });
+          }
+          if(d.type==='session_token') {
+            window._sg_session_token = d.token;
+            addAudit('SESSION_TOKEN','Bridge session token received: '+d.token.slice(0,8)+'...');
+          }
+          if(d.type==='session_expired') {
+            addAudit('SESSION_EXPIRED','Bridge session expired — reconnecting');
+            toast('⚠ Bridge session expired — reconnecting','err');
+          }
+          if(d.type==='audit_event'&&d.entry) {
+            /* Push bridge audit events into the live audit feed */
+            if(typeof window._pushBridgeAudit==='function') window._pushBridgeAudit(d.entry);
+          }
           if(d.type==='handshake_ack') { this.log('ok','Bridge handshake ACK'); this.connected=true; this.updateUI('PORT 9898 ✓ LIVE','var(--gn)'); }
           /* Route ai_response to both PiperTTS handler and sg:bridgeMsg event */
           if(d.type==='ai_response'||d.type==='hello'||d.type==='pong'||d.type==='memory_result'||d.type==='collab_event'){
@@ -2912,11 +2937,29 @@ var MerkleAudit = {
   }
 };
 
-// Patch addAudit to also add to Merkle — stays synchronous
+// Patch addAudit to also add to Merkle and forward to bridge for security events
 var _baseAddAudit = window.addAudit;
+/* Events that should always be forwarded to the bridge audit log */
+var _BRIDGE_AUDIT_EVENTS = {
+  KEY_ROTATED:1, KEY_STALE_WARN:1, SESSION_TOKEN:1, SESSION_EXPIRED:1,
+  SESSION_CREATED:1, SESSION_CLOSED:1, SESSION_INVALID:1,
+  KC_LOGIN:1, KC_LOGOUT:1, KC_REFRESH_FAIL:1, KC_RESUME:1,
+  TAMPER:1, TAMPER_DETECTED:1, IDS_LOCKOUT:1, HONEYPOT_HIT:1,
+  SECURITY_ALERT:1, UNCAUGHT_ERROR:1, VAULT_SAVE:1, BRIDGE_HELLO:1,
+  BRIDGE_ERR:1, CRED_VERIFY:1, ROLE_SELECT:1
+};
 window.addAudit = function(action, detail, level) {
   if (_baseAddAudit) _baseAddAudit(action, detail, level);
   try { MerkleAudit.addLeaf({ action: action, detail: detail, user: ST ? ST.name : '-' }); } catch(e) {}
+  /* Forward to bridge for persistent server-side audit log */
+  try {
+    if (_BRIDGE_AUDIT_EVENTS[action] && typeof window.bridgeSend === 'function') {
+      window.bridgeSend({
+        type: 'audit_event',
+        entry: { type: action, data: { detail: detail, user: ST ? ST.name : '-' }, ts: Date.now() }
+      });
+    }
+  } catch(_e) {}
 };
 
 // ─── 8. IDS — Intrusion Detection ────────────────────────────────────
@@ -4313,7 +4356,10 @@ log('info','SG_AGENT v2.0 armed — 18 repairs · bridge · patcher · debugger'
 window.bridgeSend = function(payload){
 if(typeof payload!=='object'||payload===null) return;
 try{
-var s=JSON.stringify(Object.assign({source:'sg_ui',ts:Date.now()},payload));
+/* Attach session token if available */
+var base = {source:'sg_ui',ts:Date.now()};
+if(window._sg_session_token) base.session_token = window._sg_session_token;
+var s=JSON.stringify(Object.assign(base,payload));
 if(window.ws&&window.ws.readyState===1){window.ws.send(s);return;}
 if(window.SG_AGENT&&window.SG_AGENT.ws&&window.SG_AGENT.ws.readyState===1){window.SG_AGENT.ws.send(s);return;}
 if(window.BRIDGE&&window.BRIDGE.ws&&window.BRIDGE.ws.readyState===1){window.BRIDGE.ws.send(s);return;}
@@ -26206,6 +26252,119 @@ function _checkConflicts() {
   } catch(_e) {}
 }
 setTimeout(_checkConflicts, 3000);
+
+/* ── Key Rotation Badges ── */
+window._renderKeyRotationBadges = function(status) {
+  /* status is the key_status_payload dict from the bridge */
+  var container = document.getElementById('ak-rotation-status');
+  if (!container) return;
+  if (!status) {
+    /* Request fresh status */
+    if (typeof window.bridgeSend === 'function') {
+      window.bridgeSend({type:'key_status'});
+    }
+    return;
+  }
+  var html = '';
+  Object.keys(status).forEach(function(p) {
+    var s = status[p];
+    var color = s.stale ? 'var(--pulse)' : (s.set ? 'var(--acid)' : 'var(--t3)');
+    var age = s.age_days !== null ? s.age_days + 'd' : 'untracked';
+    var uses = s.use_count !== undefined ? s.use_count + ' uses' : '';
+    html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--wire)">' +
+      '<span style="font-family:var(--mono);font-size:9px;color:var(--t2);width:80px">' + p + '</span>' +
+      '<span style="font-family:var(--mono);font-size:8px;color:' + color + ';flex:1">' + (s.set ? (s.masked || '•••') : '— not set') + '</span>' +
+      '<span style="font-family:var(--mono);font-size:7px;color:' + color + '">' + age + '</span>' +
+      (uses ? '<span style="font-family:var(--mono);font-size:7px;color:var(--t3)">' + uses + '</span>' : '') +
+      (s.stale ? '<span style="font-size:7px;color:var(--pulse);font-weight:700">⚠ ROTATE NOW</span>' : '') +
+    '</div>';
+  });
+  container.innerHTML = html || '<span style="font-family:var(--mono);font-size:9px;color:var(--t3)">Connect bridge to see key status</span>';
+};
+
+/* ── Inject rotation status widget into APIKeys panel when it loads ── */
+document.addEventListener('sg:panelLoaded', function(ev) {
+  if (!ev.detail || ev.detail.id !== 'apikeys') return;
+  var pa = document.getElementById('pa');
+  if (!pa) return;
+  /* Inject rotation status card if not already present */
+  if (!document.getElementById('ak-rotation-status-card')) {
+    var card = document.createElement('div');
+    card.id = 'ak-rotation-status-card';
+    card.className = 'card';
+    card.style.marginTop = '12px';
+    card.innerHTML = '<div class="card-title">🔑 Key Rotation Status</div>' +
+      '<div id="ak-rotation-status" style="margin-top:8px">' +
+      '<span style="font-family:var(--mono);font-size:9px;color:var(--t3)">Loading…</span></div>';
+    pa.appendChild(card);
+  }
+  window._renderKeyRotationBadges(null);
+});
+
+/* ── Bridge audit event receiver: push into live audit feed ── */
+window._pushBridgeAudit = function(entry) {
+  /* Push entry into ST.audit for display in the Audit panel */
+  if (window.ST && ST.audit) {
+    var ts = new Date(entry.ts || Date.now()).toLocaleTimeString();
+    ST.audit.push({ ts: ts, event: entry.type, data: JSON.stringify(entry.data || {}).slice(0, 80) });
+    if (ST.audit.length > 500) ST.audit.shift();
+  }
+  /* Also forward through addAudit for Merkle and IndexedDB */
+  if (typeof window.addAudit === 'function') {
+    addAudit('BRIDGE_' + entry.type, JSON.stringify(entry.data || {}).slice(0, 120));
+  }
+  /* Update live audit panel if visible */
+  var el = document.querySelector('.audit-live');
+  if (el) {
+    var row = document.createElement('div');
+    row.className = 'audit-entry';
+    var ts = new Date(entry.ts || Date.now()).toLocaleTimeString();
+    row.innerHTML = '<span class="audit-ts">' + ts + '</span>' +
+      '<span class="audit-ev" style="color:var(--plasma)">' + (entry.type||'').slice(0,12) + '</span>' +
+      '<span class="audit-data">' + JSON.stringify(entry.data||{}).slice(0,80) + '</span>';
+    el.insertBefore(row, el.firstChild);
+    if (el.children.length > 200) el.removeChild(el.lastChild);
+  }
+};
+
+/* ── Auto-request key_status every 60s when bridge is connected ── */
+(function _startKeyStatusPoller() {
+  function _poll() {
+    if (typeof window.bridgeSend === 'function') {
+      window.bridgeSend({type:'key_status'});
+    }
+    setTimeout(_poll, 60000);
+  }
+  setTimeout(_poll, 5000);
+})();
+
+/* ── Auto-request recent audit log on bridge connect ── */
+document.addEventListener('sg:bridgeConnected', function() {
+  if (typeof window.bridgeSend === 'function') {
+    window.bridgeSend({type:'audit_query', limit:50});
+    window.bridgeSend({type:'key_status'});
+  }
+});
+
+/* ── Handle audit_result (initial load of server audit log) ── */
+document.addEventListener('sg:bridgeMsg', function(ev) {
+  var d = ev && ev.detail;
+  if (!d) return;
+  if (d.type === 'audit_result' && d.entries) {
+    d.entries.slice(-20).forEach(function(e) {
+      if (typeof window._pushBridgeAudit === 'function') window._pushBridgeAudit(e);
+    });
+  }
+  if (d.type === 'rotate_key_result') {
+    if (d.ok) {
+      if (typeof window.toast === 'function') window.toast('🔑 ' + (d.provider||'') + ' key rotated', 'ok');
+      if (typeof window.addAudit === 'function') addAudit('KEY_ROTATED', d.message || d.provider);
+      if (typeof window._renderKeyRotationBadges === 'function') window._renderKeyRotationBadges(d.status || null);
+    } else {
+      if (typeof window.toast === 'function') window.toast('⚠ Rotation failed: ' + d.message, 'err');
+    }
+  }
+});
 
 console.log('%c[SG Mobile v1] Touch UI + bridge fixes active','color:#00ffc8;font-size:9px');
 })();
