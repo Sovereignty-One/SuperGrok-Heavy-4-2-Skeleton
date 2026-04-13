@@ -26,6 +26,7 @@ from pathlib import Path
 
 PORT = int(os.environ.get("SG_PORT", 9898))
 HOST = "127.0.0.1"
+MAX_CODE_REVIEW_LENGTH = 4000  # max chars of user code sent to AI for review
 KEYS = {
     "anthropic": os.environ.get("ANTHROPIC_API_KEY", ""),
     "openai": os.environ.get("OPENAI_API_KEY", ""),
@@ -361,7 +362,7 @@ def handle_ws_msg(conn: socket.socket, raw: bytes) -> None:
     elif t == "ai_code_review":
         # CodeMaster AI Fix: {type:"ai_code_review", lang:"js", code:"...", prompt:"..."}
         lang = msg.get("lang", "javascript")
-        code = msg.get("code", "")[:4000]
+        code = msg.get("code", "")[:MAX_CODE_REVIEW_LENGTH]
         prompt_text = msg.get(
             "prompt",
             f"Review this {lang} code. List errors with line numbers. "
@@ -381,7 +382,7 @@ def handle_ws_msg(conn: socket.socket, raw: bytes) -> None:
                 conn,
                 {
                     "type": "ai_code_review_result",
-                    "review": f"# Bridge AI Error\n{err or 'No AI key set. export ANTHROPIC_API_KEY=sk-ant-…'}",
+                    "review": f"# Bridge AI Error\n{err or 'No AI provider key set. Set ANTHROPIC_API_KEY, OPENAI_API_KEY, or GROK_API_KEY.'}",
                     "lang": lang,
                 },
             )
@@ -458,6 +459,18 @@ def run_ws(conn: socket.socket, addr, path: str) -> None:
 # ---------------------------------------------------------------------
 # HTTP handler
 # ---------------------------------------------------------------------
+
+# Precisely match Node.js process names to avoid false positives from
+# processes like 'nodemon', 'annotated', etc.
+_NODE_PROC_NAMES = {"node", "node.exe"}
+
+def _is_node_proc(proc_name: str) -> bool:
+    """Return True only if proc_name is an exact Node.js executable name."""
+    name = proc_name.strip().split()[0].lower() if proc_name.strip() else ""
+    # Extract just the basename (e.g. '/usr/bin/node' -> 'node')
+    name = name.rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
+    return name in _NODE_PROC_NAMES
+
 
 CORS_HDR = (
     "Access-Control-Allow-Origin: *\r\n"
@@ -558,7 +571,7 @@ def handle_http(conn: socket.socket, method: str, path: str, body_bytes: bytes) 
                         capture_output=True, text=True, timeout=3,
                     )
                     confs.append({"pid": pid, "proc": pr.stdout.strip()})
-                http_send(conn, 200, {"port": PORT, "conflicts": confs, "has_node": any("node" in c["proc"].lower() for c in confs)})
+                http_send(conn, 200, {"port": PORT, "conflicts": confs, "has_node": any(_is_node_proc(c["proc"]) for c in confs)})
             except Exception as exc:
                 http_send(conn, 200, {"port": PORT, "conflicts": [], "has_node": False, "error": str(exc)})
 
@@ -716,12 +729,12 @@ if __name__ == "__main__":
 
     _conflict_pid, _conflict_proc = _check_port_conflict(PORT)
     if _conflict_pid:
-        _is_node = "node" in (_conflict_proc or "")
+        _is_node = _is_node_proc(_conflict_proc or "")
         print(f"\n⚠  PORT CONFLICT DETECTED on {PORT}")
         print(f"   Process : {_conflict_proc or 'unknown'} (PID {_conflict_pid})")
         if _is_node:
             print("   Cause   : Node.js server (Unified_Server.js) already bound to this port.")
-            print("   Fix     : Stop Node first — `kill " + _conflict_pid + "`")
+            print(f"   Fix     : Stop Node first — `kill {_conflict_pid}`")
             print("             Or set a different port: SG_PORT=9899 python3 python3_bridge.py")
         else:
             print(f"   Fix     : kill {_conflict_pid}  or set SG_PORT=<other port>")
