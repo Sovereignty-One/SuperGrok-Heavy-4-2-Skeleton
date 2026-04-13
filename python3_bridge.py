@@ -1041,6 +1041,7 @@ if __name__ == "__main__":
                     except Exception:
                         return pid.strip(), "unknown"
         except Exception:
+            # Best-effort probe: lsof may be unavailable or restricted; continue to ss fallback.
             pass
         try:
             # Fallback: ss (Linux)
