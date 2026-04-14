@@ -5,7 +5,7 @@
 **Private Sovereign AI Research and Development Platform**  
 **Core Model:** Super Grok Heavy 4.2  
 (xAI) – Locked, Sealed, Sovereign  
-**Last Updated:** April 13, 2026
+**Last Updated:** April 14, 2026
 
 ## 📋 Overview
 
@@ -411,10 +411,11 @@ cd SuperGrok-Heavy-4-2-Skeleton/Sovereignty-AI-Studio-main
 docker-compose up -d
 
 # Access the services
-# All services accessible through unified port: http://localhost:9898
-# Backend API: http://localhost:9898/api/v1
-# WebSocket: ws://localhost:9898/ws/alerts
-# Frontend: http://localhost:9898 (if running separately)
+# Python bridge (standalone):  http://localhost:9898
+# Node.js bridge (Docker):      http://localhost:9899
+# Backend API (via bridge):     http://localhost:9899/api/v1
+# WebSocket (Node bridge):      ws://localhost:9899/ws/alerts
+# Keycloak admin console:       http://localhost:8080/admin/
 ```
 
 ### Option 2: Manual Installation
@@ -466,23 +467,22 @@ python main.py
 
 ### Port Architecture
 
-**UNIFIED PORT 9898 - Single Entry Point**
+| Service | Port | Exposure | Notes |
+|---|---|---|---|
+| **Python bridge** (`python3_bridge.py`) | 9898 | External | Primary server — iSH / macOS / Linux |
+| **Node.js bridge** (`node-bridge`) | 9899 | External | Docker-based Node bridge |
+| **Keycloak** (SSO) | 8080 (HTTP) / 8443 (HTTPS) | External | Admin console at `/admin/` |
+| **FastAPI backend** | 9898 | Internal only | Docker network only |
+| **Redis** | 6379 | Internal only | Bound to 127.0.0.1, protected mode |
+| **PostgreSQL** | 5432 | Internal only | Docker network only |
 
-All services funnel through port **9898** as the single external entry point:
+- **Python bridge entry point**: `http://127.0.0.1:9898` / `ws://127.0.0.1:9898`
+- **Node.js bridge entry point**: `http://127.0.0.1:9899` / `ws://127.0.0.1:9899`
+- **Keycloak admin**: `http://localhost:8080/admin/`
 
-- **External Access**: `ws://127.0.0.1:9898` or `http://127.0.0.1:9898`
-- **Node Bridge**: Port 9898 (external) - Proxies all traffic to internal services
-- **Backend (FastAPI)**: Internal only - Accessed via Docker network
-- **Redis**: Internal only - Bound to 127.0.0.1, no external exposure
-- **PostgreSQL**: Internal only - Accessible within Docker network only
+> **iSH / standalone usage**: Run `start-dashboard.sh` — uses the Python bridge on port 9898, no Node.js or Docker required.
 
-Need a legacy/compatibility listener? Set `PORT_BRIDGE` to a different value (e.g., 9899) and the server will start a proxy there; when it matches `PORT_UNIFIED` (the default) the proxy is skipped to avoid double-binding the same port.
-
-**No wild port numbers** - Everything routes through 9898. This architecture:
-- Simplifies firewall rules (single port)
-- Works seamlessly with a-shell/iSH environments
-- Provides a unified interface for iOS apps and frontend
-- Keeps internal services secure (no direct external access)
+See [PORT_ARCHITECTURE.md](PORT_ARCHITECTURE.md) for full details.
 
 ### FullDashboard Integration
 
@@ -657,6 +657,12 @@ For questions, issues, or collaboration inquiries:
 
 ## 📝 Changelog
 
+### [1.4.0] - 2026-04-14
+- **Port architecture update**: Python bridge (`python3_bridge.py`) stays on port **9898**; Node.js bridge moved to port **9899** to eliminate conflict.
+- **Keycloak added**: SSO / Identity Provider now runs on ports **8080** (HTTP) and **8443** (HTTPS) in all Docker Compose configurations.
+- **Configuration files updated**: `.env.example`, `docker-compose.yml`, `Sovereignty-AI-Studio-main/docker-compose.yml`, `Sovereignty-AI-Studio-main/.env.example`, `Sovereignty-AI-Studio-main/backend/.env.example`, and `PORT_ARCHITECTURE.md` updated to reflect the new port layout.
+- **python3_bridge.py**: Added `/api/conflicts` endpoint to detect Node.js port conflicts; added `ai_code_review` → `ai_code_review_result`, `ai_chat` → `ai_response`, and `selffix_report` → `selffix_ack` WebSocket handlers.
+
 ### [1.3.0] - 2026-04-13
 - **SGHv119.html**: Fixed 594 broken `var(–)` CSS references (en-dash → double-dash), 22 CSS property definition en-dash corruptions, 8 CLI flag single-dash corruptions, 3 PEM header corruptions, SVG data URI curly quote encoding. All 21 JavaScript blocks pass `node --check`. Replaced all `node Unified_Server.js` run instructions with `python3 bridge.py`.
 - **python3_bridge.py**: Updated HTML auto-discovery to find `SGHv119.html` first; updated startup messages.
@@ -690,7 +696,7 @@ For questions, issues, or collaboration inquiries:
 
 ---
 
-**Last Updated**: April 13, 2026  
-**Version**: 1.3.0  
+**Last Updated**: April 14, 2026  
+**Version**: 1.4.0  
 **Status**: Active Development  
 **Core Model**: Super Grok Heavy 4.2
