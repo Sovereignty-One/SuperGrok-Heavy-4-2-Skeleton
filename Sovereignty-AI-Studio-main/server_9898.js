@@ -339,7 +339,7 @@ if (process.env.TLS_CERT && process.env.TLS_KEY) {
 }
 
 // ---------------------------------------------------------------------------
-// WebSocket server — accepts connections at any path (root ws://localhost:9898)
+// WebSocket server — accepts connections at any path (root ws://localhost:9899)
 // ---------------------------------------------------------------------------
 let wss = null;
 try {

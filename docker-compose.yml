@@ -2,7 +2,7 @@ services:
   backend:
     build: ./backend
     ports:
-      - "8000:8000"
+      - "9898:9898"
     environment:
       - REDIS_URL=redis://redis:6379/0
     depends_on:
@@ -11,9 +11,9 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "3000:3000"
+      - "9899:9899"
     environment:
-      - API_URL=http://backend:8000
+      - API_URL=http://backend:9898
     depends_on:
       - backend
 
