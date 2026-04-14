@@ -1,5 +1,5 @@
 /**
- * SuperGrok AI Platform — Bridge Server (Port 9898)
+ * SuperGrok AI Platform — Bridge Server (Port 9899)
  *
  * Provides the local backend for Global_Roles_Dashboard.html:
  *   GET  /health                   – health check
@@ -10,13 +10,13 @@
  *   DELETE /api/memory/:id         – remove a memory entry
  *   GET  /api/audit                – list audit log entries
  *   POST /api/audit                – append an audit entry
- *   WS   ws://localhost:9898       – real-time channel
+ *   WS   ws://localhost:9899       – real-time channel
  *     → ping                       – responds with pong
  *     → ai_query                   – proxy AI request, stream reply back
  *     → piper_speak                – synthesise speech via Piper TTS
  *
  * Environment variables (all optional – keys enable live AI):
- *   PORT              server port (default 9898)
+ *   PORT              server port (default 9899)
  *   ANTHROPIC_API_KEY Claude key  (sk-ant-…)
  *   OPENAI_API_KEY    OpenAI key  (sk-…)
  *   XAI_API_KEY       xAI key
@@ -42,7 +42,7 @@ const { URL } = require('url');
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
-const PORT      = parseInt(process.env.PORT || '9898', 10);
+const PORT      = parseInt(process.env.PORT || '9899', 10);
 const DATA_DIR  = process.env.DATA_DIR || path.join(__dirname, 'data');
 const PIPER_BIN = process.env.PIPER_BIN || 'piper';
 

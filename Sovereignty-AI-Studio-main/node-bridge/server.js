@@ -22,7 +22,7 @@ const { WebSocketServer } = require('ws');
 // ---------------------------------------------------------------------------
 const BACKEND_URL = process.env.BACKEND_URL || 'http://127.0.0.1:9898';
 const WEATHER_URL = process.env.WEATHER_URL || 'http://127.0.0.1:9898';
-const PORT = parseInt(process.env.NODE_BRIDGE_PORT || '9898', 10);
+const PORT = parseInt(process.env.NODE_BRIDGE_PORT || '9899', 10);
 
 const app = express();
 app.use(express.json());

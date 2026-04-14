@@ -1068,7 +1068,8 @@ if __name__ == "__main__":
         if _is_node:
             print("   Cause   : Node.js server (Unified_Server.js) already bound to this port.")
             print(f"   Fix     : Stop Node first — `kill {_conflict_pid}`")
-            print("             Or set a different port: SG_PORT=9899 python3 python3_bridge.py")
+            print("             Node.js should run on port 9899, not 9898.")
+            print("             Or set a different port: SG_PORT=9900 python3 python3_bridge.py")
         else:
             print(f"   Fix     : kill {_conflict_pid}  or set SG_PORT=<other port>")
         print()
