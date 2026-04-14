@@ -2,7 +2,7 @@
 
 - SuperGrok Unified Server -- Production Enterprise
 - Single process: Node.js + WebSocket bridge + Auth + DDG + GitHub + Plaid + Piper + ISH shell
-- Port: 9898 (unified single entry point - all services funnel through here)
+- Port: 9899 (unified single entry point - all services funnel through here)
 - Run: node unified_server.js
   */
   'use strict';
@@ -17,8 +17,8 @@ const os      = require('os');
 const { spawn, exec } = require('child_process');
 
 // ─── CONFIG ───────────────────────────────────────────────────────────
-const PORT_UNIFIED = parseInt(process.env.PORT_UNIFIED || '9898');
-const PORT_BRIDGE  = parseInt(process.env.PORT_BRIDGE  || '9898');
+const PORT_UNIFIED = parseInt(process.env.PORT_UNIFIED || '9899');
+const PORT_BRIDGE  = parseInt(process.env.PORT_BRIDGE  || '9899');
 // Auth port always equals PORT_BRIDGE — single proxy for a-shell/iSH compat
 const PIPER_BIN    = process.env.PIPER_BIN    || './piper';
 const PIPER_MODEL  = process.env.PIPER_MODEL  || './en_US-lessac-medium.onnx';

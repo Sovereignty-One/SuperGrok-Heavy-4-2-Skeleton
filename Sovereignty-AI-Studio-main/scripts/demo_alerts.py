@@ -134,9 +134,9 @@ def demo_create_alerts():
         print("\nTo view these alerts:")
         print("  1. Start the backend: cd backend && uvicorn app.main:app --reload")
         print("  2. Start the frontend: cd frontend && npm start")
-        print("  3. Open http://localhost:9898 and click the bell icon")
+        print("  3. Open http://localhost:9899 and click the bell icon")
         print("\nOr query via API:")
-        print("  curl http://localhost:9898/api/v1/alerts/")
+        print("  curl http://localhost:9899/api/v1/alerts/")
         
         return created_alerts
         
