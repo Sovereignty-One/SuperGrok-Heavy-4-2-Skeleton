@@ -63,9 +63,11 @@ All services in the SuperGrok Heavy 4.2 Skeleton funnel through **port 9898** as
 
 ### Deprecated Ports (No Longer Used)
 - ~9899~: Previously used for separate bridge, now unified with 9898
-- ~8000/~: Keycloak HTTP (currently active)
-- ~8443~: Keycloak HTTPS (currently active)
 - ~9898~: Management port (consolidated)
+
+### Keycloak (SSO / Identity Provider)
+- **8080**: Keycloak HTTP (external)
+- **8443**: Keycloak HTTPS/TLS (external)
 
 ## Connection Examples
 
@@ -170,7 +172,7 @@ db:
 - Node Bridge: 9898 (external)
 - Redis: 9898 (external)
 - PostgreSQL: 9898 (external)
-- Potential Keycloak: 8000/8443
+- Potential Keycloak: 8080/8443 (now active)
 
 ### New Architecture (Unified Port)
 - **Single external port: 9898**
@@ -238,12 +240,11 @@ curl http://127.0.0.1:9898/api/v1/status
 
 ## Future Considerations
 
-### Keycloak Integration (Optional)
-If Keycloak is added in the future:
-- Run Keycloak internally in Docker network
-- Proxy through node-bridge at /auth/* path
-- NO direct external ports (8000/8443)
-- All auth flows via port 9898
+### Keycloak (SSO / Identity Provider)
+Keycloak runs as a dedicated service on dedicated ports:
+- **8080**: HTTP — admin console at `http://localhost:8080/admin/`
+- **8443**: HTTPS/TLS — configure `KC_HTTPS_CERTIFICATE_FILE` / `KC_HTTPS_CERTIFICATE_KEY_FILE`
+- Internal services reference it as `http://keycloak:8080`
 
 ### HTTPS/TLS
 To add HTTPS:

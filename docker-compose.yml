@@ -17,6 +17,18 @@ services:
     depends_on:
       - backend
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    environment:
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-changeme}
+    command: start-dev
+    depends_on:
+      - redis
+
   redis:
     image: redis:7
     ports:
