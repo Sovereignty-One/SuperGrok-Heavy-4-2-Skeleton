@@ -535,6 +535,14 @@ def handle_ws_msg(conn: socket.socket, raw: bytes) -> None:
     elif t == "tts_xai":
         text = msg.get("text", "")
         key = msg.get("key", KEYS.get("grok", ""))
+        def _tts_fallback(text=text):
+            try:
+                subprocess.run(["say", text], capture_output=True, timeout=30)
+            except Exception:
+                try:
+                    subprocess.run(["espeak", text], capture_output=True, timeout=30)
+                except Exception:
+                    pass
         if key:
             try:
                 r, err = post_json(
@@ -545,35 +553,25 @@ def handle_ws_msg(conn: socket.socket, raw: bytes) -> None:
                 if r:
                     ws_json(conn, {"type": "tts_result", "text": text, "status": "ok"})
                 else:
-                    threading.Thread(
-                        target=lambda: subprocess.run(
-                            f'say "{text}" 2>/dev/null || espeak "{text}" 2>/dev/null',
-                            shell=True,
-                        ),
-                        daemon=True,
-                    ).start()
+                    threading.Thread(target=_tts_fallback, daemon=True).start()
                     ws_json(conn, {"type": "speak_result", "text": text})
             except Exception:
                 ws_json(conn, {"type": "speak_result", "text": text})
         else:
-            threading.Thread(
-                target=lambda: subprocess.run(
-                    f'say "{text}" 2>/dev/null || espeak "{text}" 2>/dev/null',
-                    shell=True,
-                ),
-                daemon=True,
-            ).start()
+            threading.Thread(target=_tts_fallback, daemon=True).start()
             ws_json(conn, {"type": "speak_result", "text": text})
 
     elif t == "speak":
         text = msg.get("text", "")
-        threading.Thread(
-            target=lambda: subprocess.run(
-                f'say "{text}" 2>/dev/null || espeak "{text}" 2>/dev/null',
-                shell=True,
-            ),
-            daemon=True,
-        ).start()
+        def _sys_speak(text=text):
+            try:
+                subprocess.run(["say", text], capture_output=True, timeout=30)
+            except Exception:
+                try:
+                    subprocess.run(["espeak", text], capture_output=True, timeout=30)
+                except Exception:
+                    pass
+        threading.Thread(target=_sys_speak, daemon=True).start()
         ws_json(conn, {"type": "speak_result", "text": text})
 
     elif t == "piper_speak":
@@ -587,12 +585,11 @@ def handle_ws_msg(conn: socket.socket, raw: bytes) -> None:
             def _run_piper(text=text, request_id=request_id):
                 try:
                     import tempfile
-                    safe_text = text.replace('"', "'").replace('`', "'")[:800]
                     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
                         wav_path = tmp.name
                     r = subprocess.run(
                         [piper_bin, "--model", piper_model, "--output_file", wav_path],
-                        input=safe_text.encode(),
+                        input=text[:800].encode("utf-8", errors="replace"),
                         capture_output=True,
                         timeout=15,
                     )
@@ -607,20 +604,28 @@ def handle_ws_msg(conn: socket.socket, raw: bytes) -> None:
                         return
                 except Exception:
                     pass
-                # Fallback: system TTS
-                subprocess.run(
-                    f'say "{text}" 2>/dev/null || espeak "{text}" 2>/dev/null',
-                    shell=True,
-                )
+                # Fallback: system TTS (safe list-based invocation)
+                try:
+                    subprocess.run(["say", text], capture_output=True, timeout=30)
+                except Exception:
+                    try:
+                        subprocess.run(["espeak", text], capture_output=True, timeout=30)
+                    except Exception:
+                        pass
                 ws_json(conn, {"type": "piper_done", "fallback": True, "requestId": request_id})
             threading.Thread(target=_run_piper, daemon=True).start()
         else:
-            # No Piper binary — use system TTS as fallback
-            subprocess.run(
-                f'say "{text}" 2>/dev/null || espeak "{text}" 2>/dev/null',
-                shell=True,
-            )
-            ws_json(conn, {"type": "piper_done", "fallback": True, "requestId": request_id})
+            # No Piper binary — use system TTS as fallback (safe list-based invocation)
+            def _piper_fallback(text=text, request_id=request_id):
+                try:
+                    subprocess.run(["say", text], capture_output=True, timeout=30)
+                except Exception:
+                    try:
+                        subprocess.run(["espeak", text], capture_output=True, timeout=30)
+                    except Exception:
+                        pass
+                ws_json(conn, {"type": "piper_done", "fallback": True, "requestId": request_id})
+            threading.Thread(target=_piper_fallback, daemon=True).start()
 
     elif t == "piper_status":
         # Piper status check: respond with availability info
@@ -1011,10 +1016,13 @@ def handle_http(conn: socket.socket, method: str, path: str, body_bytes: bytes) 
 
         elif path == "/api/speak":
             text = body.get("text", "")
-            subprocess.run(
-                f'say "{text}" 2>/dev/null || espeak "{text}" 2>/dev/null',
-                shell=True,
-            )
+            try:
+                subprocess.run(["say", text], capture_output=True, timeout=30)
+            except Exception:
+                try:
+                    subprocess.run(["espeak", text], capture_output=True, timeout=30)
+                except Exception:
+                    pass
             http_send(conn, 200, {"done": True})
 
         else:
