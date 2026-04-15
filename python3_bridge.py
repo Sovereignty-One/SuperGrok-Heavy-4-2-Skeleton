@@ -576,6 +576,65 @@ def handle_ws_msg(conn: socket.socket, raw: bytes) -> None:
         ).start()
         ws_json(conn, {"type": "speak_result", "text": text})
 
+    elif t == "piper_speak":
+        # Piper TTS request from SGHv119.html PiperClient: {type:"piper_speak", text:"...", requestId:"..."}
+        text = msg.get("text", "")
+        request_id = msg.get("requestId", msg.get("request_id", ""))
+        piper_bin = os.environ.get("PIPER_BIN", "")
+        piper_model = os.environ.get("PIPER_MODEL", "")
+        if piper_bin and piper_model and os.path.isfile(piper_bin) and os.path.isfile(piper_model):
+            # Run Piper binary and return base64-encoded WAV audio
+            def _run_piper(text=text, request_id=request_id):
+                try:
+                    import tempfile
+                    safe_text = text.replace('"', "'").replace('`', "'")[:800]
+                    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+                        wav_path = tmp.name
+                    r = subprocess.run(
+                        [piper_bin, "--model", piper_model, "--output_file", wav_path],
+                        input=safe_text.encode(),
+                        capture_output=True,
+                        timeout=15,
+                    )
+                    if r.returncode == 0 and os.path.isfile(wav_path):
+                        with open(wav_path, "rb") as f:
+                            audio_b64 = base64.b64encode(f.read()).decode()
+                        try:
+                            os.unlink(wav_path)
+                        except Exception:
+                            pass
+                        ws_json(conn, {"type": "audio", "data": audio_b64, "done": True, "requestId": request_id})
+                        return
+                except Exception:
+                    pass
+                # Fallback: system TTS
+                subprocess.run(
+                    f'say "{text}" 2>/dev/null || espeak "{text}" 2>/dev/null',
+                    shell=True,
+                )
+                ws_json(conn, {"type": "piper_done", "fallback": True, "requestId": request_id})
+            threading.Thread(target=_run_piper, daemon=True).start()
+        else:
+            # No Piper binary — use system TTS as fallback
+            subprocess.run(
+                f'say "{text}" 2>/dev/null || espeak "{text}" 2>/dev/null',
+                shell=True,
+            )
+            ws_json(conn, {"type": "piper_done", "fallback": True, "requestId": request_id})
+
+    elif t == "piper_status":
+        # Piper status check: respond with availability info
+        piper_bin = os.environ.get("PIPER_BIN", "")
+        piper_model = os.environ.get("PIPER_MODEL", "")
+        piper_ready = bool(piper_bin and piper_model and os.path.isfile(piper_bin) and os.path.isfile(piper_model))
+        ws_json(conn, {
+            "type": "piper_status_result",
+            "piperReady": piper_ready,
+            "exe": piper_bin if piper_bin else None,
+            "model": piper_model if piper_model else None,
+            "ready": piper_ready,
+        })
+
     elif t == "stt_start":
         ws_json(conn, {"type": "stt_ready"})
 
@@ -709,17 +768,21 @@ def run_ws(conn: socket.socket, addr, path: str) -> None:
     _ws_register(conn)
     # Warn immediately if any key is stale
     stale = [p for p in KEYS if KEYS[p] and _key_stale(p)]
-    ws_json(
-        conn,
-        {
-            "type": "connected",
-            "version": "SuperGrok Bridge v4.0",
-            "session_token": session_token,
-            "keys": {k: bool(v) for k, v in KEYS.items()},
-            "key_status": _key_status_payload(),
-            "stale_keys": stale,
-        },
-    )
+    piper_bin = os.environ.get("PIPER_BIN", "")
+    piper_model = os.environ.get("PIPER_MODEL", "")
+    piper_ready = bool(piper_bin and piper_model and os.path.isfile(piper_bin) and os.path.isfile(piper_model))
+    _bridge_payload = {
+        "version": "SuperGrok Bridge v4.0",
+        "session_token": session_token,
+        "keys": {k: bool(v) for k, v in KEYS.items()},
+        "key_status": _key_status_payload(),
+        "stale_keys": stale,
+        "piperReady": piper_ready,
+        "features": ["ai_chat", "ai_code_review", "piper_tts", "key_rotation", "audit", "shell", "stt"],
+    }
+    ws_json(conn, dict(_bridge_payload, type="connected"))
+    # Also send a "hello" for PiperTTS.ws.onmessage compatibility
+    ws_json(conn, dict(_bridge_payload, type="hello"))
     if stale:
         for p in stale:
             _audit("KEY_STALE_WARN", {"provider": p, "age_days": _key_status_payload()[p]["age_days"]})
