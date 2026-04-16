@@ -1,3 +1,4 @@
 {
-  "aws.telemetry": false
+  "aws.telemetry": false,
+  "githubPullRequests.pullRequestDescription": "Copilot"
 }
