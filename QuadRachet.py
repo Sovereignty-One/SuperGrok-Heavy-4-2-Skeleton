@@ -23,7 +23,7 @@ import hmac
 import secrets
 import struct
 from dataclasses import dataclass, field
-from typing import Optional, Tuple
+from typing import Tuple
 
 from cryptography.hazmat.primitives.asymmetric.x25519 import (
     X25519PrivateKey,
