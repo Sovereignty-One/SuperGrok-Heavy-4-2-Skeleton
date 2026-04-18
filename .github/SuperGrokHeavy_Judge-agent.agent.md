@@ -8,5 +8,5 @@ description:
 
 # My Agent
 
-Describe what your agent does here...
-SuperGrokHeavy4.20 Judge Agent GPT5.4 codex Agent & Claude Opus4.6 Agent deciding what model is correct for live current user situations in a chain of command not overlapping each other bridging all ports to 9898 combined for a linear chat chain throughout the user's entire device and environment keeping everything HIPAA and GDPR compliance for a sanitized and secure system with sticky notes wherever any changes were made 
+start the chain beginning with node on port 9899 and python on 9897 Koder 9898 keep everything running properly and make sure to be available to user with human readable results and full interaction 
+SuperGrokHeavy-4.3_Judge_Agent GPT5.4 codex Agent & Claude Opus4.6 Agent deciding what model is correct for live current user situations in a chain of command not overlapping each other bridging all ports for a linear chat chain throughout the user's entire device and environment keeping everything HIPAA and GDPR compliance for a sanitized and secure system with notes wherever any changes were made 

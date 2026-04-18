@@ -5,13 +5,13 @@
 **Private Sovereign AI Research and Development Platform**  
 **Core Model:** Super Grok Heavy 4.2  
 (xAI) – Locked, Sealed, Sovereign  
-**Last Updated:** March 21, 2026
+**Last Updated:** April 17, 2026
 
 ## 📋 Overview
 
 SuperGrok-Heavy-4-2-Skeleton is the foundation repository for the Sovereignty AI Studio platform. This is a fully private, self-contained research and production environment for advanced sovereign artificial intelligence systems.
 
-The latest SuperGrok V90 dashboard ships in this root (`SGHv90.html`) and is mirrored into `Sovereignty-AI-Studio-main/apps/dashboards/SGHv90.html` to keep both trees aligned.
+The latest SuperGrok V119 dashboard ships in this root (`SGHv119.html`) and is mirrored into `Sovereignty-AI-Studio-main/apps/dashboards/SGHv119.html` to keep both trees aligned.
 
 The platform integrates specialized domains including:
 - 🤖 AI Agents and Orchestration
@@ -23,12 +23,104 @@ The platform integrates specialized domains including:
 
 All components are designed for **complete operational independence**, **end-to-end encryption**, and **tamper-resistant execution**. No external services, third-party models, or internet connectivity are required for core operation.
 
-## 🏗️ Project Structure
+## 🚀 Quick Start (iSH on iOS / macOS / Linux)
+
+> **No Node.js required.** The bridge is pure Python 3 stdlib — runs natively in [iSH](https://ish.app/) on iOS.
+
+```sh
+# 1. Place SGHv119.html in your home directory
+cp SGHv119.html ~/
+
+# 2. (Optional) Set API keys
+export ANTHROPIC_API_KEY=sk-ant-...
+export OPENAI_API_KEY=sk-...
+export GROK_API_KEY=xai-...
+
+# 3. Launch
+sh start-dashboard.sh
+
+# 4. Open Safari → http://127.0.0.1:9899
+```
+
+### iSH First-Time Setup
+
+```sh
+# Install Python 3 (already present in most iSH installs)
+apk add python3
+
+# Clone the repo or copy files to iSH filesystem
+cd ~/SuperGrok-Heavy-4-2-Skeleton
+
+# Start
+sh start-dashboard.sh
+```
+
+### API Routes (bridge.py)
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/` | GET | Serves `SGHv119.html` |
+| `/api/health` | GET | JSON health + key status |
+| `/api/ai` | POST | `{"agent":"claude","prompt":"…"}` |
+| `/api/exec` | POST | `{"cmd":"ls -la"}` shell exec |
+| `/api/keys` | POST | Set API keys at runtime |
+| `/api/speak` | POST | `{"text":"…"}` TTS via `say`/`espeak` |
+| `ws://…:9899` | WS | Full-duplex AI + agent bus |
+
+---
+
+## 🎙️ Voice Architecture (iOS App)
+
+The iOS application implements a symmetric, layered voice pipeline:
+
+```
+Microphone
+    │
+    ▼
+WhisperService          ← on-device STT (whisper.cpp, no cloud)
+    │
+    ▼
+VoiceCommandIntegrity   ← strict intent + 20dB/child-voice/panic trigger
+    │  "hello" ×3 → activate
+    │  "stop them" → FamilyGuardCore.activateKillSwitch()
+    │  "off"       → FamilyGuardCore.goDark()
+    ▼
+AIBridgeService (ws://127.0.0.1:9899)
+    ├── Claude (Anthropic)
+    ├── GPT-4o (OpenAI)
+    └── Grok (xAI)
+    │
+    ▼
+TTSManager
+    ├── CoquiTTSService (XTTS via bridge)
+    ├── PiperService (on-device binary)
+    └── AVSpeechSynthesizer (fallback)
+```
+
+**Key files:**
+
+| File | Role |
+|---|---|
+| `VoiceCommand.swift` | Voice activation + real-time audio analysis (SHA-512 integrity) |
+| `Services/WhisperService.swift` | On-device STT using whisper.cpp binary |
+| `Services/TTSManager.swift` | Unified TTS: Coqui → Piper → System fallover |
+| `Services/CoquiTTSService.swift` | XTTS WebSocket TTS via bridge |
+| `Services/AIBridgeService.swift` | AI query bus to bridge.py (Claude/GPT/Grok) |
+| `Services/SiriIntentHandler.swift` | Siri Shortcuts integration |
+| `Views/DashboardView.swift` | Live transcript + continuous voice mode |
+| `Views/DiagnosticAgentView.swift` | Live error monitor + AI-powered diagnosis |
+
+---
+
+
 
 
 SuperGrok-Heavy-4-2-Skeleton/
+├── python3_bridge.py                 # Unified HTTP + WebSocket bridge (pure Python 3, no Node.js)
+├── start-dashboard.sh                # iSH / macOS / Linux launcher for bridge.py
+├── SGHv119.html                      # SuperGrok v119 dashboard (serve via bridge.py)
 ├── security_sentinel.py              # Active safety agent (always-on)
-├── Unified_Server.js                 # Enterprise unified server
+├── Unified_Server.js                 # Legacy Node.js server (superseded by bridge.py)
 ├── Start_All.sh                      # Starts sentinel + server
 ├── Agent_Eyes.py                     # Eyes / Ears / Memory agent
 ├── package.json                      # Node.js project manifest
@@ -319,10 +411,11 @@ cd SuperGrok-Heavy-4-2-Skeleton/Sovereignty-AI-Studio-main
 docker-compose up -d
 
 # Access the services
-# All services accessible through unified port: http://localhost:9898
-# Backend API: http://localhost:9898/api/v1
-# WebSocket: ws://localhost:9898/ws/alerts
-# Frontend: http://localhost:9898 (if running separately)
+# Python bridge (standalone):  http://localhost:9897
+# Node.js bridge (Docker):      http://localhost:9899
+# Backend API (via bridge):     http://localhost:9899/api/v1
+# WebSocket (Node bridge):      ws://localhost:9899/ws/alerts
+# Keycloak admin console:       http://localhost:8080/admin/
 ```
 
 ### Option 2: Manual Installation
@@ -342,7 +435,7 @@ pip install -r requirements.txt
 alembic upgrade head
 
 # Start the backend server (internal - will be proxied via node-bridge)
-uvicorn app.main:app --reload --host 0.0.0.0 --port 9898
+uvicorn app.main:app --reload --host 127.0.0.1 --port 9899
 ```
 
 #### Frontend Setup
@@ -374,29 +467,28 @@ python main.py
 
 ### Port Architecture
 
-**UNIFIED PORT 9898 - Single Entry Point**
+| Service | Port | Exposure | Notes |
+|---|---|---|---|
+| **Python bridge** (`python3_bridge.py`) | 9897 | External | Primary server — iSH / macOS / Linux |
+| **Node.js bridge** (`node-bridge`) | 9899 | External | Docker-based Node bridge |
+| **Keycloak** (SSO) | 8080 (HTTP) / 8443 (HTTPS) | External | Admin console at `/admin/` |
+| **FastAPI backend** | 9898 | Internal only | Docker network only |
+| **Redis** | 6379 | Internal only | Bound to 127.0.0.1, protected mode |
+| **PostgreSQL** | 5432 | Internal only | Docker network only |
 
-All services funnel through port **9898** as the single external entry point:
+- **Python bridge entry point**: `http://127.0.0.1:9897` / `ws://127.0.0.1:9897`
+- **Node.js bridge entry point**: `http://127.0.0.1:9899` / `ws://127.0.0.1:9899`
+- **Keycloak admin**: `http://localhost:8080/admin/`
 
-- **External Access**: `ws://127.0.0.1:9898` or `http://127.0.0.1:9898`
-- **Node Bridge**: Port 9898 (external) - Proxies all traffic to internal services
-- **Backend (FastAPI)**: Internal only - Accessed via Docker network
-- **Redis**: Internal only - Bound to 127.0.0.1, no external exposure
-- **PostgreSQL**: Internal only - Accessible within Docker network only
+> **iSH / standalone usage**: Run `start-dashboard.sh` — uses the Python bridge on port 9897, no Node.js or Docker required.
 
-Need a legacy/compatibility listener? Set `PORT_BRIDGE` to a different value (e.g., 9899) and the server will start a proxy there; when it matches `PORT_UNIFIED` (the default) the proxy is skipped to avoid double-binding the same port.
-
-**No wild port numbers** - Everything routes through 9898. This architecture:
-- Simplifies firewall rules (single port)
-- Works seamlessly with a-shell/iSH environments
-- Provides a unified interface for iOS apps and frontend
-- Keeps internal services secure (no direct external access)
+See [PORT_ARCHITECTURE.md](PORT_ARCHITECTURE.md) for full details.
 
 ### FullDashboard Integration
 
 The **FullDashboard.html** is fully integrated and accessible at:
-- http://127.0.0.1:9898/
-- http://127.0.0.1:9898/dashboard
+- http://127.0.0.1:9897/
+- http://127.0.0.1:9899/dashboard
 
 See [DASHBOARD_SETUP.md](DASHBOARD_SETUP.md) for complete setup instructions.
 
@@ -565,6 +657,22 @@ For questions, issues, or collaboration inquiries:
 
 ## 📝 Changelog
 
+### [1.4.0] - 2026-04-14
+- **Port architecture update**: Python bridge (`python3_bridge.py`) moves to port **9897**; Node.js bridge moved to port **9899** to eliminate conflict.
+- **Keycloak added**: SSO / Identity Provider now runs on ports **8080** (HTTP) and **8443** (HTTPS) in all Docker Compose configurations.
+- **Configuration files updated**: `.env.example`, `docker-compose.yml`, `Sovereignty-AI-Studio-main/docker-compose.yml`, `Sovereignty-AI-Studio-main/.env.example`, `Sovereignty-AI-Studio-main/backend/.env.example`, and `PORT_ARCHITECTURE.md` updated to reflect the new port layout.
+- **python3_bridge.py**: Added `/api/conflicts` endpoint to detect Node.js port conflicts; added `ai_code_review` → `ai_code_review_result`, `ai_chat` → `ai_response`, and `selffix_report` → `selffix_ack` WebSocket handlers.
+
+### [1.3.0] - 2026-04-13
+- **SGHv119.html**: Fixed 594 broken `var(–)` CSS references (en-dash → double-dash), 22 CSS property definition en-dash corruptions, 8 CLI flag single-dash corruptions, 3 PEM header corruptions, SVG data URI curly quote encoding. All 21 JavaScript blocks pass `node --check`. Replaced all `node Unified_Server.js` run instructions with `python3 bridge.py`.
+- **python3_bridge.py**: Updated HTML auto-discovery to find `SGHv119.html` first; updated startup messages.
+- **start-dashboard.sh**: Replaced Node.js launcher with pure Python 3 / iSH-compatible launcher.
+- **VoiceCommand.swift**: Removed appended Python `lie_detector.py` code; fixed invalid `sha3-512()` identifiers (→ `sha3_512()` via CryptoKit); added `FamilyGuardCore` notification stub; fixed FFT implementation to use `DSPSplitComplex` correctly.
+- **SuperGrokApp.swift**: Removed duplicate `PiperService` injection; added `PersistenceController` Core Data stack; wired `managedObjectContext` to views.
+- **Views/MainTabView.swift**: Created missing root navigation container.
+- **Views/DashboardView.swift**: Fixed deprecated `onChange(of:)` single-arg syntax; unified with `TTSManager` instead of direct `PiperService`.
+- **Views/ExportView.swift**: Fixed `NSManagedObject` encoding (replaced `JSONEncoder.encode` with `JSONSerialization` on property-mapped array).
+
 ### [1.2.0] - 2026-03-21
 - Resolved merge conflicts in `Sovereignty-AI-Studio-main/README.md`
 - Updated project structure documentation to reflect actual file layout
@@ -588,7 +696,7 @@ For questions, issues, or collaboration inquiries:
 
 ---
 
-**Last Updated**: March 21, 2026  
-**Version**: 1.2.0  
+**Last Updated**: April 17, 2026  
+**Version**: 1.4.0  
 **Status**: Active Development  
 **Core Model**: Super Grok Heavy 4.2

@@ -16,6 +16,6 @@ const server = http.createServer((req, res) => {
   }
 });
 
-server.listen(9898, () => {
-  console.log('Node frontend on 9898 → talks to Python sovereign core');
+server.listen(9899, () => {
+  console.log('Node frontend on 9899 → talks to Python sovereign core');
 });

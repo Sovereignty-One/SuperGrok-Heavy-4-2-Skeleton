@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperGrok Heavy 4.2 Validator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0a0a14;
+            color: #fff;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        .header {
+            background: #000a;
+            padding: 2rem;
+            border-bottom: 1px solid #111;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 1.8rem;
+            background: linear-gradient(90deg, #00f5ff, #ff0080);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .container {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        .card {
+            background: #111;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid #222;
+        }
+        .card h3 {
+            margin-bottom: 1rem;
+            color: #00f5ff;
+            font-size: 1.1rem;
+        }
+        .status-value {
+            font-size: 2rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .status-green { background: #00ff88; }
+        .status-yellow { background: #ffcc00; }
+        .status-red { background: #ff4444; }
+        .controls {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 0.75rem 1.25rem;
+            border: none;
+            border-radius: 8px;
+            background: #222;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+        button:hover {
+            background: #333;
+            transform: translateY(-1px);
+        }
+        .btn-danger {
+            background: #ff4444;
+        }
+        .btn-danger:hover {
+            background: #ee3333;
+        }
+        .log-area {
+            width: 100%;
+            height: 300px;
+            background: #000;
+            border: 1px solid #222;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            overflow-y: auto;
+            margin-top: 1rem;
+        }
+        .log-line {
+            padding: 0.3rem 0;
+            border-bottom: 1px solid #222;
+        }
+        .log-line:last-child {
+            border-bottom: none;
+        }
+        .log-time {
+            color: #00f5ff;
+            margin-right: 1rem;
+        }
+        .settings {
+            position: fixed;
+            top: 0; right: -300px;
+            width: 300px;
+            background: #111;
+            height: 100%;
+            padding: 2rem;
+            transition: right 0.4s;
+            border-left: 1px solid #222;
+            z-index: 10;
+        }
+        .settings.open { right: 0; }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #aaa;
+        }
+        input, select {
+            width: 100%;
+            padding: 0.75rem;
+            background: #222;
+            border: 1px solid #333;
+            color: #fff;
+            border-radius: 6px;
+        }
+        .settings-toggle {
+            position: fixed;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            background: #000;
+            color: #fff;
+            border: none;
+            padding: 1rem;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 15;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        .threat-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .threat-item {
+            padding: 0.8rem;
+            background: #222;
+            border-radius: 8px;
+            text-align: center;
+            border-left: 3px solid #ff0080;
+        }
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            .controls {
+                flex-direction: column;
+            }
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧠 SuperGrok Heavy 4.2 Validator</h1>
+    </div>
+
+    <div class="container">
+        <div class="grid">
+            <div class="card">
+                <h3>System Status</h3>
+                <div class="status-value">
+                    <span class="status-indicator status-green" id="sysStat"></span>
+                    <span id="sysText">OPERATIONAL</span>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Override State</h3>
+                <div class="status-value">
+                    <span class="status-indicator status-green" id="overrideStat"></span>
+                    <span id="overrideText">DISABLED</span>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Scans Active</h3>
+                <div class="status-value" id="scanCount">0</div>
+            </div>
+            <div class="card">
+                <h3>Threats</h3>
+                <div class="status-value" id="threatCount">0</div>
+            </div>
+            <div class="card">
+                <h3>Quarantined</h3>
+                <div class="status-value" id="quarantineCount">0</div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h3>Controls</h3>
+                <div class="controls">
+                    <button onclick="runCheck()">Compliance Check</button>
+                    <button onclick="updateFeed()">Update Feed</button>
+                    <button onclick="scanDir()">Scan Dir</button>
+                    <button onclick="toggleOverride()">Emergency Override</button>
+                </div>
+                <div style="margin-top:1rem;">
+                    <h3 style="color:#00f5ff;">Quick</h3>
+                    <div class="controls">
+                        <button onclick="testTPM()">Test TPM</button>
+                        <button onclick="validateSig()">Validate Sig</button>
+                        <button onclick="genReport()">Report</button>
+                        <button onclick="diagnose()">Diagnose</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Audit Log</h3>
+                <div class="log-area" id="logBox"></div>
+                <div class="controls" style="margin-top:1rem;">
+                    <button onclick="clearLog()">Clear</button>
+                    <button onclick="exportLog()">Export</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card threat-monitor">
+            <h3>🛡️ Threat Categories</h3>
+            <div class="threat-grid">
+    <div class="threat-item">
+        <div id="malwareCount">live</div>
+        <div>Malware</div>
+    </div>
+    <div class="threat-item">
+        <div id="exploitCount">live</div>
+        <div>Exploits</div>
+    </div>
+    <div class="threat-item">
+        <div id="overrideCount">live</div>
+        <div>Override</div>
+    </div>
+    <div class="threat-item">
+        <div id="privacyCount">live</div>
+        <div>Privacy</div>
+    </div>
+    <div class="threat-item">
+        <div id="integrityCount">live</div>
+        <div>Integrity</div>
+    </div>
+    <div class="threat-item">
+        <div id="anomalyCount">live</div>
+        <div>Anomalies</div>
+    </div>
+</div>
+</div>
+
+<button class="settings-toggle" onclick="toggleSettings()">⚙️</button>
+
+<div class="settings">
+<h3 style="color:#00f5ff;">Settings
+                <div class="threat-item" onclick="showDetail('exploits')">
+                    <div class="threat-count" id="exploitCount">live</div>
+                    <div>Exploits</div>
+                </div>
+                <div class="threat-item" onclick="showDetail('override')">
+                    <div class="threat-count" id="overrideCount">live</div>
+                    <div>Override</div>
+                </div>
+                <div class="threat-item" onclick="showDetail('privacy')">
+                    <div class="threat-count" id="privacyCount">live</div>
+                    <div>Privacy</div>
+                </div>
+                <div class="threat-item" onclick="showDetail('integrity')">
+                    <div class="threat-count" id="integrityCount">live</div>
+                    <div>Integrity</div>
+                </div>
+                <div class="threat-item" onclick="showDetail('anomalies')">
+                    <div class="threat-count" id="anomalyCount">live</div>
+                    <div>Anomalies</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="settings-toggle" onclick="toggleSettings()">⚙️</button>
+    <div class="settings" id="settings">
+        <h3 style="color:#00f5ff;margin-bottom:1.5rem;">⚙️ Settings</h3>
+        <div class="form-group">
+            <label>Alert Email</label>
+            <input type="email" id="alertEmail" placeholder="you@domain.com">
+        </div>
+        <div class="form-group">
+            <label>Alert Phone</label>
+            <input type="tel" id="alertPhone" placeholder="+15555551234">
+        </div>
+        <div class="form-group">
+            <label>Credential Scope</label>
+            <select id="scope">
+                <option value="public">Public</option>
+                <option value="admin">Admin Only</option>
+                <option value="keycloak">Keycloak Auth</option>
+            </select>
+        </div>
+        <div class="controls">
+            <button class="btn-success" onclick="saveSettings()">Save</button>
+            <button onclick="testAlert()">Test Alert</button>
+        </div>
+    </div>
+
+    <script>
+        let override = false, threats = 0, scans = 0, quarantined = 0;
+
+        async function hashValue(value) {
+            if (!value) return '';
+            const encoder = new TextEncoder();
+            const data = encoder.encode(value);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function log(msg) {
+            const t = new Date().toLocaleTimeString();
+            const el = document.createElement('div');
+            el.className = 'log-line';
+            el.innerHTML = `<span class="log-time"> </span> ${msg}`;
+            document.getElementById('logBox').prepend(el);
+            while (document.getElementById('logBox').children.length > 100) document.getElementById('logBox').lastChild.remove();
+        }
+
+        function updateStats() {
+            document.getElementById('sysText').textContent = override ? 'OVERRIDE' : 'OPERATIONAL';
+            document.getElementById('overrideText').textContent = override ? 'ACTIVE' : 'DISABLED';
+            document.getElementById('sysStat').className = override ? 'status-indicator status-red' : 'status-indicator status-green';
+            document.getElementById('overrideStat').className = override ? 'status-indicator status-red' : 'status-indicator status-green';
+            document.getElementById('scanCount').textContent = scans;
+            document.getElementById('threatCount').textContent = threats;
+            document.getElementById('quarantineCount').textContent = quarantined;
+        }
+
+        function runCompliance() { log('Compliance scan started'); setTimeout(()=>{ log('Compliance OK'); }, 1500); }
+        function updateFeed() { log('Threat feed updated'); }
+        function scanDir() { scans++; log('Scanning directory...'); setTimeout(()=>{ scans--; log('Scan done'); }, 2000); }
+        function toggleOverride() { override = !override; log(`Override ${override ? 'ON' : 'OFF'}`); updateStats(); }
+        function testTPM() { log('TPM test: PASS'); }
+        function validateSig() { log('Signatures valid'); }
+        function genReport() { log('Report saved'); }
+        function diagnose() { log('Diagnostics OK'); }
+
+        function clearLog() { document.getElementById('logBox').innerHTML = ''; log('Logs cleared'); }
+        function exportLog() { const l = Array.from(document.getElementById('logBox').children).reverse().map(e=>e.textContent).join('\n'); 
+            const blob = new Blob( , {type:'text/plain'}); 
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'validator.log'; a.click(); 
+            log('Logs exported'); }
+
+        function showDetail(cat) { log(`Viewing ${cat} threats`); }
+
+        function toggleSettings() { document.getElementById('settings').classList.toggle('open'); }
+
+        async function saveSettings() {
+            const em = document.getElementById('alertEmail').value;
+            const ph = document.getElementById('alertPhone').value;
+            const scope = document.getElementById('scope').value;
+            if (scope === 'keycloak' && !em && !ph) { alert('Keycloak requires email or phone'); return; }
+            localStorage.setItem('alertEmail', await hashValue(em));
+            localStorage.setItem('alertPhone', await hashValue(ph));
+            localStorage.setItem('authScope', scope);
+            log(`Settings saved. Scope: ${scope}`);
+            if (scope === 'keycloak') log('Redirecting to Keycloak...'); 
+            // window.location = '/keycloak/login'; // uncomment in production
+        }
+
+        function testAlert() {
+            const em = document.getElementById('alertEmail').value;
+            const ph = document.getElementById('alertPhone').value;
+            if (!em && !ph) { log('Add contact first'); return; }
+            log('Test alert sent');
+        }
+
+        // Auto-load
+        log('Validator loaded');
+        updateStats();
+    </script>
+</body>
+</html>

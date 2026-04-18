@@ -1,0 +1,78 @@
+# Environment variables
+.env
+
+# Database
+*.db
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.whl
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# React build
+frontend/build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Media uploads
+uploads/
+media/
+
+# Docker
+docker-compose.override.yml
+
+# Piper TTS
+piper-tts/.git/
+piper-tts/build/
+piper-tts/*.onnx
+piper-tts/*.onnx.json
+piper-tts/*.tar.gz
+*.wav
+*.mp3
+.pytest_cache/
+.coverage
+coverage.xml

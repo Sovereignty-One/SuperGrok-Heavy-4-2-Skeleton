@@ -1,0 +1,141 @@
+// FORTRESS-PROTOCOL_7.887 v1.0
+// PUBLIC DOMAIN – 0BSD
+
+use blake3::Hasher;
+use argon2::{
+    Argon2, PasswordHasher, password_hash::{SaltString, PasswordHash}
+};
+use qresist::LatticeKeypair;
+use tzng::{compress, decompress};
+use std::env;
+use std::fs::{File, OpenOptions};
+use std::io::{Read, Write};
+use rand::RngCore;
+
+// ====================
+// 1. Salt
+// ====================
+fn gen_salt() -> SaltString {
+    let mut bytes = ;
+    rand::thread_rng().fill_bytes(&mut bytes);
+    SaltString::from_b64(&bytes).unwrap()  // base64-safe
+}
+
+// ====================
+// 2. Hash
+// ====================
+fn slow_hash(password: &str, salt: &SaltString) -> Result<String, Box<dyn std::error::Error>> {
+    let argon2 = Argon2::new(
+        argon2::Algorithm::Argon2id,
+        argon2::Version::V0x13,
+        argon2::Params::default()
+    );
+    let hash = argon2.hash_password(password.as_bytes(), salt)?.to_string();
+    Ok(hash)
+}
+
+// ====================
+// 3. Checksum
+// ====================
+fn checksum(data: & ) -> Vec<u8> {
+    Hasher::new().update(data).finalize().as_bytes().to_vec()
+}
+
+// ====================
+// 4. Lattice seal / open
+// ====================
+fn seal_data(data: & , key: & ) -> Result<Vec<u8>, &'static str> {
+    let kp = LatticeKeypair::generate();
+    kp.seal(key, data)
+}
+
+fn open_data(ciphertext: & , shared_key: & ) -> Result<Vec<u8>, &'static str> {
+    let kp = LatticeKeypair::from_public(ciphertext);
+    kp.open(shared_key)
+}
+
+// ====================
+// 5. Compress / hide
+// ====================
+fn compress_and_hide(data: & ) -> Vec<u8> {
+    compress(data, 9)
+}
+
+fn unhide(data: & ) -> Vec<u8> {
+    decompress(data).unwrap_or_default()
+}
+
+// ====================
+// 6. LOCK — write sealed
+// ====================
+pub fn fortress_lock(path: &str, password: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let mut file = File::open(path)?;
+    let mut data = Vec::new();
+    file.read_to_end(&mut data)?;
+
+    let salt = gen_salt();
+    let hash = slow_hash(password, &salt)?;
+
+    let env_salt = env::var("FORTRESS_SALT").map_err(|_| "Missing FORTRESS_SALT")?;
+    let key = checksum(format!("{}{}", hash, env_salt).as_bytes());
+
+    let compressed = compress_and_hide(&data);
+    let sealed = seal_data(&compressed, &key)?;
+    let chk = checksum(&sealed);
+
+    let mut out = OpenOptions::new()
+        .create(true).write(true).truncate(true)
+        .open(format!("{}.fortress", path))?;
+
+    // format: sealed|checksum|salt
+    out.write_all(&sealed)?;
+    out.write_all(b"|")?;
+    out.write_all(&chk)?;
+    out.write_all(b"|")?;
+    out.write_all(salt.as_bytes())?;  // SaltString is already UTF-8
+    out.flush()?;
+    
+    Ok(())
+}
+
+// ====================
+// 7. OPEN — read & verify
+// ====================
+pub fn fortress_open(path: &str, password: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let mut file = File::open(path)?;
+    let mut contents = Vec::new();
+    file.read_to_end(&mut contents)?;
+
+    let parts: Vec<& > = contents.split(|&b| b == b'|').collect();
+    if parts.len() != 3 {
+        return Err("Invalid fortress file: missing delimiters".into());
+    }
+
+    let sealed = &parts[0];
+    let stored_checksum = &parts[1 2];
+
+    let salt = SaltString::from_b64(salt_bytes)
+        .map_err(|_| "Invalid base64 salt")?;
+
+    let hash = slow_hash(password, &salt)?;
+
+    let env_salt = env::var("FORTRESS_SALT").map_err(|_| "Missing FORTRESS_SALT")?;
+    let key = checksum(format!("{}{}", hash, env_salt).as_bytes());
+
+    let decrypted = open_data(sealed, &key)?;
+
+    let computed_checksum = checksum(sealed);
+    if computed_checksum != stored_checksum {
+        return Err("Integrity failed — tampering detected".into());
+    }
+
+    let decompressed = unhide(&decrypted);
+    Ok(decompressed)
+}
+
+// ====================
+// 8. Public API
+// ====================
+pub mod public {
+    pub use super::{fortress_lock, fortress_open};
+}

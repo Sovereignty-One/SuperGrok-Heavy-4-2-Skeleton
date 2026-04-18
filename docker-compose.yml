@@ -1,0 +1,35 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "9898:9898"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "9899:9899"
+    environment:
+      - API_URL=http://backend:9898
+    depends_on:
+      - backend
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    environment:
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-changeme}
+    command: start-dev
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"

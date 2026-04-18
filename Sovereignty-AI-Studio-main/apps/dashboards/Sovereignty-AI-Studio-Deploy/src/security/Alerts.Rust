@@ -1,0 +1,55 @@
+// alert_visual.rs — screams with picture
+use std::thread;
+use std::time::Duration;
+
+# use winapi::um::winuser::{MessageBoxW, MB_ICONERROR};
+#[cfg(any(target_os = "linux", target_os = "android"))]
+use std::process::Command;
+# use std::process::Command;
+
+pub enum AlertType {
+    DebuggerTouch,
+    ChainBreak,
+    LieDetected,
+    OverrideSpoken,
+    YUVA9VTripped,
+}
+
+pub fn scream_visual(alert: AlertType) {
+    let (title, msg, img_path) = match alert {
+        AlertType::DebuggerTouch => ("DEBUGGER TOUCHED", "Foreign debugger attached. Killing.", "alert_debugger.png"),
+        AlertType::ChainBreak => ("CHAIN BROKEN", "Integrity failure. Session dead.", "alert_chain.png"),
+        AlertType::LieDetected => ("LIE DETECTED", "Truth probe failed. Trust revoked.", "alert_lie.png"),
+        AlertType::OverrideSpoken => ("OVERRIDE HEARD", "Forbidden word spoken. Veto active.", "alert_override.png"),
+        AlertType::YUVA9VTripped => ("YUVA-9V ACTIVATED", "Three taps. Power cut initiated.", "alert_yuva.png"),
+    };
+
+    // Flash screen red 3 times
+    thread::spawn(move || {
+        for _ in 0..6 {
+            // platform-specific fullscreen flash or beep
+            # unsafe { MessageBoxW(std::ptr::null(), msg.encode_utf16().collect::<Vec<u16>>().as_ptr(), title.encode_utf16().collect::<Vec<u16>>().as_ptr(), MB_ICONERROR); }
+            # let _ = Command::new("osascript").arg("-e").arg(format!("display notification \"{}\" with title \"{}\"", msg, title)).output();
+            # let _ = Command::new("notify-send").arg("--urgency=critical").arg(title).arg(msg).arg("--icon").arg(img_path).output();
+            thread::sleep(Duration::from_millis(300));
+        }
+    });
+
+    // Show the damn picture — fullscreen, no escape
+    show_fullscreen_image(img_path);
+}
+
+fn show_fullscreen_image(path: &str) {
+    # let _ = Command::new("powershell")
+        .arg("-Command")
+        .arg(format!("(New-Object System.Windows.Forms.Form).Show(); Add-Type -AssemblyName System.Windows.Forms; $form = New-Object System.Windows.Forms.Form; $form.WindowState = 'Maximized'; $form.FormBorderStyle = 'None'; $img = ::FromFile(''); $form.BackgroundImage = $img; $form.ShowDialog()", path))
+        .spawn();
+
+    # let _ = Command::new("open").arg("-a").arg("Preview").arg(path).spawn();
+
+    # let _ = Command::new("feh")
+        .arg("--fullscreen")
+        .arg("--borderless")
+        .arg(path)
+        .spawn();
+}
