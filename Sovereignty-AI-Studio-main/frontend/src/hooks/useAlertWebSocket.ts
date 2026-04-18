@@ -13,7 +13,7 @@ interface UseAlertWebSocketOptions {
 
 export const useAlertWebSocket = ({
   userId,
-  apiUrl = 'ws://127.0.0.1:9898',
+  apiUrl = 'ws://127.0.0.1:9899',
   onAlert,
   onSystemAlert,
   onAlertUpdate,

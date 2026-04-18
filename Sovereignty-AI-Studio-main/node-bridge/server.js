@@ -22,16 +22,21 @@ const { WebSocketServer } = require('ws');
 // ---------------------------------------------------------------------------
 const BACKEND_URL = process.env.BACKEND_URL || 'http://127.0.0.1:9898';
 const WEATHER_URL = process.env.WEATHER_URL || 'http://127.0.0.1:9898';
-const PORT = parseInt(process.env.NODE_BRIDGE_PORT || '9898', 10);
+const PORT = parseInt(process.env.NODE_BRIDGE_PORT || '9899', 10);
 
 const app = express();
 app.use(express.json());
 
 // ---------------------------------------------------------------------------
-// CORS — default to 127.0.0.1:9898
+// CORS — allow origins listed in CORS_ORIGIN (comma-separated) or default to
+// both 9898 (Python bridge) and 9899 (node-bridge itself) for local dev.
 // ---------------------------------------------------------------------------
+const _CORS_WHITELIST = (process.env.CORS_ORIGIN || 'http://127.0.0.1:9898,http://localhost:9898,http://127.0.0.1:9899,http://localhost:9899')
+  .split(',').map(s => s.trim()).filter(Boolean);
+
 app.use((_req, res, next) => {
-  const origin = process.env.CORS_ORIGIN || 'http://127.0.0.1:9898';
+  const reqOrigin = _req.headers.origin || '';
+  const origin = _CORS_WHITELIST.includes(reqOrigin) ? reqOrigin : _CORS_WHITELIST[0];
   res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');

@@ -11,21 +11,43 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=${SECRET_KEY:-}
       - ALGORITHM=HS256
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM:-sovereignty}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-sovereignty-app}
     depends_on:
       - db
       - redis
+      - keycloak
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    environment:
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-changeme}
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://db:5432/${POSTGRES_DB:-sovereignty_db}
+      - KC_DB_USERNAME=${POSTGRES_USER:-postgres}
+      - KC_DB_PASSWORD=${POSTGRES_PASSWORD:-password}
+    command: start-dev
+    depends_on:
+      - db
 
   node-bridge:
     build: ./node-bridge
     ports:
-      - "9898:9898"
+      - "9899:9899"
     environment:
       - BACKEND_URL=http://backend:9898
       - WEATHER_URL=http://backend:9898
-      - NODE_BRIDGE_PORT=9898
-      - CORS_ORIGIN=http://localhost:3000
+      - NODE_BRIDGE_PORT=9899
+      - CORS_ORIGIN=http://localhost:9898,http://localhost:9899,http://127.0.0.1:9898,http://127.0.0.1:9899
+      - KEYCLOAK_URL=http://keycloak:8080
     depends_on:
       - backend
+      - keycloak
 
   db:
     image: postgres:13
