@@ -1,7 +1,7 @@
-FROM node:20-alpine
+FROM node:24-alpine
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --production
 COPY server.js ./
-EXPOSE 3001
+EXPOSE 9899
 CMD ["node", "server.js"]
