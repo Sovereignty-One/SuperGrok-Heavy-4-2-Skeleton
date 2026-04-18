@@ -5,7 +5,7 @@
 **Private Sovereign AI Research and Development Platform**  
 **Core Model:** Super Grok Heavy 4.2  
 (xAI) – Locked, Sealed, Sovereign  
-**Last Updated:** April 14, 2026
+**Last Updated:** April 17, 2026
 
 ## 📋 Overview
 
@@ -39,7 +39,7 @@ export GROK_API_KEY=xai-...
 # 3. Launch
 sh start-dashboard.sh
 
-# 4. Open Safari → http://127.0.0.1:9898
+# 4. Open Safari → http://127.0.0.1:9899
 ```
 
 ### iSH First-Time Setup
@@ -65,7 +65,7 @@ sh start-dashboard.sh
 | `/api/exec` | POST | `{"cmd":"ls -la"}` shell exec |
 | `/api/keys` | POST | Set API keys at runtime |
 | `/api/speak` | POST | `{"text":"…"}` TTS via `say`/`espeak` |
-| `ws://…:9898` | WS | Full-duplex AI + agent bus |
+| `ws://…:9899` | WS | Full-duplex AI + agent bus |
 
 ---
 
@@ -85,7 +85,7 @@ VoiceCommandIntegrity   ← strict intent + 20dB/child-voice/panic trigger
     │  "stop them" → FamilyGuardCore.activateKillSwitch()
     │  "off"       → FamilyGuardCore.goDark()
     ▼
-AIBridgeService (ws://127.0.0.1:9898)
+AIBridgeService (ws://127.0.0.1:9899)
     ├── Claude (Anthropic)
     ├── GPT-4o (OpenAI)
     └── Grok (xAI)
@@ -411,7 +411,7 @@ cd SuperGrok-Heavy-4-2-Skeleton/Sovereignty-AI-Studio-main
 docker-compose up -d
 
 # Access the services
-# Python bridge (standalone):  http://localhost:9898
+# Python bridge (standalone):  http://localhost:9897
 # Node.js bridge (Docker):      http://localhost:9899
 # Backend API (via bridge):     http://localhost:9899/api/v1
 # WebSocket (Node bridge):      ws://localhost:9899/ws/alerts
@@ -435,7 +435,7 @@ pip install -r requirements.txt
 alembic upgrade head
 
 # Start the backend server (internal - will be proxied via node-bridge)
-uvicorn app.main:app --reload --host 127.0.0.1 --port 9898
+uvicorn app.main:app --reload --host 127.0.0.1 --port 9899
 ```
 
 #### Frontend Setup
@@ -469,26 +469,26 @@ python main.py
 
 | Service | Port | Exposure | Notes |
 |---|---|---|---|
-| **Python bridge** (`python3_bridge.py`) | 9898 | External | Primary server — iSH / macOS / Linux |
+| **Python bridge** (`python3_bridge.py`) | 9897 | External | Primary server — iSH / macOS / Linux |
 | **Node.js bridge** (`node-bridge`) | 9899 | External | Docker-based Node bridge |
 | **Keycloak** (SSO) | 8080 (HTTP) / 8443 (HTTPS) | External | Admin console at `/admin/` |
 | **FastAPI backend** | 9898 | Internal only | Docker network only |
 | **Redis** | 6379 | Internal only | Bound to 127.0.0.1, protected mode |
 | **PostgreSQL** | 5432 | Internal only | Docker network only |
 
-- **Python bridge entry point**: `http://127.0.0.1:9898` / `ws://127.0.0.1:9898`
+- **Python bridge entry point**: `http://127.0.0.1:9897` / `ws://127.0.0.1:9897`
 - **Node.js bridge entry point**: `http://127.0.0.1:9899` / `ws://127.0.0.1:9899`
 - **Keycloak admin**: `http://localhost:8080/admin/`
 
-> **iSH / standalone usage**: Run `start-dashboard.sh` — uses the Python bridge on port 9898, no Node.js or Docker required.
+> **iSH / standalone usage**: Run `start-dashboard.sh` — uses the Python bridge on port 9897, no Node.js or Docker required.
 
 See [PORT_ARCHITECTURE.md](PORT_ARCHITECTURE.md) for full details.
 
 ### FullDashboard Integration
 
 The **FullDashboard.html** is fully integrated and accessible at:
-- http://127.0.0.1:9898/
-- http://127.0.0.1:9898/dashboard
+- http://127.0.0.1:9897/
+- http://127.0.0.1:9899/dashboard
 
 See [DASHBOARD_SETUP.md](DASHBOARD_SETUP.md) for complete setup instructions.
 
@@ -658,7 +658,7 @@ For questions, issues, or collaboration inquiries:
 ## 📝 Changelog
 
 ### [1.4.0] - 2026-04-14
-- **Port architecture update**: Python bridge (`python3_bridge.py`) stays on port **9898**; Node.js bridge moved to port **9899** to eliminate conflict.
+- **Port architecture update**: Python bridge (`python3_bridge.py`) moves to port **9897**; Node.js bridge moved to port **9899** to eliminate conflict.
 - **Keycloak added**: SSO / Identity Provider now runs on ports **8080** (HTTP) and **8443** (HTTPS) in all Docker Compose configurations.
 - **Configuration files updated**: `.env.example`, `docker-compose.yml`, `Sovereignty-AI-Studio-main/docker-compose.yml`, `Sovereignty-AI-Studio-main/.env.example`, `Sovereignty-AI-Studio-main/backend/.env.example`, and `PORT_ARCHITECTURE.md` updated to reflect the new port layout.
 - **python3_bridge.py**: Added `/api/conflicts` endpoint to detect Node.js port conflicts; added `ai_code_review` → `ai_code_review_result`, `ai_chat` → `ai_response`, and `selffix_report` → `selffix_ack` WebSocket handlers.
@@ -696,7 +696,7 @@ For questions, issues, or collaboration inquiries:
 
 ---
 
-**Last Updated**: April 14, 2026  
+**Last Updated**: April 17, 2026  
 **Version**: 1.4.0  
 **Status**: Active Development  
 **Core Model**: Super Grok Heavy 4.2

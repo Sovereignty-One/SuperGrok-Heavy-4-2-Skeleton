@@ -535,6 +535,14 @@ def handle_ws_msg(conn: socket.socket, raw: bytes) -> None:
     elif t == "tts_xai":
         text = msg.get("text", "")
         key = msg.get("key", KEYS.get("grok", ""))
+        def _tts_fallback(text=text):
+            try:
+                subprocess.run(["say", text], capture_output=True, timeout=30)
+            except Exception:
+                try:
+                    subprocess.run(["espeak", text], capture_output=True, timeout=30)
+                except Exception:
+                    pass
         if key:
             try:
                 r, err = post_json(
@@ -545,36 +553,92 @@ def handle_ws_msg(conn: socket.socket, raw: bytes) -> None:
                 if r:
                     ws_json(conn, {"type": "tts_result", "text": text, "status": "ok"})
                 else:
-                    threading.Thread(
-                        target=lambda: subprocess.run(
-                            f'say "{text}" 2>/dev/null || espeak "{text}" 2>/dev/null',
-                            shell=True,
-                        ),
-                        daemon=True,
-                    ).start()
+                    threading.Thread(target=_tts_fallback, daemon=True).start()
                     ws_json(conn, {"type": "speak_result", "text": text})
             except Exception:
                 ws_json(conn, {"type": "speak_result", "text": text})
         else:
-            threading.Thread(
-                target=lambda: subprocess.run(
-                    f'say "{text}" 2>/dev/null || espeak "{text}" 2>/dev/null',
-                    shell=True,
-                ),
-                daemon=True,
-            ).start()
+            threading.Thread(target=_tts_fallback, daemon=True).start()
             ws_json(conn, {"type": "speak_result", "text": text})
 
     elif t == "speak":
         text = msg.get("text", "")
-        threading.Thread(
-            target=lambda: subprocess.run(
-                f'say "{text}" 2>/dev/null || espeak "{text}" 2>/dev/null',
-                shell=True,
-            ),
-            daemon=True,
-        ).start()
+        def _sys_speak(text=text):
+            try:
+                subprocess.run(["say", text], capture_output=True, timeout=30)
+            except Exception:
+                try:
+                    subprocess.run(["espeak", text], capture_output=True, timeout=30)
+                except Exception:
+                    pass
+        threading.Thread(target=_sys_speak, daemon=True).start()
         ws_json(conn, {"type": "speak_result", "text": text})
+
+    elif t == "piper_speak":
+        # Piper TTS request from SGHv119.html PiperClient: {type:"piper_speak", text:"...", requestId:"..."}
+        text = msg.get("text", "")
+        request_id = msg.get("requestId", msg.get("request_id", ""))
+        piper_bin = os.environ.get("PIPER_BIN", "")
+        piper_model = os.environ.get("PIPER_MODEL", "")
+        if piper_bin and piper_model and os.path.isfile(piper_bin) and os.path.isfile(piper_model):
+            # Run Piper binary and return base64-encoded WAV audio
+            def _run_piper(text=text, request_id=request_id):
+                try:
+                    import tempfile
+                    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+                        wav_path = tmp.name
+                    r = subprocess.run(
+                        [piper_bin, "--model", piper_model, "--output_file", wav_path],
+                        input=text[:800].encode("utf-8", errors="replace"),
+                        capture_output=True,
+                        timeout=15,
+                    )
+                    if r.returncode == 0 and os.path.isfile(wav_path):
+                        with open(wav_path, "rb") as f:
+                            audio_b64 = base64.b64encode(f.read()).decode()
+                        try:
+                            os.unlink(wav_path)
+                        except Exception:
+                            pass
+                        ws_json(conn, {"type": "audio", "data": audio_b64, "done": True, "requestId": request_id})
+                        return
+                except Exception:
+                    pass
+                # Fallback: system TTS (safe list-based invocation)
+                try:
+                    subprocess.run(["say", text], capture_output=True, timeout=30)
+                except Exception:
+                    try:
+                        subprocess.run(["espeak", text], capture_output=True, timeout=30)
+                    except Exception:
+                        pass
+                ws_json(conn, {"type": "piper_done", "fallback": True, "requestId": request_id})
+            threading.Thread(target=_run_piper, daemon=True).start()
+        else:
+            # No Piper binary — use system TTS as fallback (safe list-based invocation)
+            def _piper_fallback(text=text, request_id=request_id):
+                try:
+                    subprocess.run(["say", text], capture_output=True, timeout=30)
+                except Exception:
+                    try:
+                        subprocess.run(["espeak", text], capture_output=True, timeout=30)
+                    except Exception:
+                        pass
+                ws_json(conn, {"type": "piper_done", "fallback": True, "requestId": request_id})
+            threading.Thread(target=_piper_fallback, daemon=True).start()
+
+    elif t == "piper_status":
+        # Piper status check: respond with availability info
+        piper_bin = os.environ.get("PIPER_BIN", "")
+        piper_model = os.environ.get("PIPER_MODEL", "")
+        piper_ready = bool(piper_bin and piper_model and os.path.isfile(piper_bin) and os.path.isfile(piper_model))
+        ws_json(conn, {
+            "type": "piper_status_result",
+            "piperReady": piper_ready,
+            "exe": piper_bin if piper_bin else None,
+            "model": piper_model if piper_model else None,
+            "ready": piper_ready,
+        })
 
     elif t == "stt_start":
         ws_json(conn, {"type": "stt_ready"})
@@ -709,17 +773,21 @@ def run_ws(conn: socket.socket, addr, path: str) -> None:
     _ws_register(conn)
     # Warn immediately if any key is stale
     stale = [p for p in KEYS if KEYS[p] and _key_stale(p)]
-    ws_json(
-        conn,
-        {
-            "type": "connected",
-            "version": "SuperGrok Bridge v4.0",
-            "session_token": session_token,
-            "keys": {k: bool(v) for k, v in KEYS.items()},
-            "key_status": _key_status_payload(),
-            "stale_keys": stale,
-        },
-    )
+    piper_bin = os.environ.get("PIPER_BIN", "")
+    piper_model = os.environ.get("PIPER_MODEL", "")
+    piper_ready = bool(piper_bin and piper_model and os.path.isfile(piper_bin) and os.path.isfile(piper_model))
+    _bridge_payload = {
+        "version": "SuperGrok Bridge v4.0",
+        "session_token": session_token,
+        "keys": {k: bool(v) for k, v in KEYS.items()},
+        "key_status": _key_status_payload(),
+        "stale_keys": stale,
+        "piperReady": piper_ready,
+        "features": ["ai_chat", "ai_code_review", "piper_tts", "key_rotation", "audit", "shell", "stt"],
+    }
+    ws_json(conn, dict(_bridge_payload, type="connected"))
+    # Also send a "hello" for PiperTTS.ws.onmessage compatibility
+    ws_json(conn, dict(_bridge_payload, type="hello"))
     if stale:
         for p in stale:
             _audit("KEY_STALE_WARN", {"provider": p, "age_days": _key_status_payload()[p]["age_days"]})
@@ -948,10 +1016,13 @@ def handle_http(conn: socket.socket, method: str, path: str, body_bytes: bytes) 
 
         elif path == "/api/speak":
             text = body.get("text", "")
-            subprocess.run(
-                f'say "{text}" 2>/dev/null || espeak "{text}" 2>/dev/null',
-                shell=True,
-            )
+            try:
+                subprocess.run(["say", text], capture_output=True, timeout=30)
+            except Exception:
+                try:
+                    subprocess.run(["espeak", text], capture_output=True, timeout=30)
+                except Exception:
+                    pass
             http_send(conn, 200, {"done": True})
 
         else:
