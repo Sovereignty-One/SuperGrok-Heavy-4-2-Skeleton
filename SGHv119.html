@@ -146,7 +146,7 @@ border-bottom:1px solid var(--wire);z-index:200;position:relative}
 #sb.d-hide{width:0;overflow:hidden}
 @media(max-width:768px){
 #sb{position:absolute;top:0;bottom:0;left:0;width:228px;transform:translateX(-100%);transition:transform .22s ease;box-shadow:8px 0 48px rgba(0,0,0,.85);overflow:hidden}
-#sb.open{transform:translateX(0)}
+#sb.sb-open{transform:translateX(0)}
 #sb.d-hide{transform:translateX(-100%);width:228px}
 .sb-ov{position:absolute;inset:0;background:rgba(0,0,0,.6);z-index:140;display:none}
 .sb-ov.on{display:block}
@@ -297,6 +297,67 @@ background-image:url(“data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/200
 .bt-name-main{font-size:30px}
 .kgrid{grid-template-columns:repeat(2,1fr)}
 }
+@media(max-width:768px){
+  /* ── Sidebar: slide-in drawer on mobile ── */
+  #sb{position:fixed;left:0;top:0;bottom:0;z-index:300;transform:translateX(-100%);
+    transition:transform .25s cubic-bezier(.4,0,.2,1);width:min(280px,85vw)!important;
+    box-shadow:4px 0 32px rgba(0,0,0,.8)}
+  #sb.sb-open{transform:translateX(0)}
+  /* .sb-ov visibility is driven by .sb-ov.on — never force display:block here */
+  /* ── Panel area: full width, bottom nav clearance ── */
+  #pa{padding:12px 10px 84px!important}
+  /* ── Toolbar ── */
+  .tb-clock{display:none!important}
+  .tb-live .tb-lbl{display:none}
+  /* ── Touch targets: min 44px ── */
+  .btn{min-height:44px;padding:10px 18px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  .nav-item{min-height:44px;padding:10px 12px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  .sg-in,.auth-inp,.rs-search,.sg-sel{min-height:44px;font-size:16px!important} /* 16px prevents iOS zoom */
+  .rk-btn{min-height:48px}
+  /* ── Grids: single column on mobile ── */
+  .g2,.g3,.g4,.kgrid{grid-template-columns:1fr!important}
+  .metric-bar{gap:12px;padding:8px 0}
+  /* ── Toast: full-width, above nav bar ── */
+  #toasts{bottom:80px;right:10px;left:10px}
+  .tst{width:100%;max-width:100%}
+  /* ── Cards: no hover transform on touch ── */
+  .rc:hover{transform:none}
+  .card{margin-bottom:8px}
+  /* ── Chat: taller on mobile ── */
+  .chat-msgs{min-height:200px;max-height:38vh}
+  /* ── Table: horizontal scroll ── */
+  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  /* ── CodeMaster: full-width editor ── */
+  #cm-editor{font-size:13px!important}
+  /* ── Key panel and dev-tool FAB: hide/reposition above nav bar ── */
+  #sg-key-panel{display:none!important}
+  #sg-devtool,#sg-devtool-fab{bottom:76px!important}
+}
+@media(max-width:480px){
+  .bt-name-main{font-size:28px}
+  .rs-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))!important;gap:6px}
+  .auth-box{padding:20px 16px}
+}
+/* ── Mobile bottom nav bar ── */
+#sg-mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:250;
+  background:rgba(7,16,31,.97);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-top:1px solid var(--wire);
+  padding:6px 0;padding-bottom:max(6px,var(--sab));
+  flex-direction:row;align-items:stretch}
+@media(max-width:768px){#sg-mobile-nav{display:flex}}
+.sg-mnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;background:none;border:none;color:var(--t3);font-family:var(--mono);font-size:7px;
+  letter-spacing:.3px;padding:5px 2px;cursor:pointer;touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;transition:color .12s,background .12s;
+  border-radius:var(--r)}
+.sg-mnav-btn:active{background:rgba(0,255,200,.08)}
+.sg-mnav-btn.active{color:var(--acid)}
+.sg-mnav-ic{font-size:18px;line-height:1;transition:transform .12s}
+.sg-mnav-btn:active .sg-mnav-ic{transform:scale(.88)}
+/* ── Swipe hint overlay (first-time only) ── */
+#sg-swipe-hint{display:none;position:fixed;inset:0;z-index:999;pointer-events:none;
+  align-items:center;justify-content:center}
+
 </style><link rel="manifest" id="sg-manifest">
 <meta name="theme-color" content="#00ffc8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1964,7 +2025,7 @@ const BRIDGE = {
     if(this.ws){ try{this.ws.close();}catch(e){} this.ws=null; }
     var self = this;
     try{
-      var wsUrl = 'ws://127.0.0.1:9898'; /* 9898 ONLY */
+      var wsUrl = (location.protocol==='http:' ? 'ws://'+location.host : 'ws://127.0.0.1:9898'); /* same host when served by bridge */
       const ws = new WebSocket(wsUrl);
       this.ws = ws;
       ws.onopen = ()=>{
@@ -1995,7 +2056,36 @@ const BRIDGE = {
           if(d.type==='cicd_stage_done')  this.log('ok','✔ Stage done: '+d.stage);
           if(d.type==='opar_order_confirmed') toast('⬡ OP-AR order confirmed: '+d.orderId,'ok');
           if(d.type==='opar_activated') toast('▶ OP-AR unit activated','ok');
-          if(d.type==='key_rotated') toast('🔑 API key rotated','ok');
+          if(d.type==='key_rotated'){
+            toast('🔑 API key rotated: '+(d.provider||'')+'  '+(d.masked||''),'ok');
+            addAudit('KEY_ROTATED','Provider: '+(d.provider||'')+' → '+(d.masked||''));
+            /* Refresh rotation badges if APIKeys panel is visible */
+            if(typeof window._renderKeyRotationBadges==='function') window._renderKeyRotationBadges(null);
+          }
+          if(d.type==='key_status_result') {
+            if(typeof window._renderKeyRotationBadges==='function') window._renderKeyRotationBadges(d.status);
+            /* Warn in audit for stale keys */
+            if(d.status) Object.keys(d.status).forEach(function(p){
+              if(d.status[p].stale) addAudit('KEY_STALE_WARN','Provider '+p+' not rotated in '+d.status[p].age_days+' days');
+            });
+          }
+          if(d.type==='connected') {
+            /* Initial handshake from bridge — capture session token */
+            if(d.session_token) { window._sg_session_token = d.session_token; addAudit('SESSION_TOKEN','Bridge session token: '+d.session_token.slice(0,8)+'...'); }
+            if(d.keys) window._sg_bridge_keys = d.keys;
+          }
+          if(d.type==='session_token') {
+            window._sg_session_token = d.token;
+            addAudit('SESSION_TOKEN','Bridge session token received: '+d.token.slice(0,8)+'...');
+          }
+          if(d.type==='session_expired') {
+            addAudit('SESSION_EXPIRED','Bridge session expired — reconnecting');
+            toast('⚠ Bridge session expired — reconnecting','err');
+          }
+          if(d.type==='audit_event'&&d.entry) {
+            /* Push bridge audit events into the live audit feed */
+            if(typeof window._pushBridgeAudit==='function') window._pushBridgeAudit(d.entry);
+          }
           if(d.type==='handshake_ack') { this.log('ok','Bridge handshake ACK'); this.connected=true; this.updateUI('PORT 9898 ✓ LIVE','var(--gn)'); }
           /* Route ai_response to both PiperTTS handler and sg:bridgeMsg event */
           if(d.type==='ai_response'||d.type==='hello'||d.type==='pong'||d.type==='memory_result'||d.type==='collab_event'){
@@ -2181,7 +2271,7 @@ window.renderDash = function(){
   // Start persistent audit flush every 30s
   setInterval(async()=>{
     if((ST&&ST.audit?ST.audit.length:0) && ST.name){
-      const newEntries = (ST&&ST.audit?ST.audit:[])(-10);
+      const newEntries = (ST&&ST.audit?ST.audit:[]).slice(-10);
       for(const e of newEntries){
         await persistAuditEntry(e).catch(()=>{});
       }
@@ -2378,7 +2468,23 @@ var PiperTTS = {
         } else if (d.type === 'error') {
           if (typeof addAudit === 'function') addAudit('BRIDGE_ERR', (d.code||'') + ': ' + (d.msg||''));
           if (d.code === 'RATE_LIMIT' && typeof toast === 'function') toast('Bridge rate limit — slow down', 'err');
+        } else if (d.type === 'connected') {
+          // Bridge sends "connected" on handshake — treat same as "hello"
+          PiperTTS.ready = true;
+          PiperTTS.piperReady = d.piperReady;
+          PiperTTS.retryCount = 0;
+          if (PiperTTS.retryTimer) { clearTimeout(PiperTTS.retryTimer); PiperTTS.retryTimer = null; }
+          addAudit && addAudit('BRIDGE_CONNECTED', 'Bridge v' + (d.version||'?') + ' · Piper: ' + (d.piperReady ? 'READY' : 'FALLBACK'));
+          var bs2 = document.getElementById('bridgeStatus');
+          if (bs2) { bs2.textContent = 'BRIDGE v' + (d.version||'?'); bs2.style.color = d.piperReady ? 'var(--gn)' : 'var(--am)'; }
+          var bb2 = document.getElementById('bridgeQuickBtn');
+          if (bb2) { bb2.textContent = '⚡ LIVE'; bb2.style.color = 'var(--gn)'; bb2.style.borderColor = 'rgba(16,185,129,.3)'; }
+          if (d.session_token) window._sg_session_token = d.session_token;
         }
+        // Always broadcast every bridge message to sg:bridgeMsg so listeners
+        // (AI code review, agent responses, etc.) work regardless of which WS
+        // connection received the message.
+        try { document.dispatchEvent(new CustomEvent('sg:bridgeMsg', { detail: d })); } catch(_) {}
       };
       ws.onclose = function() {
         PiperTTS.ready = false;
@@ -2854,11 +2960,29 @@ var MerkleAudit = {
   }
 };
 
-// Patch addAudit to also add to Merkle — stays synchronous
+// Patch addAudit to also add to Merkle and forward to bridge for security events
 var _baseAddAudit = window.addAudit;
+/* Events that should always be forwarded to the bridge audit log */
+var _BRIDGE_AUDIT_EVENTS = {
+  KEY_ROTATED:1, KEY_STALE_WARN:1, SESSION_TOKEN:1, SESSION_EXPIRED:1,
+  SESSION_CREATED:1, SESSION_CLOSED:1, SESSION_INVALID:1,
+  KC_LOGIN:1, KC_LOGOUT:1, KC_REFRESH_FAIL:1, KC_RESUME:1,
+  TAMPER:1, TAMPER_DETECTED:1, IDS_LOCKOUT:1, HONEYPOT_HIT:1,
+  SECURITY_ALERT:1, UNCAUGHT_ERROR:1, VAULT_SAVE:1, BRIDGE_HELLO:1,
+  BRIDGE_ERR:1, CRED_VERIFY:1, ROLE_SELECT:1
+};
 window.addAudit = function(action, detail, level) {
   if (_baseAddAudit) _baseAddAudit(action, detail, level);
   try { MerkleAudit.addLeaf({ action: action, detail: detail, user: ST ? ST.name : '-' }); } catch(e) {}
+  /* Forward to bridge for persistent server-side audit log */
+  try {
+    if (_BRIDGE_AUDIT_EVENTS[action] && typeof window.bridgeSend === 'function') {
+      window.bridgeSend({
+        type: 'audit_event',
+        entry: { type: action, data: { detail: detail, user: ST ? ST.name : '-' }, ts: Date.now() }
+      });
+    }
+  } catch(_e) {}
 };
 
 // ─── 8. IDS — Intrusion Detection ────────────────────────────────────
@@ -4255,7 +4379,10 @@ log('info','SG_AGENT v2.0 armed — 18 repairs · bridge · patcher · debugger'
 window.bridgeSend = function(payload){
 if(typeof payload!=='object'||payload===null) return;
 try{
-var s=JSON.stringify(Object.assign({source:'sg_ui',ts:Date.now()},payload));
+/* Attach session token if available */
+var base = {source:'sg_ui',ts:Date.now()};
+if(window._sg_session_token) base.session_token = window._sg_session_token;
+var s=JSON.stringify(Object.assign(base,payload));
 if(window.ws&&window.ws.readyState===1){window.ws.send(s);return;}
 if(window.SG_AGENT&&window.SG_AGENT.ws&&window.SG_AGENT.ws.readyState===1){window.SG_AGENT.ws.send(s);return;}
 if(window.BRIDGE&&window.BRIDGE.ws&&window.BRIDGE.ws.readyState===1){window.BRIDGE.ws.send(s);return;}
@@ -15538,15 +15665,36 @@ if (output) output.textContent = '\u23f3 Analyzing ' + lang + ' code via bridge.
 if (applyBtn) applyBtn.style.display = 'none';
 panel && panel.scrollIntoView({behavior:'smooth'});
 
-var bridgeOk = (typeof PiperTTS !== 'undefined') && PiperTTS.ws && PiperTTS.ws.readyState === 1;
-if (bridgeOk) {
+/* Use whichever bridge WebSocket is live: window.ws, PiperTTS.ws, or BRIDGE.ws */
+var _bws = null;
+if (window.ws && window.ws.readyState === 1) _bws = window.ws;
+else if (typeof PiperTTS !== 'undefined' && PiperTTS.ws && PiperTTS.ws.readyState === 1) _bws = PiperTTS.ws;
+else if (window.BRIDGE && window.BRIDGE.ws && window.BRIDGE.ws.readyState === 1) _bws = window.BRIDGE.ws;
+if (_bws) {
   try {
-    PiperTTS.ws.send(JSON.stringify({
+    var _rid = 'cm_' + Date.now();
+    _bws.send(JSON.stringify({
       type: 'ai_code_review',
+      request_id: _rid,
       lang: lang,
       code: code.slice(0, 4000),
       prompt: 'Review this ' + lang + ' code. List errors with line numbers. For each error provide exact fix code. Be concise and precise.'
     }));
+    /* sg:bridgeMsg is dispatched by all WS message handlers */
+    var _handler = function(ev) {
+      var d = ev && ev.detail;
+      if (!d || d.type !== 'ai_code_review_result') return;
+      document.removeEventListener('sg:bridgeMsg', _handler);
+      var out2 = document.getElementById('cm-ai-output');
+      var btn2 = document.getElementById('cm-apply-fix');
+      if (out2) out2.textContent = d.review || d.text || 'No response';
+      if (d.fixed_code && btn2) {
+        btn2.style.display = 'block';
+        btn2._fixFn = function() { setCode(d.fixed_code); };
+      }
+    };
+    document.addEventListener('sg:bridgeMsg', _handler);
+    setTimeout(function() { document.removeEventListener('sg:bridgeMsg', _handler); }, 30000);
     return;
   } catch(e) {}
 }
@@ -15571,7 +15719,7 @@ if (output) {
 
 }
 
-/* Listen for AI response from bridge */
+/* Bridge compat: re-dispatch PiperTTS ai_code_review_result as sg:bridgeMsg */
 if (typeof PiperTTS !== 'undefined' && PiperTTS.ws) {
 var _prev = PiperTTS.ws.onmessage;
 PiperTTS.ws.onmessage = function(e) {
@@ -15579,18 +15727,11 @@ if (_prev) _prev.call(this, e);
 try {
 var d = JSON.parse(e.data);
 if (d.type === 'ai_code_review_result') {
-var output = document.getElementById('cm-ai-output');
-var applyBtn = document.getElementById('cm-apply-fix');
-if (output) output.textContent = d.review || d.text || 'No response';
-if (d.fixed_code && applyBtn) {
-applyBtn.style.display = 'block';
-applyBtn._fixFn = function() { setCode(d.fixed_code); };
-}
+  document.dispatchEvent(new CustomEvent('sg:bridgeMsg', {detail: d}));
 }
 } catch(ex) {}
 };
 }
-
 /* ── EXPOSE GLOBALS ───────────────────────────── */
 
 /* ══ QUOTE BLADE ENGINE ══ */
@@ -20578,15 +20719,36 @@ if (output) output.textContent = '\u23f3 Analyzing ' + lang + ' code via bridge.
 if (applyBtn) applyBtn.style.display = 'none';
 panel && panel.scrollIntoView({behavior:'smooth'});
 
-var bridgeOk = (typeof PiperTTS !== 'undefined') && PiperTTS.ws && PiperTTS.ws.readyState === 1;
-if (bridgeOk) {
+/* Use whichever bridge WebSocket is live: window.ws, PiperTTS.ws, or BRIDGE.ws */
+var _bws = null;
+if (window.ws && window.ws.readyState === 1) _bws = window.ws;
+else if (typeof PiperTTS !== 'undefined' && PiperTTS.ws && PiperTTS.ws.readyState === 1) _bws = PiperTTS.ws;
+else if (window.BRIDGE && window.BRIDGE.ws && window.BRIDGE.ws.readyState === 1) _bws = window.BRIDGE.ws;
+if (_bws) {
   try {
-    PiperTTS.ws.send(JSON.stringify({
+    var _rid = 'cm_' + Date.now();
+    _bws.send(JSON.stringify({
       type: 'ai_code_review',
+      request_id: _rid,
       lang: lang,
       code: code.slice(0, 4000),
       prompt: 'Review this ' + lang + ' code. List errors with line numbers. For each error provide exact fix code. Be concise and precise.'
     }));
+    /* sg:bridgeMsg is dispatched by all WS message handlers */
+    var _handler = function(ev) {
+      var d = ev && ev.detail;
+      if (!d || d.type !== 'ai_code_review_result') return;
+      document.removeEventListener('sg:bridgeMsg', _handler);
+      var out2 = document.getElementById('cm-ai-output');
+      var btn2 = document.getElementById('cm-apply-fix');
+      if (out2) out2.textContent = d.review || d.text || 'No response';
+      if (d.fixed_code && btn2) {
+        btn2.style.display = 'block';
+        btn2._fixFn = function() { setCode(d.fixed_code); };
+      }
+    };
+    document.addEventListener('sg:bridgeMsg', _handler);
+    setTimeout(function() { document.removeEventListener('sg:bridgeMsg', _handler); }, 30000);
     return;
   } catch(e) {}
 }
@@ -20611,7 +20773,7 @@ if (output) {
 
 }
 
-/* Listen for AI response from bridge */
+/* Bridge compat: re-dispatch PiperTTS ai_code_review_result as sg:bridgeMsg */
 if (typeof PiperTTS !== 'undefined' && PiperTTS.ws) {
 var _prev = PiperTTS.ws.onmessage;
 PiperTTS.ws.onmessage = function(e) {
@@ -20619,18 +20781,11 @@ if (_prev) _prev.call(this, e);
 try {
 var d = JSON.parse(e.data);
 if (d.type === 'ai_code_review_result') {
-var output = document.getElementById('cm-ai-output');
-var applyBtn = document.getElementById('cm-apply-fix');
-if (output) output.textContent = d.review || d.text || 'No response';
-if (d.fixed_code && applyBtn) {
-applyBtn.style.display = 'block';
-applyBtn._fixFn = function() { setCode(d.fixed_code); };
-}
+  document.dispatchEvent(new CustomEvent('sg:bridgeMsg', {detail: d}));
 }
 } catch(ex) {}
 };
 }
-
 /* ── EXPOSE GLOBALS ───────────────────────────── */
 window.CM = { runLint: runLint, updatePreview: updatePreview, updateLines: updateLines };
 
@@ -23067,6 +23222,7 @@ if(missing.length){
 _addChain('TAMPER_DETECTED', {missing:missing});
 if(window.SG_MEMORY) SG_MEMORY.add('security_alert',{type:'tamper',missing:missing});
 toast('⚠ DOM tamper detected: '+missing.join(','),'err');
+if(window.bridgeSend) bridgeSend({type:'selffix_report',score:_score,bugs:_bugs,errors:[{event:'TAMPER_DETECTED',missing:missing}]});
 _score = Math.max(0, _score - 20);
 return true;
 }
@@ -23101,6 +23257,7 @@ if(typeof window[fn] !== 'function'){
 _bugs++;
 _addChain('FUNCTION_MISSING', {fn:fn});
 toast('⚠ Missing: window.'+fn+' — reload if issues persist','err');
+if(window.bridgeSend) bridgeSend({type:'selffix_report',score:_score,bugs:_bugs,errors:[{event:'FUNCTION_MISSING',fn:fn}]});
 }
 });
 }
@@ -23120,6 +23277,8 @@ _functionCheck();
 _optimize();
 }
 _addChain('BEAT', {score:Math.round(_score), bugs:_bugs});
+/* Report to bridge every 30s so server has health data */
+if(window.bridgeSend) bridgeSend({type:'selffix_report',score:Math.round(_score),bugs:_bugs,errors:[]});
 setTimeout(_beat, 30000); /* 30s interval */
 }
 
@@ -25949,6 +26108,289 @@ setTimeout(boot, 100);
 
 })();
 
+</script>
+
+
+<!-- ═══ MOBILE NAV BAR ═════════════════════════════════════════════ -->
+<nav id="sg-mobile-nav" aria-label="Mobile navigation">
+  <button class="sg-mnav-btn active" id="mnav-home" onclick="window._mnavGo('home')" aria-label="Dashboard">
+    <span class="sg-mnav-ic">🏠</span><span>HOME</span>
+  </button>
+  <button class="sg-mnav-btn" id="mnav-agents" onclick="window._mnavGo('agents')" aria-label="Agents">
+    <span class="sg-mnav-ic">🤖</span><span>AGENTS</span>
+  </button>
+  <button class="sg-mnav-btn" id="mnav-chat" onclick="window._mnavGo('chat')" aria-label="Chat">
+    <span class="sg-mnav-ic">💬</span><span>CHAT</span>
+  </button>
+  <button class="sg-mnav-btn" id="mnav-code" onclick="window._mnavGo('codemaster')" aria-label="Code">
+    <span class="sg-mnav-ic">💻</span><span>CODE</span>
+  </button>
+  <button class="sg-mnav-btn" id="mnav-menu" onclick="window._mnavToggleSb()" aria-label="Menu">
+    <span class="sg-mnav-ic">☰</span><span>MENU</span>
+  </button>
+</nav>
+
+<!-- ═══ MOBILE JS MODULE ══════════════════════════════════════════ -->
+<script>
+(function() {
+'use strict';
+
+/* ── Touch / swipe state ── */
+var _touchStartX = 0, _touchStartY = 0, _swipeEdge = false;
+var _SWIPE_EDGE = 24;
+var _SWIPE_THRESHOLD = 60;
+
+function _sb()     { return document.getElementById('sb'); }
+function _sbOv()   { return document.getElementById('sbOv'); }
+function _mnBtn(id){ return id ? document.getElementById('mnav-' + id) : null; }
+
+/* ── Sidebar open / close ── */
+function _openSb() {
+  var s = _sb(), ov = _sbOv();
+  if (!s) return;
+  s.classList.add('sb-open');
+  if (ov) { ov.classList.add('on'); ov.style.display = 'block'; }
+  document.body.style.overflow = 'hidden';
+}
+function _closeSb() {
+  var s = _sb(), ov = _sbOv();
+  if (!s) return;
+  s.classList.remove('sb-open');
+  if (ov) { ov.classList.remove('on'); ov.style.display = ''; }
+  document.body.style.overflow = '';
+}
+function _toggleSb() {
+  var s = _sb();
+  if (!s) return;
+  if (s.classList.contains('sb-open')) _closeSb(); else _openSb();
+}
+window._mnavToggleSb = _toggleSb;
+
+/* ── Re-wire menuBtn (preserve existing listeners via clone) ── */
+var _mb = document.getElementById('menuBtn');
+if (_mb) {
+  var _mb2 = _mb.cloneNode(true);
+  _mb.parentNode.replaceChild(_mb2, _mb);
+  _mb2.addEventListener('click', function(e) { e.stopPropagation(); _toggleSb(); });
+}
+
+/* ── Overlay tap closes sidebar ── */
+var _ov = _sbOv();
+if (_ov) {
+  _ov.addEventListener('click', _closeSb);
+  _ov.addEventListener('touchend', function(e) { e.preventDefault(); _closeSb(); }, {passive: false});
+}
+
+/* ── Swipe right from left edge to open; swipe left to close ── */
+document.addEventListener('touchstart', function(e) {
+  var t = e.touches[0];
+  _touchStartX = t.clientX;
+  _touchStartY = t.clientY;
+  _swipeEdge = t.clientX < _SWIPE_EDGE;
+}, {passive: true});
+
+document.addEventListener('touchend', function(e) {
+  var t = e.changedTouches[0];
+  var dx = t.clientX - _touchStartX;
+  var dy = t.clientY - _touchStartY;
+  if (Math.abs(dy) > Math.abs(dx) * 1.5) return;
+  var s = _sb();
+  if (!s) return;
+  if (_swipeEdge && dx > _SWIPE_THRESHOLD)                        { _openSb(); }
+  else if (s.classList.contains('sb-open') && dx < -_SWIPE_THRESHOLD) { _closeSb(); }
+  _swipeEdge = false;
+}, {passive: true});
+
+/* ── Mobile nav panel routing ── */
+var _NAV_MAP = {home:'home', agents:'agents', chat:'chat', codemaster:'code'};
+window._mnavGo = function(panelId) {
+  _closeSb();
+  if (typeof window.loadPanel === 'function') window.loadPanel(panelId);
+  document.querySelectorAll('.sg-mnav-btn').forEach(function(b) { b.classList.remove('active'); });
+  var mn = _mnBtn(_NAV_MAP[panelId]);
+  if (mn) mn.classList.add('active');
+};
+
+/* ── Sync mobile nav active state on panel load events ── */
+document.addEventListener('sg:panelLoaded', function(ev) {
+  if (!ev.detail) return;
+  document.querySelectorAll('.sg-mnav-btn').forEach(function(b) { b.classList.remove('active'); });
+  var mn = _mnBtn(_NAV_MAP[ev.detail.id]);
+  if (mn) mn.classList.add('active');
+  if (window.innerWidth <= 768) _closeSb();
+});
+
+/* ── Touch feedback: scale + dim on press ── */
+document.addEventListener('touchstart', function(e) {
+  var t = e.target.closest('.btn,.nav-item,.rk-btn,.sg-mnav-btn,.auth-cta,.rc');
+  if (t) { t.dataset.touchActive = '1'; t.style.opacity = '0.75'; t.style.transform = 'scale(0.97)'; }
+}, {passive: true});
+function _clearTouch() {
+  document.querySelectorAll('[data-touch-active]').forEach(function(el) {
+    el.style.opacity = ''; el.style.transform = ''; delete el.dataset.touchActive;
+  });
+}
+document.addEventListener('touchend',    _clearTouch, {passive: true});
+document.addEventListener('touchcancel', _clearTouch, {passive: true});
+
+/* ── Swipe-to-dismiss toasts ── */
+var _toastContainer = document.getElementById('toasts');
+if (_toastContainer) {
+  _toastContainer.addEventListener('touchstart', function(e) {
+    var t = e.target.closest('.tst');
+    if (t) t._tsX = e.touches[0].clientX;
+  }, {passive: true});
+  _toastContainer.addEventListener('touchend', function(e) {
+    var t = e.target.closest('.tst');
+    if (t && t._tsX !== undefined) {
+      var dx = e.changedTouches[0].clientX - t._tsX;
+      if (Math.abs(dx) > 60) {
+        t.style.transition = 'transform .2s,opacity .2s';
+        t.style.transform  = 'translateX(' + (dx > 0 ? '120%' : '-120%') + ')';
+        t.style.opacity = '0';
+        setTimeout(function() { if (t.parentNode) t.parentNode.removeChild(t); }, 220);
+      }
+    }
+  }, {passive: true});
+}
+
+/* ── Port conflict detection: check /api/conflicts once on load ── */
+function _checkConflicts() {
+  try {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'http://127.0.0.1:9898/api/conflicts', true);
+    xhr.timeout = 3000;
+    xhr.onload = function() {
+      try {
+        var d = JSON.parse(xhr.responseText);
+        if (d.has_node && typeof window.toast === 'function') {
+          window.toast(
+            '\u26a0 Port conflict: Node.js on 9898. Stop it first, then restart bridge.',
+            'err'
+          );
+        }
+      } catch(_e) {}
+    };
+    xhr.send();
+  } catch(_e) {}
+}
+setTimeout(_checkConflicts, 3000);
+
+/* ── Key Rotation Badges ── */
+window._renderKeyRotationBadges = function(status) {
+  /* status is the key_status_payload dict from the bridge */
+  var container = document.getElementById('ak-rotation-status');
+  if (!container) return;
+  if (!status) {
+    /* Request fresh status */
+    if (typeof window.bridgeSend === 'function') {
+      window.bridgeSend({type:'key_status'});
+    }
+    return;
+  }
+  var html = '';
+  Object.keys(status).forEach(function(p) {
+    var s = status[p];
+    var color = s.stale ? 'var(--pulse)' : (s.set ? 'var(--acid)' : 'var(--t3)');
+    var age = s.age_days !== null ? s.age_days + 'd' : 'untracked';
+    var uses = s.use_count !== undefined ? s.use_count + ' uses' : '';
+    html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--wire)">' +
+      '<span style="font-family:var(--mono);font-size:9px;color:var(--t2);width:80px">' + p + '</span>' +
+      '<span style="font-family:var(--mono);font-size:8px;color:' + color + ';flex:1">' + (s.set ? (s.masked || '•••') : '— not set') + '</span>' +
+      '<span style="font-family:var(--mono);font-size:7px;color:' + color + '">' + age + '</span>' +
+      (uses ? '<span style="font-family:var(--mono);font-size:7px;color:var(--t3)">' + uses + '</span>' : '') +
+      (s.stale ? '<span style="font-size:7px;color:var(--pulse);font-weight:700">⚠ ROTATE NOW</span>' : '') +
+    '</div>';
+  });
+  container.innerHTML = html || '<span style="font-family:var(--mono);font-size:9px;color:var(--t3)">Connect bridge to see key status</span>';
+};
+
+/* ── Inject rotation status widget into APIKeys panel when it loads ── */
+document.addEventListener('sg:panelLoaded', function(ev) {
+  if (!ev.detail || ev.detail.id !== 'apikeys') return;
+  var pa = document.getElementById('pa');
+  if (!pa) return;
+  /* Inject rotation status card if not already present */
+  if (!document.getElementById('ak-rotation-status-card')) {
+    var card = document.createElement('div');
+    card.id = 'ak-rotation-status-card';
+    card.className = 'card';
+    card.style.marginTop = '12px';
+    card.innerHTML = '<div class="card-title">🔑 Key Rotation Status</div>' +
+      '<div id="ak-rotation-status" style="margin-top:8px">' +
+      '<span style="font-family:var(--mono);font-size:9px;color:var(--t3)">Loading…</span></div>';
+    pa.appendChild(card);
+  }
+  window._renderKeyRotationBadges(null);
+});
+
+/* ── Bridge audit event receiver: push into live audit feed ── */
+window._pushBridgeAudit = function(entry) {
+  /* Push entry into ST.audit for display in the Audit panel */
+  if (window.ST && ST.audit) {
+    var ts = new Date(entry.ts || Date.now()).toLocaleTimeString();
+    ST.audit.push({ ts: ts, event: entry.type, data: JSON.stringify(entry.data || {}).slice(0, 80) });
+    if (ST.audit.length > 500) ST.audit.shift();
+  }
+  /* Also forward through addAudit for Merkle and IndexedDB */
+  if (typeof window.addAudit === 'function') {
+    addAudit('BRIDGE_' + entry.type, JSON.stringify(entry.data || {}).slice(0, 120));
+  }
+  /* Update live audit panel if visible */
+  var el = document.querySelector('.audit-live');
+  if (el) {
+    var row = document.createElement('div');
+    row.className = 'audit-entry';
+    var ts = new Date(entry.ts || Date.now()).toLocaleTimeString();
+    row.innerHTML = '<span class="audit-ts">' + ts + '</span>' +
+      '<span class="audit-ev" style="color:var(--plasma)">' + (entry.type||'').slice(0,12) + '</span>' +
+      '<span class="audit-data">' + JSON.stringify(entry.data||{}).slice(0,80) + '</span>';
+    el.insertBefore(row, el.firstChild);
+    if (el.children.length > 200) el.removeChild(el.lastChild);
+  }
+};
+
+/* ── Auto-request key_status every 60s when bridge is connected ── */
+(function _startKeyStatusPoller() {
+  function _poll() {
+    if (typeof window.bridgeSend === 'function') {
+      window.bridgeSend({type:'key_status'});
+    }
+    setTimeout(_poll, 60000);
+  }
+  setTimeout(_poll, 5000);
+})();
+
+/* ── Auto-request recent audit log on bridge connect ── */
+document.addEventListener('sg:bridgeConnected', function() {
+  if (typeof window.bridgeSend === 'function') {
+    window.bridgeSend({type:'audit_query', limit:50});
+    window.bridgeSend({type:'key_status'});
+  }
+});
+
+/* ── Handle audit_result (initial load of server audit log) ── */
+document.addEventListener('sg:bridgeMsg', function(ev) {
+  var d = ev && ev.detail;
+  if (!d) return;
+  if (d.type === 'audit_result' && d.entries) {
+    d.entries.slice(-20).forEach(function(e) {
+      if (typeof window._pushBridgeAudit === 'function') window._pushBridgeAudit(e);
+    });
+  }
+  if (d.type === 'rotate_key_result') {
+    if (d.ok) {
+      if (typeof window.toast === 'function') window.toast('🔑 ' + (d.provider||'') + ' key rotated', 'ok');
+      if (typeof window.addAudit === 'function') addAudit('KEY_ROTATED', d.message || d.provider);
+      if (typeof window._renderKeyRotationBadges === 'function') window._renderKeyRotationBadges(d.status || null);
+    } else {
+      if (typeof window.toast === 'function') window.toast('⚠ Rotation failed: ' + d.message, 'err');
+    }
+  }
+});
+
+console.log('%c[SG Mobile v1] Touch UI + bridge fixes active','color:#00ffc8;font-size:9px');
+})();
 </script>
 
 </body>
