@@ -31,6 +31,6 @@ echo "  PYTHONPATH=.:./backend hypercorn weather_dashboard:app --bind 0.0.0.0:98
 echo "  cd node-bridge && npm start"
 echo ""
 echo "All APIs on 9898: http://localhost:9898/health"
-echo "Node bridge proxies on 9898: http://localhost:9898/api/weather"
+echo "Node bridge on 9899: http://localhost:9899/api/weather"
 echo "Type the port yourself—iSH auto-links fuck up to 0000."
 echo "If crash: pkill hypercorn; rerun the hypercorn line."

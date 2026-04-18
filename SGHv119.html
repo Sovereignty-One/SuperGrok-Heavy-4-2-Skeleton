@@ -2468,7 +2468,23 @@ var PiperTTS = {
         } else if (d.type === 'error') {
           if (typeof addAudit === 'function') addAudit('BRIDGE_ERR', (d.code||'') + ': ' + (d.msg||''));
           if (d.code === 'RATE_LIMIT' && typeof toast === 'function') toast('Bridge rate limit — slow down', 'err');
+        } else if (d.type === 'connected') {
+          // Bridge sends "connected" on handshake — treat same as "hello"
+          PiperTTS.ready = true;
+          PiperTTS.piperReady = d.piperReady;
+          PiperTTS.retryCount = 0;
+          if (PiperTTS.retryTimer) { clearTimeout(PiperTTS.retryTimer); PiperTTS.retryTimer = null; }
+          addAudit && addAudit('BRIDGE_CONNECTED', 'Bridge v' + (d.version||'?') + ' · Piper: ' + (d.piperReady ? 'READY' : 'FALLBACK'));
+          var bs2 = document.getElementById('bridgeStatus');
+          if (bs2) { bs2.textContent = 'BRIDGE v' + (d.version||'?'); bs2.style.color = d.piperReady ? 'var(--gn)' : 'var(--am)'; }
+          var bb2 = document.getElementById('bridgeQuickBtn');
+          if (bb2) { bb2.textContent = '⚡ LIVE'; bb2.style.color = 'var(--gn)'; bb2.style.borderColor = 'rgba(16,185,129,.3)'; }
+          if (d.session_token) window._sg_session_token = d.session_token;
         }
+        // Always broadcast every bridge message to sg:bridgeMsg so listeners
+        // (AI code review, agent responses, etc.) work regardless of which WS
+        // connection received the message.
+        try { document.dispatchEvent(new CustomEvent('sg:bridgeMsg', { detail: d })); } catch(_) {}
       };
       ws.onclose = function() {
         PiperTTS.ready = false;

@@ -48,7 +48,7 @@ echo "  PID: $SERVER_PID"
 
 echo "  Waiting for server..."
 for i in $(seq 1 10); do
-  if curl -sf http://127.0.0.1:9898/health >/dev/null 2>&1; then
+  if curl -sf http://127.0.0.1:9899/health >/dev/null 2>&1; then
     echo "  Health: OK"
     break
   fi
@@ -57,7 +57,7 @@ done
 
 echo ""
 echo "  Open SuperGrok_Global_Role_Dashboard.html in your browser"
-echo "  Port: 9898 (unified - all services)"
+echo "  Port: 9899 (Node.js unified server)"
 echo "  Logs:  ./logs/access.jsonl"
 echo ""
 echo "  Features: Movie · Music · 3D CGI Avatar · OPAR · CodeMaster · Koder"
