@@ -146,7 +146,7 @@ border-bottom:1px solid var(--wire);z-index:200;position:relative}
 #sb.d-hide{width:0;overflow:hidden}
 @media(max-width:768px){
 #sb{position:absolute;top:0;bottom:0;left:0;width:228px;transform:translateX(-100%);transition:transform .22s ease;box-shadow:8px 0 48px rgba(0,0,0,.85);overflow:hidden}
-#sb.open{transform:translateX(0)}
+#sb.sb-open{transform:translateX(0)}
 #sb.d-hide{transform:translateX(-100%);width:228px}
 .sb-ov{position:absolute;inset:0;background:rgba(0,0,0,.6);z-index:140;display:none}
 .sb-ov.on{display:block}
@@ -303,7 +303,7 @@ background-image:url(“data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/200
     transition:transform .25s cubic-bezier(.4,0,.2,1);width:min(280px,85vw)!important;
     box-shadow:4px 0 32px rgba(0,0,0,.8)}
   #sb.sb-open{transform:translateX(0)}
-  .sb-ov{display:block!important}
+  /* .sb-ov visibility is driven by .sb-ov.on — never force display:block here */
   /* ── Panel area: full width, bottom nav clearance ── */
   #pa{padding:12px 10px 84px!important}
   /* ── Toolbar ── */
@@ -329,6 +329,9 @@ background-image:url(“data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/200
   .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
   /* ── CodeMaster: full-width editor ── */
   #cm-editor{font-size:13px!important}
+  /* ── Key panel and dev-tool FAB: hide/reposition above nav bar ── */
+  #sg-key-panel{display:none!important}
+  #sg-devtool,#sg-devtool-fab{bottom:76px!important}
 }
 @media(max-width:480px){
   .bt-name-main{font-size:28px}
@@ -2022,7 +2025,7 @@ const BRIDGE = {
     if(this.ws){ try{this.ws.close();}catch(e){} this.ws=null; }
     var self = this;
     try{
-      var wsUrl = 'ws://127.0.0.1:9898'; /* 9898 ONLY */
+      var wsUrl = (location.protocol==='http:' ? 'ws://'+location.host : 'ws://127.0.0.1:9898'); /* same host when served by bridge */
       const ws = new WebSocket(wsUrl);
       this.ws = ws;
       ws.onopen = ()=>{
@@ -2031,7 +2034,6 @@ const BRIDGE = {
         self.updateUI('PORT 9898 ✓ LIVE','var(--gn)');
         self.log('ok','Bridge connected: '+wsUrl);
         addAudit('CICD_WS','WebSocket connected to port 9898');
-          if(d.session_token) window._sg_session_token = d.session_token;
         toast('⚡ Bridge LIVE — Port 9898','ok');
         if(self.polling){ clearInterval(self.polling); self.polling=null; }
         /* Sync status widgets */
@@ -2066,6 +2068,11 @@ const BRIDGE = {
             if(d.status) Object.keys(d.status).forEach(function(p){
               if(d.status[p].stale) addAudit('KEY_STALE_WARN','Provider '+p+' not rotated in '+d.status[p].age_days+' days');
             });
+          }
+          if(d.type==='connected') {
+            /* Initial handshake from bridge — capture session token */
+            if(d.session_token) { window._sg_session_token = d.session_token; addAudit('SESSION_TOKEN','Bridge session token: '+d.session_token.slice(0,8)+'...'); }
+            if(d.keys) window._sg_bridge_keys = d.keys;
           }
           if(d.type==='session_token') {
             window._sg_session_token = d.token;
@@ -2461,7 +2468,23 @@ var PiperTTS = {
         } else if (d.type === 'error') {
           if (typeof addAudit === 'function') addAudit('BRIDGE_ERR', (d.code||'') + ': ' + (d.msg||''));
           if (d.code === 'RATE_LIMIT' && typeof toast === 'function') toast('Bridge rate limit — slow down', 'err');
+        } else if (d.type === 'connected') {
+          // Bridge sends "connected" on handshake — treat same as "hello"
+          PiperTTS.ready = true;
+          PiperTTS.piperReady = d.piperReady;
+          PiperTTS.retryCount = 0;
+          if (PiperTTS.retryTimer) { clearTimeout(PiperTTS.retryTimer); PiperTTS.retryTimer = null; }
+          addAudit && addAudit('BRIDGE_CONNECTED', 'Bridge v' + (d.version||'?') + ' · Piper: ' + (d.piperReady ? 'READY' : 'FALLBACK'));
+          var bs2 = document.getElementById('bridgeStatus');
+          if (bs2) { bs2.textContent = 'BRIDGE v' + (d.version||'?'); bs2.style.color = d.piperReady ? 'var(--gn)' : 'var(--am)'; }
+          var bb2 = document.getElementById('bridgeQuickBtn');
+          if (bb2) { bb2.textContent = '⚡ LIVE'; bb2.style.color = 'var(--gn)'; bb2.style.borderColor = 'rgba(16,185,129,.3)'; }
+          if (d.session_token) window._sg_session_token = d.session_token;
         }
+        // Always broadcast every bridge message to sg:bridgeMsg so listeners
+        // (AI code review, agent responses, etc.) work regardless of which WS
+        // connection received the message.
+        try { document.dispatchEvent(new CustomEvent('sg:bridgeMsg', { detail: d })); } catch(_) {}
       };
       ws.onclose = function() {
         PiperTTS.ready = false;

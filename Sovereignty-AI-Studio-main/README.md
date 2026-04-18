@@ -71,7 +71,7 @@ Sovereignty-AI-Studio/
 │       ├── DebuggerDetection.swift
 │       ├── FamilyGuardCore.swift
 │       └── VoiceCommandIntegrity.swift
-├── node-bridge/                   # Node.js Express+WS bridge (port 9898)
+├── node-bridge/                   # Node.js Express+WS bridge (port 9899)
 │   ├── server.js
 │   ├── package.json
 │   └── test/bridge.test.js
@@ -158,7 +158,7 @@ Sovereignty-AI-Studio/
 - **backend/**: FastAPI backend with WebSocket support, REST API, Piper TTS integration (port 9898)
 - **frontend/**: React TypeScript frontend with real-time alert notifications and post-quantum auth UI
 - **ios/**: iOS Swift Package (SovereigntyGuard) with debugger detection and audit logging
-- **node-bridge/**: Node.js Express+WS bridge proxying to backend (port 9898)
+- **node-bridge/**: Node.js Express+WS bridge proxying to backend (port 9899)
 - **Piper TTS**: Piper text-to-speech integration for audio alerts (see [docs/PIPER_INTEGRATION.md](docs/PIPER_INTEGRATION.md))
 
 ## Features
@@ -242,8 +242,8 @@ cd frontend
 npm install
 
 # Set environment variables
-echo "REACT_APP_API_URL=http://localhost:9898/api/v1" > .env
-echo "REACT_APP_WS_URL=ws://localhost:9898" >> .env
+echo "REACT_APP_API_URL=http://localhost:9899/api/v1" > .env
+echo "REACT_APP_WS_URL=ws://localhost:9899" >> .env
 
 # Run the development server
 npm start
