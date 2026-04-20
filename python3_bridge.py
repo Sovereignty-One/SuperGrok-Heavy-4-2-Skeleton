@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
 SuperGrok Unified Bridge v4.0
-Single port 9898 — HTTP + WebSocket upgrade on same socket.
+Single port 9897 — HTTP + WebSocket upgrade on same socket.
 No external dependencies. Pure Python 3.6+ stdlib only.
 
 Quick start (a-Shell or iSH):
 export ANTHROPIC_API_KEY=sk-ant-…
 python3 bridge.py
 
-Then open Safari at:  http://127.0.0.1:9898
+Then open Safari at:  http://127.0.0.1:9897
 """
 
 import base64
@@ -25,7 +25,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-PORT = int(os.environ.get("SG_PORT", 9898))
+PORT = int(os.environ.get("SG_PORT", 9897))
 HOST = "127.0.0.1"
 MAX_CODE_REVIEW_LENGTH = 4000  # max chars of user code sent to AI for review
 
@@ -1093,7 +1093,7 @@ def handle_conn(conn: socket.socket, addr) -> None:
 
 if __name__ == "__main__":
     # ------------------------------------------------------------------
-    # Port conflict detection — warn if Node.js already holds port 9898
+    # Port conflict detection — warn if Node.js already holds port 9897
     # ------------------------------------------------------------------
     def _check_port_conflict(port: int) -> tuple:
         """Return (pid, process_name) if something already owns the port, else (None, None)."""
@@ -1139,7 +1139,7 @@ if __name__ == "__main__":
         if _is_node:
             print("   Cause   : Node.js server (Unified_Server.js) already bound to this port.")
             print(f"   Fix     : Stop Node first — `kill {_conflict_pid}`")
-            print("             Node.js should run on port 9899, not 9898.")
+            print("             Node.js should run on port 9899, not 9897.")
             print("             Or set a different port: SG_PORT=9900 python3 python3_bridge.py")
         else:
             print(f"   Fix     : kill {_conflict_pid}  or set SG_PORT=<other port>")

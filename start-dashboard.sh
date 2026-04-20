@@ -1,10 +1,10 @@
 #!/bin/sh
 # SuperGrok Heavy 4.2 - Dashboard Launcher
-# Runs python3_bridge.py on port 9898.
+# Runs python3_bridge.py on port 9897.
 # Works on iSH (Alpine Linux / iOS), macOS, and Linux.
 # No Node.js required.
 
-SG_PORT="${SG_PORT:-9898}"
+SG_PORT="${SG_PORT:-9897}"
 BRIDGE="python3_bridge.py"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 

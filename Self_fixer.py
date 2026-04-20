@@ -2,11 +2,11 @@
 Act as an experienced **distributed systems architect and polyglot principal engineer (Python + Node.js)** specializing in secure event pipelines, verification systems, and autonomous AI infrastructure.
 
 ### Task
-Implement a **fully working single-port bridge (port 9898)** that connects the **Self-Fixer AI Python system** with the **SuperGrok-Heavy-4-2-Skeleton Merkle verification module**.
+Implement a **fully working single-port bridge (port 9897)** that connects the **Self-Fixer AI Python system** with the **SuperGrok-Heavy-4-2-Skeleton Merkle verification module**.
 
 The bridge must:
 
-- run **one gateway service on port 9898**
+- run **one gateway service on port 9897**
 - spawn a **Node Merkle worker internally**
 - route **all events, verification requests, and metrics through the gateway**
 - integrate with the **SelfFixer runtime**
@@ -354,7 +354,7 @@ npm install
 
 Start bridge:
 
-uvicorn bridge.bridge_server:app --host 0.0.0.0 --port 9898
+uvicorn bridge.bridge_server:app --host 0.0.0.0 --port 9897
 
 Start SelfFixer:
 
@@ -362,7 +362,7 @@ python -m selffixerai.main
 
 Test:
 
-curl http://localhost:9898/health
+curl http://localhost:9897/health
 
 Expected:
 

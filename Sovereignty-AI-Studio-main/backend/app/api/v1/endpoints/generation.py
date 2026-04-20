@@ -15,7 +15,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# In-memory store for demo (production uses database)
+# WARNING: In-memory store — data lost on restart. Replace with SQLAlchemy
+# models (app.models.*) + database session for production persistence.
+# See: app/core/database.py for the DB session factory.
 _generations = []
 _next_id = 1
 
