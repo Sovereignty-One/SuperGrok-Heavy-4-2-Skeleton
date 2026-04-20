@@ -20,8 +20,8 @@ const { WebSocketServer } = require('ws');
 // ---------------------------------------------------------------------------
 // Config from environment (sensible defaults for local / iSH)
 // ---------------------------------------------------------------------------
-const BACKEND_URL = process.env.BACKEND_URL || 'http://127.0.0.1:9898';
-const WEATHER_URL = process.env.WEATHER_URL || 'http://127.0.0.1:9898';
+const BACKEND_URL = process.env.BACKEND_URL || 'http://127.0.0.1:9897';
+const WEATHER_URL = process.env.WEATHER_URL || 'http://127.0.0.1:9897';
 const PORT = parseInt(process.env.NODE_BRIDGE_PORT || '9899', 10);
 
 const app = express();
@@ -29,9 +29,9 @@ app.use(express.json());
 
 // ---------------------------------------------------------------------------
 // CORS — allow origins listed in CORS_ORIGIN (comma-separated) or default to
-// both 9898 (Python bridge) and 9899 (node-bridge itself) for local dev.
+// 9897 (Python bridge), 9898 (Koder), and 9899 (node-bridge itself) for local dev.
 // ---------------------------------------------------------------------------
-const _CORS_WHITELIST = (process.env.CORS_ORIGIN || 'http://127.0.0.1:9898,http://localhost:9898,http://127.0.0.1:9899,http://localhost:9899')
+const _CORS_WHITELIST = (process.env.CORS_ORIGIN || 'http://127.0.0.1:9897,http://localhost:9897,http://127.0.0.1:9898,http://localhost:9898,http://127.0.0.1:9899,http://localhost:9899')
   .split(',').map(s => s.trim()).filter(Boolean);
 
 app.use((_req, res, next) => {

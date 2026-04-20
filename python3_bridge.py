@@ -25,7 +25,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-PORT = int(os.environ.get("SG_PORT", 9898))
+PORT = int(os.environ.get("SG_PORT", 9897))
 HOST = "127.0.0.1"
 MAX_CODE_REVIEW_LENGTH = 4000  # max chars of user code sent to AI for review
 
