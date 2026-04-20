@@ -1646,7 +1646,7 @@ h+=kv('Bridge','ws://127.0.0.1:9897 (unified)');
 h+=kv('Auth (unified port)','via 9897');
 h+=kv('Piper TTS',tag(STATE.piperActive?'Active':'Inactive',STATE.piperActive?'tg':'ta2'));
 h+='<div class="btn-row" style="margin-top:10px"><button class="btn bp" onclick="Bridge.connect()">Reconnect Bridge</button><button class="btn bs" onclick="Bridge.pingHealth()">Ping Health</button></div>';
-h+='<div class="banner-i" style="margin-top:8px">Run: <code>node Unified_Server.js</code> — all services unified on 9897 · a-shell / iSH compatible</div></div>';
+h+='<div class="banner-i" style="margin-top:8px">Run: <code>python3 python3_bridge.py</code> — bridge on port 9897 · a-shell / iSH compatible</div></div>';
 h+=’</div>’;
 // GitHub
 h+=’<div class="card"><div class="ct">🐙 GitHub Token</div>’;
@@ -3061,7 +3061,7 @@ var Term={
   cmdSession:function(){if(!STATE.user){this.line('No session','w');return;}this.line('User: '+STATE.user.name,'i');this.line('Role: '+(STATE.role?STATE.role.lbl:'—'),'i');this.line('Level: L'+(STATE.role?STATE.role.lvl:1),'i');this.line('Uptime: '+this.uptime(),'i');this.line('Audit: '+STATE.auditLog.length+' entries','i');this.line('Memory: '+STATE.memory.length+' cards','i');},
   cmdAlgo:function(){[['ML-KEM-768','NIST FIPS 203'],['Dilithium3','NIST FIPS 204'],['BLAKE3','BLAKE3 2020'],['ChaCha20-Poly1305','RFC 8439']].forEach(function(a){Term.line('  '+a[0].padEnd(20)+a[1],'s');});},
   cmdAudit:function(){this.line('── Last 10 ──','i');(this.audit.length?this.audit:STATE.auditLog).slice(-10).forEach(function(e){Term.line('  '+(e.allowed!==false?'✓':'⛔')+' '+(e.cmd||e.msg||''),'i');});},
-  cmdPing:function(){var self=this;this.line('Pinging 9897…','d');fetch('http://127.0.0.1:9897/health').then(function(r){return r.json();}).then(function(d){self.line('PONG ✓ '+JSON.stringify(d),'s');}).catch(function(){self.line('Bridge offline. Run: node Unified_Server.js','w');});},
+  cmdPing:function(){var self=this;this.line('Pinging 9897…','d');fetch('http://127.0.0.1:9897/health').then(function(r){return r.json();}).then(function(d){self.line('PONG ✓ '+JSON.stringify(d),'s');}).catch(function(){self.line('Bridge offline. Run: python3 python3_bridge.py','w');});},
   cmdWhoami:function(){this.line((STATE.user?STATE.user.name:'SYSTEM')+' · '+(STATE.roleKey||'—'),'i');},
   cmdLs:function(){Object.keys(PANELS).slice(0,20).forEach(function(p){Term.line('  '+p,'d');});this.line('  … '+(Math.max(0,Object.keys(PANELS).length-20))+' more','d');},
   cmdHash:function(text){if(!text){this.line('Usage: hash <text>','w');return;}this.line('Hash: '+sha256str(text),'s');},

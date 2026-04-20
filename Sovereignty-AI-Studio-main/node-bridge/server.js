@@ -19,6 +19,8 @@ const { WebSocketServer } = require('ws');
 
 // ---------------------------------------------------------------------------
 // Config from environment (sensible defaults for local / iSH)
+// In Docker: BACKEND_URL is set to http://backend:9898 (internal container name)
+// Standalone: defaults to Python bridge on 9897
 // ---------------------------------------------------------------------------
 const BACKEND_URL = process.env.BACKEND_URL || 'http://127.0.0.1:9897';
 const WEATHER_URL = process.env.WEATHER_URL || 'http://127.0.0.1:9897';
