@@ -12,7 +12,7 @@
 'use strict';
 
 // ─── CONSTANTS ────────────────────────────────────────
-const SG_API    = 'http://127.0.0.1:9898';
+const SG_API    = 'http://127.0.0.1:9897';
 const SG_VER    = 'v13.1-sec';
 const TOKEN_KEY = 'sg_jwt';
 const ROLE_KEY2 = 'sg_role_claim';
@@ -923,7 +923,7 @@ letter-spacing:2px;text-transform:uppercase;margin-bottom:12px}
       <button class="tbb" id="tbbBack" onclick="D.back()" title="Alt+←">← BACK</button>
       <button class="tbb" id="tbbVoice" onclick="D.toggleVoice()" title="AI Voice">🔇 AI</button>
       <button class="tbb" id="tbbMic" onclick="D.toggleMic()" title="Mic">🎙 OFF</button>
-      <button class="tbb" id="tbbBridge" onclick="D.load('bridge')">⚡ 9898</button>
+      <button class="tbb" id="tbbBridge" onclick="D.load('bridge')">⚡ 9897</button>
       <button class="tbb" id="tbbMem" onclick="D.load('memory')">🧠 MEM</button>
       <div class="vi" id="voiceInd"><span class="vi-d">●</span> LISTENING</div>
     </div>
@@ -1591,7 +1591,7 @@ PANELS.dashboard = function(){
   h+=kv('GPT-4 (OpenAI)',tag(SS.get('sg_openai_key')?'Key Configured':'No Key (Add in Bridge)','tb2'));
   h+=kv('Grok (xAI)',tag(SS.get('sg_xai_key')?'Key Configured':'No Key (Add in Bridge)','tv'));
   h+=kv('Piper TTS',tag(STATE.piperActive?'Online':'Offline · Fallback active',STATE.piperActive?'tg':'ta2'));
-  h+=kv('Port 9898 Bridge',tag(STATE.bridgeOnline?'Connected':'Offline · Run server_9898.js',STATE.bridgeOnline?'tg':'tr2'));
+  h+=kv('Port 9897 Bridge',tag(STATE.bridgeOnline?'Connected':'Offline · Run python3_bridge.py',STATE.bridgeOnline?'tg':'tr2'));
   h+='<div class="btn-row" style="margin-top:10px"><button class="btn bp" onclick="D.load(\'ai_chat\')">🤖 Open AI Chat</button><button class="btn bs" onclick="D.load(\'bridge\')">⚡ Bridge Config</button><button class="btn bs" onclick="D.load(\'memory\')">🧠 Memory Cards</button></div></div>';
   return h;
 };
@@ -1629,8 +1629,8 @@ return h;
 
 // ── BRIDGE CONFIG ─────────────────────────────────────
 PANELS.bridge = function(){
-var h=ph(‘Bridge Configuration’,’// Port 9898 · API Keys · Piper + Coqui TTS · No Google/Meta’);
-h+=comp([‘Port 9898’,‘Piper TTS’,‘WebSocket’,‘Self-Cert’,‘Zero External Calls’]);
+var h=ph(‘Bridge Configuration’,’// Port 9897 · API Keys · Piper + Coqui TTS · No Google/Meta’);
+h+=comp([‘Port 9897’,‘Piper TTS’,‘WebSocket’,‘Self-Cert’,‘Zero External Calls’]);
 h+=’<div class="g2">’;
 // AI Keys
 h+=’<div class="card"><div class="ct">🤖 AI Provider Keys</div>’;
@@ -1639,14 +1639,14 @@ h+=’<div class="fg" style="margin-bottom:8px"><label>OPENAI API KEY (GPT-4)</l
 h+=’<div class="fg" style="margin-bottom:8px"><label>XAI API KEY (Grok)</label><input class="fi" id="xaiKey" type="password" placeholder="xai-…" value="'+(SS.get('sg_xai_key')||'')+'"></div>’;
 h+=’<button class="btn bp btn-w" onclick="saveAIKeys()" style="margin-top:4px">Save API Keys</button></div>’;
 // Bridge
-h+='<div class="card"><div class="ct">⚡ Port 9898 Unified</div>';
+h+='<div class="card"><div class="ct">⚡ Port 9897 Unified</div>';
 h+=kv('Status',tag(STATE.bridgeOnline?'ONLINE':'OFFLINE',STATE.bridgeOnline?'tg':'tr2'));
-h+=kv('Primary','ws://127.0.0.1:9898 (a-shell/iSH)');
-h+=kv('Bridge','ws://127.0.0.1:9898 (unified)');
-h+=kv('Auth (unified port)','via 9898');
+h+=kv('Primary','ws://127.0.0.1:9897 (a-shell/iSH)');
+h+=kv('Bridge','ws://127.0.0.1:9897 (unified)');
+h+=kv('Auth (unified port)','via 9897');
 h+=kv('Piper TTS',tag(STATE.piperActive?'Active':'Inactive',STATE.piperActive?'tg':'ta2'));
 h+='<div class="btn-row" style="margin-top:10px"><button class="btn bp" onclick="Bridge.connect()">Reconnect Bridge</button><button class="btn bs" onclick="Bridge.pingHealth()">Ping Health</button></div>';
-h+='<div class="banner-i" style="margin-top:8px">Run: <code>node Unified_Server.js</code> — all services unified on 9898 · a-shell / iSH compatible</div></div>';
+h+='<div class="banner-i" style="margin-top:8px">Run: <code>node Unified_Server.js</code> — all services unified on 9897 · a-shell / iSH compatible</div></div>';
 h+=’</div>’;
 // GitHub
 h+=’<div class="card"><div class="ct">🐙 GitHub Token</div>’;
@@ -2126,7 +2126,7 @@ h+=‘<div class="btn-row" style="margin-top:8px">’;
 h+=‘<button class="btn bp" onclick="Bridge.wsSend({type:‘piper_speak’,text:el(‘voiceText’).value})">🔊 Piper Speak</button>’;
 h+=‘<button class="btn bs" onclick="Bridge.wsSend({type:‘coqui_speak’,text:el(‘voiceText’).value})">🔊 Coqui Speak</button>’;
 h+=‘</div>’;
-h+=‘<div class="banner-i" style="margin-top:8px">Both engines run 100% on-device via 127.0.0.1:9898. No data leaves your machine.</div>’;
+h+=‘<div class="banner-i" style="margin-top:8px">Both engines run 100% on-device via 127.0.0.1:9897. No data leaves your machine.</div>’;
 h+=‘</div>’;
 return h;
 };
@@ -2206,7 +2206,7 @@ h+=‘</div>’;
 h+=‘<div class="card"><div class="ct">🏠 OPAR Location</div>’;
 h+=‘<div class="ir"><select class="inp" id="oparLocation"><option>living_room</option><option>bedroom</option><option>kitchen</option><option>home_office</option><option>garage</option><option>patio</option></select></div>’;
 h+=‘<button class="btn bs" style="margin-top:6px" onclick="Bridge.wsSend({type:‘opar_design’,opar_id:‘default’,appearance:{location:el(‘oparLocation’).value}});toast(‘Location updated’,‘ok’)">📍 Move OPAR</button>’;
-h+=‘<div class="banner-i" style="margin-top:8px">OPAR runs entirely on-premises at 127.0.0.1:9898. No data leaves your home network. Every interaction is HMAC-SHA256 audit-logged for court admissibility.</div>’;
+h+=‘<div class="banner-i" style="margin-top:8px">OPAR runs entirely on-premises at 127.0.0.1:9897. No data leaves your home network. Every interaction is HMAC-SHA256 audit-logged for court admissibility.</div>’;
 h+=‘</div>’;
 h+=‘<div class="card"><div class="ct">🧑 OPAR Human Appearance Designer</div>’;
 h+=kv(‘Body Build’,‘<select class="inp" id="oparBuild" style="width:140px"><option>athletic</option><option>average</option><option>slim</option><option>stocky</option><option>tall_lean</option></select>’);
@@ -2273,7 +2273,7 @@ h+=‘<span class="cm-badge cm-badge-g" id="cmCleanCount">0 clean</span>’;
 h+=‘</div>’;
 h+=‘<div id="cmResults" style="border:1px solid var(--bd);border-radius:8px;overflow:hidden;max-height:400px;overflow-y:auto;background:rgba(0,0,0,.3)"></div>’;
 h+=‘</div>’;
-h+=‘<div class="banner-i">CodeMaster runs entirely on 127.0.0.1:9898. No code leaves your machine. Red = error · Yellow/Orange = needs work · Green = good · Click fix buttons to auto-repair.</div>’;
+h+=‘<div class="banner-i">CodeMaster runs entirely on 127.0.0.1:9897. No code leaves your machine. Red = error · Yellow/Orange = needs work · Green = good · Click fix buttons to auto-repair.</div>’;
 return h;
 };
 
@@ -2318,14 +2318,14 @@ h+=‘<div class="kd-status">’;
 h+=‘<span><span class="kd-indicator" id="kdStatusDot" style="background:#27c93f"></span><span id="kdStatusText">Ready</span></span>’;
 h+=‘<span id="kdLineInfo">Ln 1, Col 1</span>’;
 h+=‘<span id="kdIssueCount">0 issues</span>’;
-h+=‘<span>127.0.0.1:9898</span>’;
+h+=‘<span>127.0.0.1:9897</span>’;
 h+=‘</div></div>’;
 h+=‘<div style="display:flex;gap:6px;margin-top:8px">’;
 h+=‘<button class="btn bp" onclick="kdCheck()" style="padding:5px 12px">🔍 Full Check</button>’;
 h+=‘<button class="btn bs" onclick="kdSave()" style="padding:5px 12px">💾 Save</button>’;
 h+=‘<button class="btn bs" onclick="kdRun()" style="padding:5px 12px">▶️ Run</button>’;
 h+=‘</div></div>’;
-h+=‘<div class="banner-i">KODER runs on 127.0.0.1:9898 via a-shell/iSH. No Google · No Meta. Syntax: 🔴 Red = Error · 🟡 Yellow = Needs Work · 🟢 Green = Good</div>’;
+h+=‘<div class="banner-i">KODER runs on 127.0.0.1:9897 via a-shell/iSH. No Google · No Meta. Syntax: 🔴 Red = Error · 🟡 Yellow = Needs Work · 🟢 Green = Good</div>’;
 return h;
 };
 
@@ -2335,7 +2335,7 @@ var h=ph(‘Dashboard Builder AI’,‘// Auto-Create Dashboards Per Role · AI 
 h+=comp([‘AI Layout’,‘Per-Role’,‘Preview’,‘Export’,‘No Cloud’,‘Court Admissible’]);
 h+=‘<div class="card"><div class="ct">🤖 AI Dashboard Creator</div>’;
 h+=kv(‘Engine’,‘On-Device AI Layout Generator’);
-h+=kv(‘Connection’,‘127.0.0.1:9898 (a-shell / iSH)’);
+h+=kv(‘Connection’,‘127.0.0.1:9897 (a-shell / iSH)’);
 h+=kv(‘Cloud Dependencies’,tag(‘None’,‘tg’));
 h+=‘<div style="margin-top:10px">’;
 h+=‘<div class="ir"><select class="inp" id="dbRole" style="width:160px">’;
@@ -2828,9 +2828,9 @@ var Bridge={
   ws:null,
   connect:function(){
     try{
-      this.ws=new WebSocket('ws://127.0.0.1:9898'); var _sg_tok=STATE.sgToken||sessionStorage.getItem('sg_jwt')||'';
+      this.ws=new WebSocket('ws://127.0.0.1:9897'); var _sg_tok=STATE.sgToken||sessionStorage.getItem('sg_jwt')||'';
       this.ws.onopen=function(){STATE.bridgeOnline=true;STATE.piperActive=true;var _b=el('tbbBridge');if(_b){_b.textContent='⚡ LIVE';_b.classList.add('on');}var _l=el('liveLabel');if(_l)_l.textContent='LIVE';addAudit('BRIDGE','Unified server connected');var _tok=STATE.sgToken||sessionStorage.getItem('sg_jwt')||'';if(_tok)Bridge.ws.send(JSON.stringify({type:'token_verify',token:_tok}));};
-      this.ws.onclose=function(){STATE.bridgeOnline=false;STATE.piperActive=false;el('tbbBridge').textContent='⚡ 9898';el('tbbBridge').classList.remove('on');};
+      this.ws.onclose=function(){STATE.bridgeOnline=false;STATE.piperActive=false;el('tbbBridge').textContent='⚡ 9897';el('tbbBridge').classList.remove('on');};
       this.ws.onerror=function(){STATE.bridgeOnline=false;};
       this.ws.onmessage=function(e){
       var _d;try{_d=JSON.parse(e.data);}catch{return;}
@@ -2867,7 +2867,7 @@ var Bridge={
     }catch(e){STATE.bridgeOnline=false;}
   },
   pingHealth:function(){
-    fetch('http://127.0.0.1:9898/health').then(function(r){return r.json();}).then(function(d){toast('Bridge: '+JSON.stringify(d),'ok');}).catch(function(){toast('Bridge offline','err');});
+    fetch('http://127.0.0.1:9897/health').then(function(r){return r.json();}).then(function(d){toast('Bridge: '+JSON.stringify(d),'ok');}).catch(function(){toast('Bridge offline','err');});
   },
   speak:function(text){
     if(!text)return;
@@ -2908,9 +2908,9 @@ async function sendChat(){
       responseText=data3.choices&&data3.choices[0]?data3.choices[0].message.content:'Error from Grok API';
     }else if(Bridge.ws&&Bridge.ws.readyState===1){
       Bridge.ws.send(JSON.stringify({type:'ai_query',text:memCtx+text,model:model,system:sys,apiKey:model==='claude'?SS.get('sg_anthropic_key'):model==='gpt'?SS.get('sg_openai_key'):model==='grok'?SS.get('sg_xai_key'):'',token:STATE.sgToken||sessionStorage.getItem('sg_jwt')||''}));
-      responseText='[Sent to Bridge port 9898] No direct API key for '+model+'. Add key in Bridge Config → AI Provider Keys.';
+      responseText='[Sent to Bridge port 9897] No direct API key for '+model+'. Add key in Bridge Config → AI Provider Keys.';
     }else{
-      responseText='No API key set for '+model+'. Open Bridge Config (⚡ 9898) → AI Provider Keys to add:\n• Claude: console.anthropic.com\n• GPT-4: platform.openai.com\n• Grok: console.x.ai';
+      responseText='No API key set for '+model+'. Open Bridge Config (⚡ 9897) → AI Provider Keys to add:\n• Claude: console.anthropic.com\n• GPT-4: platform.openai.com\n• Grok: console.x.ai';
     }
     if(thinkMsg)thinkMsg.remove();
     addChatMsg('ai',responseText,model==='claude'?'Claude':model==='gpt'?'GPT-4o':'Grok');
@@ -3061,14 +3061,14 @@ var Term={
   cmdSession:function(){if(!STATE.user){this.line('No session','w');return;}this.line('User: '+STATE.user.name,'i');this.line('Role: '+(STATE.role?STATE.role.lbl:'—'),'i');this.line('Level: L'+(STATE.role?STATE.role.lvl:1),'i');this.line('Uptime: '+this.uptime(),'i');this.line('Audit: '+STATE.auditLog.length+' entries','i');this.line('Memory: '+STATE.memory.length+' cards','i');},
   cmdAlgo:function(){[['ML-KEM-768','NIST FIPS 203'],['Dilithium3','NIST FIPS 204'],['BLAKE3','BLAKE3 2020'],['ChaCha20-Poly1305','RFC 8439']].forEach(function(a){Term.line('  '+a[0].padEnd(20)+a[1],'s');});},
   cmdAudit:function(){this.line('── Last 10 ──','i');(this.audit.length?this.audit:STATE.auditLog).slice(-10).forEach(function(e){Term.line('  '+(e.allowed!==false?'✓':'⛔')+' '+(e.cmd||e.msg||''),'i');});},
-  cmdPing:function(){var self=this;this.line('Pinging 9898…','d');fetch('http://127.0.0.1:9898/health').then(function(r){return r.json();}).then(function(d){self.line('PONG ✓ '+JSON.stringify(d),'s');}).catch(function(){self.line('Bridge offline. Run: node Unified_Server.js','w');});},
+  cmdPing:function(){var self=this;this.line('Pinging 9897…','d');fetch('http://127.0.0.1:9897/health').then(function(r){return r.json();}).then(function(d){self.line('PONG ✓ '+JSON.stringify(d),'s');}).catch(function(){self.line('Bridge offline. Run: node Unified_Server.js','w');});},
   cmdWhoami:function(){this.line((STATE.user?STATE.user.name:'SYSTEM')+' · '+(STATE.roleKey||'—'),'i');},
   cmdLs:function(){Object.keys(PANELS).slice(0,20).forEach(function(p){Term.line('  '+p,'d');});this.line('  … '+(Math.max(0,Object.keys(PANELS).length-20))+' more','d');},
   cmdHash:function(text){if(!text){this.line('Usage: hash <text>','w');return;}this.line('Hash: '+sha256str(text),'s');},
   cmdMemory:function(){this.line('── Memory ('+STATE.memory.length+') ──','i');STATE.memory.slice(0,5).forEach(function(m,i){Term.line('  #'+(i+1)+' '+(m.title||'').slice(0,50),'i');});},
   async cmdGitHub(rest){var p=rest.split(/\s+/),s=p[0]||'';if(s==='list'||s==='repos'){await GH.myRepos();this.line('Repos loaded','s');}else if(s==='create'&&p[1]){var nm=el('ghNewName');if(nm)nm.value=p.slice(1).join('-');await GH.createRepo();}else if(s==='open'&&p[1]){await GH.openRepo(p[1],'main');this.line('Repo opened','s');}else this.line('github list | github create <n> | github open <user/repo>','d');},
   cmdAI:function(text){if(!text){this.line('Usage: ai <question>','w');return;}var inp=el('chatInput');if(inp)inp.value=text;this.line('Sending to AI…','d');sendChat().then(function(){Term.line('Response in AI Chat panel','s');});},
-  cmdServer:function(cmd){var self=this;this.line('→ Bridge…','d');fetch('http://127.0.0.1:9898/api/execute-command',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({command:cmd,sessionId:Date.now().toString(36),role:STATE.roleKey})}).then(function(r){return r.json();}).then(function(d){(d.output||JSON.stringify(d)).split('\n').forEach(function(l){self.line(l,'i');});}).catch(function(){self.line('Bridge offline','w');});},
+  cmdServer:function(cmd){var self=this;this.line('→ Bridge…','d');fetch('http://127.0.0.1:9897/api/execute-command',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({command:cmd,sessionId:Date.now().toString(36),role:STATE.roleKey})}).then(function(r){return r.json();}).then(function(d){(d.output||JSON.stringify(d)).split('\n').forEach(function(l){self.line(l,'i');});}).catch(function(){self.line('Bridge offline','w');});},
   addAuditEntry:function(cmd,allowed,reason){var prev=this.audit.length?this.audit[this.audit.length-1].hash:'0';var hash=sha256str(cmd+Date.now()+prev);var entry={ts:Date.now(),cmd:cmd,allowed:allowed,reason:reason,hash:hash};this.audit.push(entry);this.saveAudit();this.renderAuditRow(entry);},
   renderAuditRow:function(e){var log=el('termAuditLog'),empty=el('termAuditEmpty');if(!log)return;if(empty)empty.style.display='none';var row=document.createElement('div');row.style.cssText='display:flex;align-items:center;gap:6px;padding:3px 6px;background:'+(e.allowed?'rgba(0,232,122,.04)':'rgba(255,61,90,.06)')+';border:1px solid '+(e.allowed?'rgba(0,232,122,.1)':'rgba(255,61,90,.15)')+';border-radius:4px;margin-bottom:3px';row.innerHTML='<span style="font-size:9px;color:'+(e.allowed?'var(--gn)':'var(--rd)')+'>'+(e.allowed?'✓':'⛔')+'</span><span style="font-family:var(--mono);font-size:7.5px;color:var(--mu2);flex-shrink:0">'+new Date(e.ts).toLocaleTimeString()+'</span><span style="font-size:9px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(e.cmd)+'</span><span style="font-family:var(--mono);font-size:7px;color:var(--mu2)">'+e.hash.slice(0,8)+'…</span>';log.appendChild(row);log.scrollTop=log.scrollHeight;},
   saveAudit:function(){try{localStorage.setItem('sg_term_audit',JSON.stringify(this.audit.slice(-200)));}catch(e){}},
@@ -3131,7 +3131,7 @@ document.addEventListener('keydown',function(e){if(e.altKey&&e.key==='ArrowLeft'
 
 function showDash(){el('auth').classList.remove('visible');el('dash').classList.add('visible');var m=SS.get('sg_memory');if(m&&Array.isArray(m))STATE.memory=m;var a=SS.get('sg_audit');if(a&&Array.isArray(a))STATE.auditLog=a;STATE.ghToken=SS.get('sg_gh_token')||null;D.init();speak('Welcome back, '+(STATE.user?STATE.user.name.split(' ')[0]:'Commander')+'.');}
 
-(function boot(){var msgs=['Initializing quantum context…','Loading 60+ role definitions…','Verifying PQ signatures…','Connecting to 127.0.0.1:9898…','Calibrating Dilithium3…','System ready.'];var fill=el('bootFill'),msg=el('bootMsg'),i=0;var iv=setInterval(function(){if(i>=msgs.length){clearInterval(iv);var boot=el('boot');boot.classList.add('fade');setTimeout(function(){boot.classList.remove('visible');el('auth').classList.add('visible');A.init();},600);return;}if(fill)fill.style.width=((i+1)/msgs.length*100)+'%';if(msg)msg.textContent=msgs[i];i++;},260);})();
+(function boot(){var msgs=['Initializing quantum context…','Loading 60+ role definitions…','Verifying PQ signatures…','Connecting to 127.0.0.1:9897…','Calibrating Dilithium3…','System ready.'];var fill=el('bootFill'),msg=el('bootMsg'),i=0;var iv=setInterval(function(){if(i>=msgs.length){clearInterval(iv);var boot=el('boot');boot.classList.add('fade');setTimeout(function(){boot.classList.remove('visible');el('auth').classList.add('visible');A.init();},600);return;}if(fill)fill.style.width=((i+1)/msgs.length*100)+'%';if(msg)msg.textContent=msgs[i];i++;},260);})();
 
 
 function quizAns(given,correct){if(given===correct){toast('Correct! +20 gems 💎','ok');speak('Correct!');}else{toast('Wrong!','err');speak('Incorrect.');}}
@@ -3147,7 +3147,7 @@ function sgMemorySync(){if(!Bridge.ws||Bridge.ws.readyState!==1)return;var k=(ST
 function sgMFAGen(role){if(!Bridge.ws||Bridge.ws.readyState!==1){toast('Bridge offline','err');return;}Bridge.ws.send(JSON.stringify({type:'mfa_gen',role:role||STATE.roleKey||''}));}
 function sgPlaidBridge(t,extra){if(!Bridge.ws||Bridge.ws.readyState!==1){toast('Bridge offline','err');return;}Bridge.ws.send(JSON.stringify(Object.assign({type:t,client_id:SS.get('sg_plaid_cid'),secret:SS.get('sg_plaid_sec'),env:'sandbox'},extra||{})));}
 function sgCollabSend(payload){if(!Bridge.ws||Bridge.ws.readyState!==1)return;Bridge.ws.send(JSON.stringify({type:'collab_broadcast',payload:payload,from:STATE.userName||'?'}));}
-async function sgRefreshToken(){var tok=STATE.sgToken||sessionStorage.getItem('sg_jwt');if(!tok)return;try{var r=await fetch('http://127.0.0.1:9898/api/auth/refresh',{method:'POST',headers:{Authorization:'Bearer '+tok},signal:AbortSignal.timeout(5000)});if(r.ok){var d=await r.json();STATE.sgToken=d.token;sessionStorage.setItem('sg_jwt',d.token);}}catch(_){}}
+async function sgRefreshToken(){var tok=STATE.sgToken||sessionStorage.getItem('sg_jwt');if(!tok)return;try{var r=await fetch('http://127.0.0.1:9897/api/auth/refresh',{method:'POST',headers:{Authorization:'Bearer '+tok},signal:AbortSignal.timeout(5000)});if(r.ok){var d=await r.json();STATE.sgToken=d.token;sessionStorage.setItem('sg_jwt',d.token);}}catch(_){}}
 setInterval(sgRefreshToken,27900000);
 
 // ── CodeMaster helper functions ──────────────────────────────────────

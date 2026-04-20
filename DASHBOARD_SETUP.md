@@ -2,7 +2,7 @@
 
 ## Overview
 
-The FullDashboard.html is now fully integrated with the Unified Server on port 9898. This comprehensive dashboard provides a complete interface for all SuperGrok Heavy 4.2 features.
+The FullDashboard.html is now fully integrated with the Unified Server on port 9897. This comprehensive dashboard provides a complete interface for all SuperGrok Heavy 4.2 features.
 
 ## Quick Start
 
@@ -12,7 +12,7 @@ The FullDashboard.html is now fully integrated with the Unified Server on port 9
 # Navigate to the project root
 cd /path/to/SuperGrok-Heavy-4-2-Skeleton
 
-# Start the server (port 9898)
+# Start the server (port 9897)
 node Unified_Server.js
 
 # OR use npm
@@ -26,30 +26,30 @@ npm run dev
 
 Open your browser and navigate to:
 
-- **Main Dashboard**: http://127.0.0.1:9898/
+- **Main Dashboard**: http://127.0.0.1:9897/
 - **Alternative URLs**:
-  - http://127.0.0.1:9898/dashboard
-  - http://127.0.0.1:9898/FullDashboard.html
+  - http://127.0.0.1:9897/dashboard
+  - http://127.0.0.1:9897/FullDashboard.html
 
 ## Architecture
 
-### Unified Port 9898
+### Unified Port 9897
 
-All services are consolidated through port 9898:
+All services are consolidated through port 9897:
 
 ```
 ┌─────────────────────────────────────────┐
 │         FullDashboard.html              │
-│  (Browser - served from port 9898)      │
+│  (Browser - served from port 9897)      │
 └──────────────┬──────────────────────────┘
                │
-               │ HTTP: http://127.0.0.1:9898
-               │ WebSocket: ws://127.0.0.1:9898
+               │ HTTP: http://127.0.0.1:9897
+               │ WebSocket: ws://127.0.0.1:9897
                │
                ▼
 ┌─────────────────────────────────────────┐
 │       Unified_Server.js                 │
-│       (Node.js - Port 9898)             │
+│       (Node.js - Port 9897)             │
 │                                         │
 │  • HTTP Server (static files + API)    │
 │  • WebSocket Server (real-time)        │
@@ -71,7 +71,7 @@ The FullDashboard provides access to:
 ### Core Features
 - **Role-Based Authentication**: Multi-level access control with passphrase protection
 - **AI Chat**: Claude, GPT-4o, Grok integration
-- **WebSocket Bridge**: Real-time communication on port 9898
+- **WebSocket Bridge**: Real-time communication on port 9897
 - **TTS Services**: Piper and Coqui text-to-speech
 - **DDG Search**: Privacy-focused search integration
 
@@ -91,15 +91,15 @@ The FullDashboard provides access to:
 
 ## Connection Configuration
 
-The dashboard automatically connects to port 9898. Connection settings in the HTML:
+The dashboard automatically connects to port 9897. Connection settings in the HTML:
 
 ```javascript
 // WebSocket Connection (line 1830)
-var wsUrl = 'ws://127.0.0.1:9898'; /* 9898 ONLY */
+var wsUrl = 'ws://127.0.0.1:9897'; /* 9897 ONLY */
 
 // HTTP Fallback (lines 1897-1898)
-fetch('http://127.0.0.1:9898/health')  // Bridge health + direct
-fetch('http://127.0.0.1:9898/health')  // Direct fallback
+fetch('http://127.0.0.1:9897/health')  // Bridge health + direct
+fetch('http://127.0.0.1:9897/health')  // Direct fallback
 ```
 
 ## Server Endpoints
@@ -182,9 +182,9 @@ Create a `.env` file (copy from `.env.example`):
 
 ```bash
 # Server - UNIFIED PORT ARCHITECTURE
-PORT_UNIFIED=9898
-PORT_BRIDGE=9898
-PORT_AUTH=9898
+PORT_UNIFIED=9897
+PORT_BRIDGE=9897
+PORT_AUTH=9897
 
 # Logging
 LOG_DIR=./logs
@@ -235,7 +235,7 @@ ALLOW_SHELL=0
 
 1. Check if server is running:
 ```bash
-curl http://127.0.0.1:9898/health
+curl http://127.0.0.1:9897/health
 ```
 
 2. Verify FullDashboard.html exists in project root:
@@ -250,9 +250,9 @@ tail -f logs/access.jsonl
 
 ### WebSocket Connection Fails
 
-1. Verify port 9898 is not blocked:
+1. Verify port 9897 is not blocked:
 ```bash
-lsof -i :9898
+lsof -i :9897
 ```
 
 2. Check browser console for CSP errors
@@ -308,10 +308,10 @@ npm run shell
 npm run check
 
 # Test health endpoint
-curl http://127.0.0.1:9898/health
+curl http://127.0.0.1:9897/health
 
 # Test WebSocket (using websocat)
-websocat ws://127.0.0.1:9898
+websocat ws://127.0.0.1:9897
 {"type":"ping"}
 ```
 
@@ -325,10 +325,10 @@ websocat ws://127.0.0.1:9898
 
 ## Integration Checklist
 
-- [x] FullDashboard.html connects to ws://127.0.0.1:9898
-- [x] Unified_Server.js serves FullDashboard.html on port 9898
-- [x] All HTTP APIs accessible through port 9898
-- [x] WebSocket bridge operational on port 9898
+- [x] FullDashboard.html connects to ws://127.0.0.1:9897
+- [x] Unified_Server.js serves FullDashboard.html on port 9897
+- [x] All HTTP APIs accessible through port 9897
+- [x] WebSocket bridge operational on port 9897
 - [x] Authentication system integrated
 - [x] TTS services (Piper + Coqui) available
 - [x] AI proxy (Claude, GPT, Grok) configured
@@ -344,7 +344,7 @@ websocat ws://127.0.0.1:9898
    ```
 
 2. **Open Dashboard**:
-   http://127.0.0.1:9898/
+   http://127.0.0.1:9897/
 
 3. **Select Your Role**:
    - Browse available roles
@@ -370,4 +370,4 @@ For issues or questions:
 **Last Updated**: March 12, 2026
 **Dashboard Version**: FullDashboard.html (23,686 lines)
 **Server Version**: Unified_Server.js v13.1.0
-**Port Architecture**: Unified 9898
+**Port Architecture**: Unified 9897

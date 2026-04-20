@@ -39,7 +39,7 @@ export GROK_API_KEY=xai-...
 # 3. Launch
 sh start-dashboard.sh
 
-# 4. Open Safari → http://127.0.0.1:9899
+# 4. Open Safari → http://127.0.0.1:9897
 ```
 
 ### iSH First-Time Setup
@@ -65,7 +65,7 @@ sh start-dashboard.sh
 | `/api/exec` | POST | `{"cmd":"ls -la"}` shell exec |
 | `/api/keys` | POST | Set API keys at runtime |
 | `/api/speak` | POST | `{"text":"…"}` TTS via `say`/`espeak` |
-| `ws://…:9899` | WS | Full-duplex AI + agent bus |
+| `ws://…:9897` | WS | Full-duplex AI + agent bus |
 
 ---
 
@@ -85,7 +85,7 @@ VoiceCommandIntegrity   ← strict intent + 20dB/child-voice/panic trigger
     │  "stop them" → FamilyGuardCore.activateKillSwitch()
     │  "off"       → FamilyGuardCore.goDark()
     ▼
-AIBridgeService (ws://127.0.0.1:9899)
+AIBridgeService (ws://127.0.0.1:9897)
     ├── Claude (Anthropic)
     ├── GPT-4o (OpenAI)
     └── Grok (xAI)
@@ -435,7 +435,7 @@ pip install -r requirements.txt
 alembic upgrade head
 
 # Start the backend server (internal - will be proxied via node-bridge)
-uvicorn app.main:app --reload --host 127.0.0.1 --port 9899
+uvicorn app.main:app --reload --host 127.0.0.1 --port 9898
 ```
 
 #### Frontend Setup
