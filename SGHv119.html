@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#03060f">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; connect-src 'self' ws://127.0.0.1:9899 ws://127.0.0.1:9899/ http://127.0.0.1:9899 ws://localhost:9899 wss://localhost:9899 ws://127.0.0.1:9899 ws://127.0.0.1:9899/ ws://127.0.0.1:9899/terminal ws://127.0.0.1:9899/agent ws://127.0.0.1:9899/chat ws://127.0.0.1:9899/bridge wss://127.0.0.1:9899 wss://127.0.0.1:9899/ wss://127.0.0.1:9899/terminal wss://127.0.0.1:9899/agent wss://127.0.0.1:9899/chat wss://127.0.0.1:9899/bridge ws://localhost:9899 wss://localhost:9899 http://127.0.0.1:9899 https://api.anthropic.com https://api.openai.com https://api.x.ai; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: http://127.0.0.1:9899; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob:; frame-src https://duckduckgo.com https://www.duckduckgo.com https://claude.ai https://chatgpt.com https://grok.com https://x.com https://github.com/features/copilot https://github.com https://app.tuta.com https://signal.org https://proton.me https://protonmail.com https://protonvpn.com https://signal.org https://localhost:* http://127.0.0.1:* https://worldview.earthdata.nasa.gov https://apps.sentinel-hub.com https://rammb-slider.cira.colostate.edu https://www.star.nesdis.noaa.gov https://zoom.earth https://embed.windy.com https://openstreetmap.org https://www.openstreetmap.org https://player.vimeo.com https://www.youtube-nocookie.com blob: data:; worker-src blob: blob-request:;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; connect-src 'self' http://127.0.0.1:9897 http://127.0.0.1:9898 ws://127.0.0.1:9897 ws://127.0.0.1:9897/ ws://localhost:9897 wss://127.0.0.1:9897 wss://127.0.0.1:9897/ wss://localhost:9897 ws://127.0.0.1:9897/terminal ws://127.0.0.1:9897/agent ws://127.0.0.1:9897/chat ws://127.0.0.1:9897/bridge ws://127.0.0.1:9899 ws://127.0.0.1:9899/ http://127.0.0.1:9899 ws://localhost:9899 wss://localhost:9899 ws://127.0.0.1:9899 ws://127.0.0.1:9899/ ws://127.0.0.1:9899/terminal ws://127.0.0.1:9899/agent ws://127.0.0.1:9899/chat ws://127.0.0.1:9899/bridge wss://127.0.0.1:9899 wss://127.0.0.1:9899/ wss://127.0.0.1:9899/terminal wss://127.0.0.1:9899/agent wss://127.0.0.1:9899/chat wss://127.0.0.1:9899/bridge ws://localhost:9899 wss://localhost:9899 http://127.0.0.1:9899 https://api.anthropic.com https://api.openai.com https://api.x.ai; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: http://127.0.0.1:9897 http://127.0.0.1:9899; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob:; frame-src https://duckduckgo.com https://www.duckduckgo.com https://claude.ai https://chatgpt.com https://grok.com https://x.com https://github.com/features/copilot https://github.com https://app.tuta.com https://signal.org https://proton.me https://protonmail.com https://protonvpn.com https://signal.org https://localhost:* http://127.0.0.1:* https://worldview.earthdata.nasa.gov https://apps.sentinel-hub.com https://rammb-slider.cira.colostate.edu https://www.star.nesdis.noaa.gov https://zoom.earth https://embed.windy.com https://openstreetmap.org https://www.openstreetmap.org https://player.vimeo.com https://www.youtube-nocookie.com blob: data:; worker-src blob: blob-request:;">
 <script>/* kill Script error. before anything else — also unregister stale SWs */
 (function(){
   var _s='Script error';
@@ -646,6 +646,9 @@ try { BRIDGE.ws.send(typeof msg === 'string' ? msg : JSON.stringify(msg)); sent=
 }
 if (!sent && typeof PiperTTS !== 'undefined' && PiperTTS.ws && PiperTTS.ws.readyState === 1) {
 try { PiperTTS.ws.send(typeof msg === 'string' ? msg : JSON.stringify(msg)); sent=true; } catch(e){}
+}
+if (!sent && typeof BRIDGE_NODE !== 'undefined' && BRIDGE_NODE.ws && BRIDGE_NODE.ws.readyState === 1) {
+try { BRIDGE_NODE.ws.send(typeof msg === 'string' ? msg : JSON.stringify(msg)); sent=true; } catch(e){}
 }
 if (!sent) {
 /* HTTP fallback */
@@ -2167,6 +2170,52 @@ const BRIDGE = {
   }
 };
 
+// ─── Node.js WebSocket Bridge — Port 9899 ────────────────────────
+var BRIDGE_NODE = {
+  ws: null,
+  connected: false,
+  retries: 0,
+  maxRetries: 5,
+  tryWebSocket: function() {
+    if (this.ws && this.ws.readyState < 2) return;
+    if (this.ws) { try { this.ws.close(); } catch(e) {} this.ws = null; }
+    var self = this;
+    try {
+      var ws = new WebSocket('ws://127.0.0.1:9899');
+      this.ws = ws;
+      ws.onopen = function() {
+        self.connected = true; self.retries = 0;
+        document.dispatchEvent(new CustomEvent('sg:bridgeConnected', { detail: { url: 'ws://127.0.0.1:9899', source: 'node' } }));
+        typeof addAudit === 'function' && addAudit('NODE_BRIDGE_CONNECT', 'Node.js WS bridge :9899 connected');
+        typeof toast === 'function' && toast('⚡ Node Bridge LIVE — Port 9899', 'ok');
+      };
+      ws.onmessage = function(e) {
+        try {
+          var d = JSON.parse(e.data);
+          document.dispatchEvent(new CustomEvent('sg:bridgeMsg', { detail: d }));
+        } catch(_) {}
+      };
+      ws.onerror = function() { self.connected = false; };
+      ws.onclose = function() {
+        self.connected = false; self.ws = null;
+        if (self.retries < self.maxRetries) {
+          self.retries++;
+          setTimeout(function() { self.tryWebSocket && self.tryWebSocket(); }, Math.min(5000 * self.retries, 30000));
+        }
+      };
+    } catch(e) { this.connected = false; }
+  },
+  send: function(payload) {
+    if (this.ws && this.ws.readyState === 1) {
+      try { this.ws.send(typeof payload === 'string' ? payload : JSON.stringify(payload)); return true; } catch(e) {}
+    }
+    return false;
+  }
+};
+// Start Node.js bridge connection attempt after Python bridge settles
+setTimeout(function() { BRIDGE_NODE.tryWebSocket(); }, 4000);
+setInterval(function() { if (!BRIDGE_NODE.connected) BRIDGE_NODE.tryWebSocket(); }, 45000);
+
 // Override checkCICD to use BRIDGE
 window.checkCICD = function(){
   BRIDGE.pollHealth();
@@ -3548,9 +3597,10 @@ return `<div class="panel-hdr">
         <div style="font-family:var(--mono);font-size:8px;color:var(--mu);margin-bottom:4px">PRIMARY AGENT</div>
         <select id="agentPrimary" style="width:100%;padding:8px;background:#0f1923;border:1px solid #2a3a55;color:#e2e8f0;border-radius:6px;font-family:var(--mono);font-size:10px">
           <option value="claude">Claude (Anthropic)</option>
-          <option value="grok">Grok (xAI)</option>
+          <option value="grok">Grok 4.3 (xAI)</option>
           <option value="copilot">GitHub Copilot</option>
-          <option value="openai">GPT-4 (OpenAI)</option>
+          <option value="codex">Codex Max (OpenAI)</option>
+          <option value="openai">GPT-5.4 (OpenAI)</option>
         </select>
       </div>
       <div>
@@ -3673,7 +3723,21 @@ window.saveCopilotToken = function(){
 
 window.testCopilotAgent = function(){
   toast('Testing agent connection...','info');
-  setTimeout(function(){ toast('Agent ready — use Run Agent to start','ok'); }, 800);
+  var _bws = null;
+  if (typeof BRIDGE !== 'undefined' && BRIDGE.ws && BRIDGE.ws.readyState === 1) _bws = BRIDGE.ws;
+  else if (typeof PiperTTS !== 'undefined' && PiperTTS.ws && PiperTTS.ws.readyState === 1) _bws = PiperTTS.ws;
+  else if (typeof BRIDGE_NODE !== 'undefined' && BRIDGE_NODE.ws && BRIDGE_NODE.ws.readyState === 1) _bws = BRIDGE_NODE.ws;
+  if (_bws) {
+    try {
+      _bws.send(JSON.stringify({ type: 'ping', source: 'copilot_agent_test' }));
+      toast('Bridge connected -- agent ready on :9897', 'ok');
+    } catch(e) { toast('Bridge WS error: ' + e.message, 'err'); }
+  } else {
+    /* Try HTTP health check */
+    fetch('http://127.0.0.1:9897/health', { signal: (typeof _safeAbort === 'function' ? _safeAbort(3000) : undefined) })
+      .then(function(r){ if(r.ok){ toast('Bridge HTTP -- :9897 -- reconnecting WS...','ok'); typeof BRIDGE !== 'undefined' && BRIDGE.tryWebSocket && BRIDGE.tryWebSocket(); } else { toast('Bridge HTTP error ' + r.status, 'err'); } })
+      .catch(function(){ toast('Bridge offline — start python3 python3_bridge.py', 'err'); });
+  }
 };
 
 window.runCopilotAgent = function(){
@@ -3690,27 +3754,92 @@ window.runCopilotAgent = function(){
   if(outCard) outCard.style.display='';
   if(outEl){ outEl.innerHTML='<span style="color:var(--cy)">⟳ Agent running ['+primary+' / '+mode+']...</span>'; }
 
-  // Select API key based on primary agent
+  // Newest-first model chains per provider (matches python3_bridge.py)
+  var _MODEL_CHAINS = {
+    claude:  ['claude-opus-4-6','claude-opus-4-5','claude-sonnet-4-6'],
+    grok:    ['grok-4.3','grok-3-latest'],
+    openai:  ['gpt-5.4','gpt-5.1-codex-max','gpt-4o'],
+    codex:   ['gpt-5.1-codex-max','gpt-5.4','gpt-4o'],
+    copilot: ['claude-opus-4-6','claude-opus-4-5','claude-sonnet-4-6']
+  };
+
+  // Select API key + URL based on primary agent
   var apiKey = '';
   var apiUrl = '';
-  var apiModel = '';
+  var _modelChain = [];
   if(primary==='claude'||primary==='copilot'){
     apiKey = localStorage.getItem('sg_ant_key')||'';
     apiUrl = 'https://api.anthropic.com/v1/messages';
-    apiModel = 'claude-opus-4-5';
+    _modelChain = _MODEL_CHAINS[primary] || _MODEL_CHAINS.claude;
   } else if(primary==='grok'){
     apiKey = localStorage.getItem('sg_xai_key')||'';
     apiUrl = 'https://api.x.ai/v1/chat/completions';
-    apiModel = 'grok-3-latest';
-  } else if(primary==='openai'){
+    _modelChain = _MODEL_CHAINS.grok;
+  } else if(primary==='codex'){
     apiKey = localStorage.getItem('sg_oai_key')||'';
     apiUrl = 'https://api.openai.com/v1/chat/completions';
-    apiModel = 'gpt-4o';
+    _modelChain = _MODEL_CHAINS.codex;
+  } else { /* openai */
+    apiKey = localStorage.getItem('sg_oai_key')||'';
+    apiUrl = 'https://api.openai.com/v1/chat/completions';
+    _modelChain = _MODEL_CHAINS.openai;
+  }
+
+  /* Try bridge first — Python bridge at 9897 has server-side API keys + model fallback */
+  var _bridgeWs = null;
+  if (typeof BRIDGE !== 'undefined' && BRIDGE.ws && BRIDGE.ws.readyState === 1) _bridgeWs = BRIDGE.ws;
+  else if (typeof PiperTTS !== 'undefined' && PiperTTS.ws && PiperTTS.ws.readyState === 1) _bridgeWs = PiperTTS.ws;
+  else if (typeof BRIDGE_NODE !== 'undefined' && BRIDGE_NODE.ws && BRIDGE_NODE.ws.readyState === 1) _bridgeWs = BRIDGE_NODE.ws;
+
+  if (_bridgeWs) {
+    /* Route through bridge — no local API key needed */
+    var _rid2 = 'agent_' + Date.now();
+    var _agentStart = Date.now();
+    if(outEl) outEl.innerHTML = '<span style="color:var(--cy)">⟳ Routing via bridge :9897 [' + primary + ' / ' + mode + ' / ' + _modelChain[0] + ']...</span>';
+    var _modeInstr = {
+      code:'You are an expert coding agent. Write clean, production-ready, well-commented code.',
+      review:'You are a code reviewer. Identify bugs, security issues, and improvements.',
+      debug:'You are a debugger. Find the bug, explain why it occurs, and provide the fix.',
+      explain:'You are a code explainer. Break down the code clearly.',
+      test:'You are a testing expert. Write comprehensive unit tests.',
+      refactor:'You are a refactoring expert. Improve code quality.',
+      docs:'You are a documentation writer.',
+      security:'You are a security auditor. Find vulnerabilities and provide mitigations.'
+    };
+    var _ctx = (_modeInstr[mode] || _modeInstr.code) + '\n\nAir-gapped device. Stay on-device.';
+    var _bt = Array(4).join(String.fromCharCode(96));
+    var _userMsg2 = prompt; if(code.trim()) _userMsg2 += '\n\n' + _bt + '\n' + code + '\n' + _bt;
+    try {
+      _bridgeWs.send(JSON.stringify({ type: 'ai_chat', request_id: _rid2, agent: primary, model: _modelChain[0], message: _userMsg2, context: _ctx }));
+    } catch(e) { _bridgeWs = null; }
+    if (_bridgeWs) {
+      var _agHandler = function(ev) {
+        var d = ev && ev.detail;
+        if (!d || (d.type !== 'ai_response' && d.type !== 'agent_thinking')) return;
+        if (d.request_id && d.request_id !== _rid2) return;
+        if (d.type === 'agent_thinking') {
+          if(outEl) outEl.innerHTML = '<span style="color:var(--cy)">⟳ Bridge thinking [' + (d.agent||primary) + ']...</span>';
+          return;
+        }
+        document.removeEventListener('sg:bridgeMsg', _agHandler);
+        var txt2 = d.text || d.response || '';
+        var elapsed2 = ((Date.now() - _agentStart) / 1000).toFixed(1);
+        _sessions++;
+        if(outCard) outCard.style.display = '';
+        if(outEl) outEl.textContent = txt2 || (d.error ? '⚠ Bridge error: ' + d.error : 'No response from bridge');
+        if(metaEl) metaEl.textContent = '[' + (d.agent||primary) + '] [' + mode + '] [' + elapsed2 + 's] [bridge:9897]';
+        if(typeof toast === 'function') toast('Agent completed via bridge in ' + elapsed2 + 's', 'ok');
+        if(typeof addAudit === 'function') addAudit('AGENT_BRIDGE_CALL', 'agent=' + primary + ' mode=' + mode + ' elapsed=' + elapsed2 + 's via bridge');
+      };
+      document.addEventListener('sg:bridgeMsg', _agHandler);
+      setTimeout(function() { document.removeEventListener('sg:bridgeMsg', _agHandler); if(outEl && outEl.textContent.indexOf('⟳') !== -1) outEl.innerHTML = '<span style="color:#ef4444">⚠ Bridge timeout — check bridge.py is running on :9897</span>'; }, 30000);
+      return;
+    }
   }
 
   if(!apiKey){
-    if(outEl) outEl.innerHTML='<span style="color:#ef4444">⚠ No API key for '+primary+'. Go to → AI Providers panel to add your key.</span>';
-    toast('Add API key in AI Providers panel','err');
+    if(outEl) outEl.innerHTML='<span style="color:#ef4444">⚠ No API key for '+primary+'. Start bridge.py on :9897 for server-side keys, or add a local key in AI Providers panel.</span>';
+    toast('Add API key or start bridge','err');
     return;
   }
 
@@ -3733,71 +3862,86 @@ window.runCopilotAgent = function(){
 
   var startTime = Date.now();
   var headers = {'Content-Type':'application/json'};
-  var body;
 
-  if(primary==='claude'||primary==='copilot'){
-    headers['x-api-key'] = apiKey;
-    headers['anthropic-version'] = '2023-06-01';
-    body = JSON.stringify({model:apiModel,max_tokens:2048,system:sysPrompt,messages:[{role:'user',content:userMsg}]});
-  } else {
-    headers['Authorization'] = 'Bearer '+apiKey;
-    body = JSON.stringify({model:apiModel,max_tokens:2048,messages:[{role:'system',content:sysPrompt},{role:'user',content:userMsg}]});
+  /* Direct-API fallback with newest-first model chain */
+  var _isClaude = (primary==='claude'||primary==='copilot');
+  if(_isClaude){ headers['x-api-key']=apiKey; headers['anthropic-version']='2023-06-01'; }
+  else { headers['Authorization']='Bearer '+apiKey; }
+
+  var _directIdx = 0;
+  function _tryDirectModel() {
+    if (_directIdx >= _modelChain.length) {
+      if(outEl) outEl.innerHTML='<span style="color:#ef4444">⚠ All model fallbacks exhausted.</span>';
+      toast('All model fallbacks failed','err'); return;
+    }
+    var apiModel = _modelChain[_directIdx++];
+    if(outEl && _directIdx > 1) outEl.innerHTML='<span style="color:var(--sun)">⟳ Trying fallback model: '+apiModel+'...</span>';
+    var body = _isClaude
+      ? JSON.stringify({model:apiModel,max_tokens:2048,system:sysPrompt,messages:[{role:'user',content:userMsg}]})
+      : JSON.stringify({model:apiModel,max_tokens:2048,messages:[{role:'system',content:sysPrompt},{role:'user',content:userMsg}]});
+    fetch(apiUrl,{method:'POST',headers:headers,body:body})
+    .then(function(r){ return r.json(); }).catch(function(e){ console.warn("[b6]", e && e.message || e); _tryDirectModel(); })
+    .then(function(data){
+      if(!data) return;
+      /* Model-not-found → try next in chain */
+      if(data.error){
+        var ec=(data.error.type||'')+(data.error.code||'')+(data.error.message||'');
+        if(/not_found|invalid_model|no such model|does not exist/i.test(ec)){ _tryDirectModel(); return; }
+        if(outEl) outEl.textContent='⚠ API Error ['+apiModel+']: '+(data.error.message||JSON.stringify(data.error));
+        return;
+      }
+      var text = '';
+      if(data.content && data.content[0]) text = data.content[0].text || '';
+      else if(data.choices && data.choices[0]) text = data.choices[0].message.content || '';
+
+      var elapsed = ((Date.now()-startTime)/1000).toFixed(1);
+      _sessions++;
+      var sessEl = document.getElementById('agentSessions');
+      if(sessEl) sessEl.textContent = _sessions;
+
+      // Display output
+      if(outEl) outEl.textContent = text;
+      if(metaEl) metaEl.textContent = '['+primary+' '+apiModel+'] ['+mode+'] ['+elapsed+'s] ['+new Date().toLocaleTimeString()+']';
+
+      // Cryptographic signature
+      var signed = document.getElementById('agentSignOutput');
+      if(signed && signed.checked && sigEl){
+        var hash = 0;
+        for(var i=0;i<text.length;i++) hash = ((hash<<5)-hash)+text.charCodeAt(i);
+        hash = Math.abs(hash).toString(16).padStart(8,'0');
+        sigEl.style.display = '';
+        sigEl.innerHTML = '✅ SIGNED · SHA-256-sim: 0x'+hash+' · Agent: '+primary+' · Model: '+apiModel+' · Mode: '+mode+' · Time: '+new Date().toISOString()+' · On-Device: YES';
+      }
+
+      // History entry
+      _history.unshift({time:new Date().toLocaleTimeString(),agent:primary+'/'+apiModel,mode:mode,prompt:prompt.slice(0,60)+'...',elapsed:elapsed+'s'});
+      if(_history.length>20) _history=_history.slice(0,20);
+      var hEl = document.getElementById('agentHistory');
+      if(hEl){
+        hEl.innerHTML = _history.map(function(h){
+          return '<div style="padding:5px 0;border-bottom:1px solid #1a2540;display:flex;gap:8px;align-items:center">'+
+            '<span style="color:var(--cy)">'+h.time+'</span>'+
+            '<span style="color:var(--am)">['+h.agent+']</span>'+
+            '<span style="color:#8b9eb0">['+h.mode+']</span>'+
+            '<span style="color:var(--mu)">'+h.prompt+'</span>'+
+            '<span style="color:var(--gn);margin-left:auto">'+h.elapsed+'</span>'+
+            '</div>';
+        }).join('');
+      }
+
+      // Audit log
+      var auditChk = document.getElementById('agentAuditLog');
+      if(auditChk && auditChk.checked && typeof auditLog==='function'){
+        auditLog('AGENT_CALL','agent='+primary+' model='+apiModel+' mode='+mode+' elapsed='+elapsed+'s prompt_len='+prompt.length+' output_len='+text.length);
+      }
+      toast('Agent completed in '+elapsed+'s','ok');
+    })
+    .catch(function(err){
+      if(outEl) outEl.innerHTML='<span style="color:#ef4444">⚠ Network error: '+(err&&err.message||err)+'.\nNote: This device may be air-gapped. Ensure your API endpoint is reachable.</span>';
+      toast('Agent error — check console','err');
+    });
   }
-
-  fetch(apiUrl,{method:'POST',headers:headers,body:body})
-  .then(function(r){ return r.json(); }).catch(function(e){ console.warn("[b6]", e && e.message || e); })
-  .then(function(data){
-    var text = '';
-    if(data.content && data.content[0]) text = data.content[0].text || '';
-    else if(data.choices && data.choices[0]) text = data.choices[0].message.content || '';
-    else if(data.error) text = '⚠ API Error: ' + (data.error.message||JSON.stringify(data.error));
-
-    var elapsed = ((Date.now()-startTime)/1000).toFixed(1);
-    _sessions++;
-    var sessEl = document.getElementById('agentSessions');
-    if(sessEl) sessEl.textContent = _sessions;
-
-    // Display output
-    if(outEl) outEl.textContent = text;
-    if(metaEl) metaEl.textContent = '['+primary+'] ['+mode+'] ['+elapsed+'s] ['+new Date().toLocaleTimeString()+']';
-
-    // Cryptographic signature
-    var signed = document.getElementById('agentSignOutput');
-    if(signed && signed.checked && sigEl){
-      var hash = 0;
-      for(var i=0;i<text.length;i++) hash = ((hash<<5)-hash)+text.charCodeAt(i);
-      hash = Math.abs(hash).toString(16).padStart(8,'0');
-      sigEl.style.display = '';
-      sigEl.innerHTML = '✅ SIGNED · SHA-256-sim: 0x'+hash+' · Agent: '+primary+' · Mode: '+mode+' · Time: '+new Date().toISOString()+' · On-Device: YES';
-    }
-
-    // History entry
-    _history.unshift({time:new Date().toLocaleTimeString(),agent:primary,mode:mode,prompt:prompt.slice(0,60)+'...',elapsed:elapsed+'s'});
-    if(_history.length>20) _history=_history.slice(0,20);
-    var hEl = document.getElementById('agentHistory');
-    if(hEl){
-      hEl.innerHTML = _history.map(function(h){
-        return '<div style="padding:5px 0;border-bottom:1px solid #1a2540;display:flex;gap:8px;align-items:center">'+
-          '<span style="color:var(--cy)">'+h.time+'</span>'+
-          '<span style="color:var(--am)">['+h.agent+']</span>'+
-          '<span style="color:#8b9eb0">['+h.mode+']</span>'+
-          '<span style="color:var(--mu)">'+h.prompt+'</span>'+
-          '<span style="color:var(--gn);margin-left:auto">'+h.elapsed+'</span>'+
-          '</div>';
-      }).join('');
-    }
-
-    // Audit log
-    var auditChk = document.getElementById('agentAuditLog');
-    if(auditChk && auditChk.checked && typeof auditLog==='function'){
-      auditLog('AGENT_CALL','agent='+primary+' mode='+mode+' elapsed='+elapsed+'s prompt_len='+prompt.length+' output_len='+text.length);
-    }
-    toast('Agent completed in '+elapsed+'s','ok');
-  })
-  .catch(function(err){
-    if(outEl) outEl.innerHTML='<span style="color:#ef4444">⚠ Network error: '+err.message+'.\nNote: This device may be air-gapped. Ensure your API endpoint is reachable.</span>';
-    toast('Agent error — check console','err');
-  });
+  _tryDirectModel();
 };
 
 window.copyAgentOutput = function(){
@@ -4939,18 +5083,18 @@ window.SGOrchestrator = (function(){
   }
 
   var AGENTS={};
-  AGENTS.claude=new Agent({id:'claude',name:'Claude Sonnet 4.6',icon:'🤖',color:'#cc785c',role:'Reasoning · Safety · Analysis · Code',
-    process:async function(msg,a){ return await bridge('claude','claude-sonnet-4-6',a.memory.slice(-10).concat([{role:'user',content:msg.content}]),1024); }});
-  AGENTS.gpt=new Agent({id:'gpt',name:'GPT-4o',icon:'🧠',color:'#10a37f',role:'General · Creative · Vision · Translate',
-    process:async function(msg,a){ return await bridge('gpt','gpt-4o',a.memory.slice(-10).concat([{role:'user',content:msg.content}]),1024); }});
-  AGENTS.grok=new Agent({id:'grok',name:'Grok 4.20 Judge',icon:'⚡',color:'#f59e0b',role:'Judge · Debate · Fact-Check · Real-Time',
+  AGENTS.claude=new Agent({id:'claude',name:'Claude Opus 4.6',icon:'🤖',color:'#cc785c',role:'Reasoning · Safety · Analysis · Code',
+    process:async function(msg,a){ return await bridge('claude','claude-opus-4-6',a.memory.slice(-10).concat([{role:'user',content:msg.content}]),1024); }});
+  AGENTS.gpt=new Agent({id:'gpt',name:'GPT-5.4',icon:'🧠',color:'#10a37f',role:'General · Creative · Vision · Translate',
+    process:async function(msg,a){ return await bridge('gpt','gpt-5.4',a.memory.slice(-10).concat([{role:'user',content:msg.content}]),1024); }});
+  AGENTS.grok=new Agent({id:'grok',name:'Grok 4.3 Judge',icon:'⚡',color:'#f59e0b',role:'Judge · Debate · Fact-Check · Real-Time',
     process:async function(msg,a){
       var lock='MEMORY_LOCK: '+a.memory.length+' protected entries.';
       var msgs=[{role:'system',content:lock}].concat(a.memory.slice(-10)).concat([{role:'user',content:msg.content}]);
-      return await bridge('grok','grok-3',msgs,1024);
+      return await bridge('grok','grok-4.3',msgs,1024);
     }});
-  AGENTS.copilot=new Agent({id:'copilot',name:'GitHub Copilot',icon:'🐙',color:'#6366f1',role:'Code · Repo · PR · Review · Actions',
-    process:async function(msg,a){ return await bridge('copilot','gpt-4o',a.memory.slice(-8).concat([{role:'user',content:msg.content}]),1024); }});
+  AGENTS.copilot=new Agent({id:'copilot',name:'Codex Max',icon:'🐙',color:'#6366f1',role:'Code · Repo · PR · Review · Actions',
+    process:async function(msg,a){ return await bridge('codex','gpt-5.1-codex-max',a.memory.slice(-8).concat([{role:'user',content:msg.content}]),1024); }});
   AGENTS.siri=new Agent({id:'siri',name:'Voice / Siri',icon:'🎙️',color:'#a855f7',role:'Voice Commands · Device Control · On-Device',
     process:async function(msg){
       var cmd=(msg.content||'').toLowerCase();
@@ -4958,7 +5102,7 @@ window.SGOrchestrator = (function(){
         audit:'audittrail',github:'github',browser:'browser',files:'fileai',agents:'agents',shield:'privacy'};
       for(var p in panelMap){ if(cmd.includes(p)){ if(window.loadPanel) window.loadPanel(panelMap[p]); return 'Opening '+p; } }
       if(cmd.includes('logout')||cmd.includes('sign out')){ if(window.doLogout) window.doLogout(); return 'Signed out.'; }
-      return await bridge('siri','claude-sonnet-4-6',[{role:'user',content:msg.content}],256);
+      return await bridge('siri','claude-opus-4-6',[{role:'user',content:msg.content}],256);
     }});
   AGENTS.arbiter=new Agent({id:'arbiter',name:'Arbiter',icon:'⚖️',color:'#00d4ff',role:'Council · Conflict · Final Authority',
     process:async function(msg){
@@ -4966,14 +5110,14 @@ window.SGOrchestrator = (function(){
         var parts=Object.keys(msg.opts.council).map(function(k){ return k+': '+String(msg.opts.council[k]).slice(0,80); });
         return 'COUNCIL: '+parts.join(' | ');
       }
-      return await bridge('arbiter','claude-sonnet-4-6',[{role:'system',content:'You are an arbiter. Be concise.'},{role:'user',content:msg.content}],512);
+      return await bridge('arbiter','claude-opus-4-6',[{role:'system',content:'You are an arbiter. Be concise.'},{role:'user',content:msg.content}],512);
     }});
 
   async function councilVote(question){
     if(!question) return;
     var responses={};
     await Promise.allSettled(['claude','gpt','grok'].map(function(id){
-      return bridge(id,id==='claude'?'claude-sonnet-4-6':id==='gpt'?'gpt-4o':'grok-3',[{role:'user',content:question}],256)
+      return bridge(id,id==='claude'?'claude-opus-4-6':id==='gpt'?'gpt-5.4':'grok-4.3',[{role:'user',content:question}],256)
         .then(function(r){ responses[id]=r; });
     }));
     AGENTS.arbiter.send(question,{council:responses});
@@ -6609,6 +6753,14 @@ PANELS.dashboard=function(){
       var ok=(typeof PiperTTS!=='undefined'&&PiperTTS.ws&&PiperTTS.ws.readyState===1)||
              (typeof BRIDGE!=='undefined'&&BRIDGE.connected);
       if(!ok) _sgConnect();
+      /* Update bridge metric */
+      var mb=document.getElementById('mBridge');
+      if(mb){
+        var bOk=(typeof BRIDGE!=='undefined'&&BRIDGE.connected)||(typeof PiperTTS!=='undefined'&&PiperTTS.ws&&PiperTTS.ws.readyState===1);
+        var nOk=typeof BRIDGE_NODE!=='undefined'&&BRIDGE_NODE.connected;
+        mb.textContent = bOk?'LIVE':(nOk?'NODE':'OFFLINE');
+        mb.style.color  = bOk?'var(--acid)':(nOk?'var(--volt)':'var(--pulse)');
+      }
     },8000);
   })();
 
@@ -6618,7 +6770,7 @@ PANELS.dashboard=function(){
     '<div class="metric-item"><div class="metric-val">'+(ST.levelLabel||'L0')+'</div><div class="metric-lbl">LEVEL</div></div>'+
     '<div class="metric-item"><div class="metric-val" id="mBlocked">'+ps.blocked+'</div><div class="metric-lbl">BLOCKED</div></div>'+
     '<div class="metric-item"><div class="metric-val" id="mAudit">'+_log.length+'</div><div class="metric-lbl">AUDIT ENTRIES</div></div>'+
-    '<div class="metric-item"><div class="metric-val">LIVE</div><div class="metric-lbl">BRIDGE</div></div>'+
+    '<div class="metric-item"><div class="metric-val" id="mBridge" style="color:var(--am)">—</div><div class="metric-lbl">BRIDGE</div></div>'+
     '<div class="metric-item"><div class="metric-val">PQ</div><div class="metric-lbl">CRYPTO</div></div>'+
   '</div>'+
   '<div class="kgrid">'+
@@ -6634,10 +6786,10 @@ PANELS.dashboard=function(){
   '<div class="two">'+
     '<div class="card"><div class="card-title">🔐 Security Status</div>'+
       sr('Privacy Shield','ACTIVE','b-ok')+
-      sr('PQ Crypto Suite','ONLINE','b-ok')+
-      sr('Dilithium3','READY','b-ok')+
-      sr('ML-KEM-768','READY','b-ok')+
-      sr('Agent Bridge','localhost:9897','b-warn')+
+      sr('PQ Crypto Suite','SIM+LIVE','b-ok')+
+      sr('Dilithium3',window._noblePostQuantumReady?'READY':'SIM','b-ok')+
+      sr('ML-KEM-768',window._noblePostQuantumReady?'READY':'SIM','b-ok')+
+      sr('Agent Bridge',(typeof BRIDGE!=='undefined'&&BRIDGE.connected)?'9897 LIVE':(typeof BRIDGE_NODE!=='undefined'&&BRIDGE_NODE.connected)?'9899 LIVE':'OFFLINE',(typeof BRIDGE!=='undefined'&&BRIDGE.connected)?'b-ok':(typeof BRIDGE_NODE!=='undefined'&&BRIDGE_NODE.connected)?'b-ok':'b-warn')+
       sr('Secure Enclave','READY','b-ok')+
       sr('Audit Chain','VERIFIED','b-ok')+
     '</div>'+
@@ -13849,7 +14001,7 @@ if(ag==='claude'||ag==='arbiter'){
 endpoint='https://api.anthropic.com/v1/messages';
 headers={'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
 body=JSON.stringify({
-model:'claude-opus-4-5',
+model:'claude-opus-4-6',
 max_tokens:1024,
 system:'You are SuperGrok, a sovereign AI assistant. Be direct, accurate, never hallucinate.',
 messages: history.slice(-8).concat([{role:'user',content:msg}])
@@ -13857,14 +14009,21 @@ messages: history.slice(-8).concat([{role:'user',content:msg}])
 } else if(ag==='gpt'){
 endpoint='https://api.openai.com/v1/chat/completions';
 headers={'Content-Type':'application/json','Authorization':'Bearer '+key};
-body=JSON.stringify({model:'gpt-4o',max_tokens:1024,
+body=JSON.stringify({model:'gpt-5.4',max_tokens:1024,
 messages:[{role:'system',content:'You are SuperGrok AI. Be direct and accurate.'}]
+.concat(history.slice(-8))
+.concat([{role:'user',content:msg}])});
+} else if(ag==='codex'){
+endpoint='https://api.openai.com/v1/chat/completions';
+headers={'Content-Type':'application/json','Authorization':'Bearer '+key};
+body=JSON.stringify({model:'gpt-5.1-codex-max',max_tokens:1024,
+messages:[{role:'system',content:'You are a coding expert powered by Codex Max.'}]
 .concat(history.slice(-8))
 .concat([{role:'user',content:msg}])});
 } else if(ag==='grok'){
 endpoint='https://api.x.ai/v1/chat/completions';
 headers={'Content-Type':'application/json','Authorization':'Bearer '+key};
-body=JSON.stringify({model:'grok-3-latest',max_tokens:1024,
+body=JSON.stringify({model:'grok-4.3',max_tokens:1024,
 messages:[{role:'system',content:'You are SuperGrok AI.'}]
 .concat(history.slice(-8))
 .concat([{role:'user',content:msg}])});
@@ -15665,11 +15824,12 @@ if (output) output.textContent = '\u23f3 Analyzing ' + lang + ' code via bridge.
 if (applyBtn) applyBtn.style.display = 'none';
 panel && panel.scrollIntoView({behavior:'smooth'});
 
-/* Use whichever bridge WebSocket is live: window.ws, PiperTTS.ws, or BRIDGE.ws */
+/* Use whichever bridge WebSocket is live: BRIDGE.ws (9897), PiperTTS.ws (9897), BRIDGE_NODE.ws (9899), or window.ws */
 var _bws = null;
-if (window.ws && window.ws.readyState === 1) _bws = window.ws;
+if (window.BRIDGE && window.BRIDGE.ws && window.BRIDGE.ws.readyState === 1) _bws = window.BRIDGE.ws;
 else if (typeof PiperTTS !== 'undefined' && PiperTTS.ws && PiperTTS.ws.readyState === 1) _bws = PiperTTS.ws;
-else if (window.BRIDGE && window.BRIDGE.ws && window.BRIDGE.ws.readyState === 1) _bws = window.BRIDGE.ws;
+else if (typeof BRIDGE_NODE !== 'undefined' && BRIDGE_NODE.ws && BRIDGE_NODE.ws.readyState === 1) _bws = BRIDGE_NODE.ws;
+else if (window.ws && window.ws.readyState === 1) _bws = window.ws;
 if (_bws) {
   try {
     var _rid = 'cm_' + Date.now();
@@ -20719,11 +20879,12 @@ if (output) output.textContent = '\u23f3 Analyzing ' + lang + ' code via bridge.
 if (applyBtn) applyBtn.style.display = 'none';
 panel && panel.scrollIntoView({behavior:'smooth'});
 
-/* Use whichever bridge WebSocket is live: window.ws, PiperTTS.ws, or BRIDGE.ws */
+/* Use whichever bridge WebSocket is live: BRIDGE.ws (9897), PiperTTS.ws (9897), BRIDGE_NODE.ws (9899), or window.ws */
 var _bws = null;
-if (window.ws && window.ws.readyState === 1) _bws = window.ws;
+if (window.BRIDGE && window.BRIDGE.ws && window.BRIDGE.ws.readyState === 1) _bws = window.BRIDGE.ws;
 else if (typeof PiperTTS !== 'undefined' && PiperTTS.ws && PiperTTS.ws.readyState === 1) _bws = PiperTTS.ws;
-else if (window.BRIDGE && window.BRIDGE.ws && window.BRIDGE.ws.readyState === 1) _bws = window.BRIDGE.ws;
+else if (typeof BRIDGE_NODE !== 'undefined' && BRIDGE_NODE.ws && BRIDGE_NODE.ws.readyState === 1) _bws = BRIDGE_NODE.ws;
+else if (window.ws && window.ws.readyState === 1) _bws = window.ws;
 if (_bws) {
   try {
     var _rid = 'cm_' + Date.now();
@@ -22758,10 +22919,11 @@ return '<button class="btn-s" style="font-size:8px;font-family:monospace;padding
 PANELS.quickkeys = function(){
 var st  = window.SG_VAULT ? SG_VAULT.status() : {};
 var providers = [
-{id:'claude', label:'Anthropic / Claude',       icon:'🟣', prefix:'sk-ant-',  model:'claude-opus-4-5'},
-{id:'gpt',    label:'OpenAI / GPT-4o',           icon:'🟢', prefix:'sk-',      model:'gpt-4o'},
-{id:'grok',   label:'xAI / Grok',                icon:'⚡', prefix:'xai-',     model:'grok-3-latest'},
-{id:'copilot',label:'GitHub Copilot (preview)',  icon:'🔵', prefix:'ghp_',     model:'copilot'},
+{id:'claude', label:'Anthropic / Claude Opus 4.6',  icon:'🟣', prefix:'sk-ant-',  model:'claude-opus-4-6'},
+{id:'gpt',    label:'OpenAI / GPT-5.4',            icon:'🟢', prefix:'sk-',      model:'gpt-5.4'},
+{id:'grok',   label:'xAI / Grok 4.3',              icon:'⚡', prefix:'xai-',     model:'grok-4.3'},
+{id:'codex',  label:'OpenAI / Codex Max',           icon:'🔵', prefix:'sk-',      model:'gpt-5.1-codex-max'},
+{id:'copilot',label:'GitHub Copilot (preview)',     icon:'🐙', prefix:'ghp_',     model:'copilot'},
 ];
 function masked(v){ return v?(v.slice(0,10)+'··········'+v.slice(-4)):''; }
 var html = hdr('\uD83D\uDD11 AI API Keys & Vault','One place for all keys · Auto-saved · Never leaves device · Test each provider');
@@ -23618,7 +23780,7 @@ _queryDirect: function(agentId, message, history, cb){
         'anthropic-dangerous-direct-browser-access':'true'
       },
       body: JSON.stringify({
-        model:'claude-opus-4-5', max_tokens:1024,
+        model:'claude-opus-4-6', max_tokens:1024,
         system:'You are SuperGrok. Be direct, factual, verified.',
         messages:(history||[]).concat([{role:'user',content:message}])
       })
@@ -25544,12 +25706,21 @@ window.SG_AGENT = window.SG_AGENT || {
   }
 };
 
-/* ── 4. BRIDGESEND — fix _ws vs ws mismatch ───────────────── */
+/* ── 4. BRIDGESEND — tries all live bridge connections ─────── */
 window.bridgeSend = function(payload){
   if(!payload || typeof payload !== 'object') return;
   var s = JSON.stringify(Object.assign({source:'sg_ui',ts:Date.now()}, payload));
-  var ws = window.ws || window._ws || null;
-  if(ws && ws.readyState === 1){ ws.send(s); return; }
+  /* Try in priority order: BRIDGE (9897), PiperTTS (9897), BRIDGE_NODE (9899), window.ws */
+  var candidates = [
+    (typeof BRIDGE !== 'undefined' && BRIDGE.ws) || null,
+    (typeof PiperTTS !== 'undefined' && PiperTTS.ws) || null,
+    (typeof BRIDGE_NODE !== 'undefined' && BRIDGE_NODE.ws) || null,
+    window.ws || window._ws || null
+  ];
+  for (var i = 0; i < candidates.length; i++) {
+    var ws = candidates[i];
+    if (ws && ws.readyState === 1) { try { ws.send(s); return; } catch(e) {} }
+  }
   window._sgSendQ = window._sgSendQ || [];
   if(window._sgSendQ.length < 100) window._sgSendQ.push(s);
 };
@@ -25610,7 +25781,7 @@ window.SG_DIRECT_AI = {
         'anthropic-dangerous-direct-browser-access':'true'
       },
       body:JSON.stringify({
-        model:'claude-opus-4-5', max_tokens:1024,
+        model:'claude-opus-4-6', max_tokens:1024,
         system:'You are SuperGrok sovereign AI. Be direct and accurate.',
         messages:messages
       })
@@ -26202,7 +26373,7 @@ document.addEventListener('touchend', function(e) {
 }, {passive: true});
 
 /* ── Mobile nav panel routing ── */
-var _NAV_MAP = {home:'home', agents:'agents', chat:'chat', codemaster:'code'};
+var _NAV_MAP = {home:'dashboard', agents:'agents', chat:'chat', codemaster:'codemaster'};
 window._mnavGo = function(panelId) {
   _closeSb();
   if (typeof window.loadPanel === 'function') window.loadPanel(panelId);
@@ -26274,7 +26445,24 @@ function _checkConflicts() {
     xhr.send();
   } catch(_e) {}
 }
+/* ── KODER (port 9898) connectivity check ── */
+function _checkKoder() {
+  try {
+    var xhr2 = new XMLHttpRequest();
+    xhr2.open('GET', 'http://127.0.0.1:9898/', true);
+    xhr2.timeout = 2000;
+    xhr2.onload = function() {
+      window._koderOnline = true;
+      typeof addAudit === 'function' && addAudit('KODER_ONLINE', 'KODER file server detected on :9898');
+      typeof toast === 'function' && toast('\uD83D\uDCF1 KODER file server detected on :9898', 'ok');
+    };
+    xhr2.onerror = function() { window._koderOnline = false; };
+    xhr2.ontimeout = function() { window._koderOnline = false; };
+    xhr2.send();
+  } catch(_e) { window._koderOnline = false; }
+}
 setTimeout(_checkConflicts, 3000);
+setTimeout(_checkKoder, 5000);
 
 /* ── Key Rotation Badges ── */
 window._renderKeyRotationBadges = function(status) {
@@ -26390,6 +26578,302 @@ document.addEventListener('sg:bridgeMsg', function(ev) {
 });
 
 console.log('%c[SG Mobile v1] Touch UI + bridge fixes active','color:#00ffc8;font-size:9px');
+})();
+</script>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   SGHv119 — iOS Native Bridge Layer v1.0
+   AVSpeechSynthesizer · AVAudioSession · PiPKit · iOS Event Listeners
+   Works in: WKWebView (KODER/iSH/a-Shell) · Safari iOS · Chrome iOS
+   ═══════════════════════════════════════════════════════════════════════════ */
+(function _iosBridgeLayer() {
+  'use strict';
+
+  var _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  var _isWKWebView = !!window.webkit && !!(window.webkit.messageHandlers || {});
+
+  /* ── AVSpeechSynthesizer ─────────────────────────────────────────────── */
+  window.SG_AVSpeech = {
+    _voices: [],
+    speak: function(text, opts) {
+      opts = opts || {};
+      var payload = {
+        text: String(text).slice(0, 4000),
+        voice: opts.voice || 'com.apple.voice.compact.en-US.Samantha',
+        rate:   opts.rate   !== undefined ? opts.rate   : 0.52,
+        pitch:  opts.pitch  !== undefined ? opts.pitch  : 1.0,
+        volume: opts.volume !== undefined ? opts.volume : 1.0
+      };
+      /* 1. WKWebView native AVSpeechSynthesizer */
+      if (_isWKWebView && window.webkit.messageHandlers && window.webkit.messageHandlers.avSpeech) {
+        try { window.webkit.messageHandlers.avSpeech.postMessage(payload); return true; } catch(e) {}
+      }
+      /* 2. Web Speech API (iOS Safari / Chrome iOS) */
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        var u = new SpeechSynthesisUtterance(payload.text);
+        u.rate = payload.rate; u.pitch = payload.pitch; u.volume = payload.volume;
+        /* Prefer iOS system voice if available */
+        var voices = window.speechSynthesis.getVoices();
+        var iosVoice = voices.find(function(v){ return v.lang === 'en-US' && v.localService; });
+        if (iosVoice) u.voice = iosVoice;
+        window.speechSynthesis.speak(u);
+        return true;
+      }
+      return false;
+    },
+    stop: function() {
+      if (_isWKWebView && window.webkit.messageHandlers && window.webkit.messageHandlers.avSpeech) {
+        try { window.webkit.messageHandlers.avSpeech.postMessage({ action: 'stop' }); } catch(e) {}
+      }
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+    },
+    getVoices: function(cb) {
+      if (_isWKWebView && window.webkit.messageHandlers && window.webkit.messageHandlers.avSpeechVoices) {
+        try { window.webkit.messageHandlers.avSpeechVoices.postMessage({}); } catch(e) {}
+      }
+      var voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+      if (cb) cb(voices);
+      return voices;
+    }
+  };
+
+  /* Override global speak() — priority: Piper bridge → AVSpeechSynthesizer → Web Speech */
+  var _prevSpeak = window.speak;
+  window.speak = function(text) {
+    if (!text || !String(text).trim()) return;
+    if (typeof AIVoice !== 'undefined' && !AIVoice.enabled) return;
+    if (typeof QuietMode !== 'undefined' && QuietMode && !QuietMode.voiceEnabled) return;
+    /* 1. Piper TTS bridge (best quality, offline) */
+    var bridgeOk = typeof PiperTTS !== 'undefined' && PiperTTS.ws && PiperTTS.ws.readyState === 1;
+    if (bridgeOk) {
+      try { PiperTTS.ws.send(JSON.stringify({ type: 'piper_speak', text: text, requestId: Date.now() })); return; } catch(e) {}
+    }
+    /* 2. AVSpeechSynthesizer (native iOS / Web Speech fallback) */
+    window.SG_AVSpeech.speak(text);
+  };
+
+  /* ── AVAudioSession ──────────────────────────────────────────────────── */
+  window.SG_AVAudio = {
+    _ctx: null,
+    getContext: function() {
+      if (!this._ctx) {
+        try { this._ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+      }
+      return this._ctx;
+    },
+    activate: function(category) {
+      /* category: 'playback' | 'ambient' | 'playAndRecord' */
+      if (_isWKWebView && window.webkit.messageHandlers && window.webkit.messageHandlers.avAudio) {
+        try { window.webkit.messageHandlers.avAudio.postMessage({ action: 'setCategory', category: category || 'playback' }); } catch(e) {}
+      }
+      var ctx = this.getContext();
+      if (ctx && ctx.state === 'suspended') { ctx.resume().catch(function(){}); }
+    },
+    deactivate: function() {
+      if (_isWKWebView && window.webkit.messageHandlers && window.webkit.messageHandlers.avAudio) {
+        try { window.webkit.messageHandlers.avAudio.postMessage({ action: 'deactivate' }); } catch(e) {}
+      }
+      /* Keep Web Audio context alive — only suspend if truly backgrounded */
+    },
+    setOutputToSpeaker: function() {
+      if (_isWKWebView && window.webkit.messageHandlers && window.webkit.messageHandlers.avAudio) {
+        try { window.webkit.messageHandlers.avAudio.postMessage({ action: 'overrideOutput', port: 'speaker' }); } catch(e) {}
+      }
+    }
+  };
+
+  /* ── PiPKit (Picture-in-Picture) ─────────────────────────────────────── */
+  window.SG_PiP = {
+    _el: null,
+    open: function(opts) {
+      opts = opts || {};
+      /* Native video PiP */
+      if (opts.videoEl && typeof opts.videoEl.requestPictureInPicture === 'function') {
+        opts.videoEl.requestPictureInPicture().catch(function() { window.SG_PiP._openFallback(opts); });
+        return;
+      }
+      /* WKWebView native PiP */
+      if (_isWKWebView && window.webkit.messageHandlers && window.webkit.messageHandlers.pipKit) {
+        try {
+          window.webkit.messageHandlers.pipKit.postMessage({ action: 'open', title: opts.title || 'SuperGrok', content: opts.content || '' });
+          return;
+        } catch(e) {}
+      }
+      this._openFallback(opts);
+    },
+    _openFallback: function(opts) {
+      this.close();
+      var title   = opts.title   || 'SuperGrok';
+      var content = opts.content || '';
+      var pip = document.createElement('div');
+      pip.className = 'pip-window sg-pip';
+      pip.id = 'sg-pip-' + Date.now();
+      pip.style.cssText = 'position:fixed;bottom:90px;right:12px;z-index:99000;width:260px;min-height:120px;' +
+        'background:rgba(7,16,31,.97);border:1px solid rgba(0,255,200,.35);border-radius:10px;' +
+        'backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);' +
+        'box-shadow:0 8px 32px rgba(0,0,0,.7);overflow:hidden;';
+      var tb = document.createElement('div');
+      tb.className = 'pip-titlebar';
+      tb.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:7px 10px;' +
+        'background:rgba(0,255,200,.08);border-bottom:1px solid rgba(0,255,200,.15);cursor:move;-webkit-user-select:none;user-select:none;';
+      var span = document.createElement('span');
+      span.style.cssText = 'font-family:var(--mono);font-size:9px;color:var(--acid);letter-spacing:.5px;';
+      span.textContent = title;
+      var closeBtn = document.createElement('button');
+      closeBtn.setAttribute('data-pip-close', '1');
+      closeBtn.innerHTML = '&#x2715;';
+      closeBtn.style.cssText = 'background:rgba(255,61,110,.2);border:1px solid rgba(255,61,110,.4);' +
+        'border-radius:4px;color:#ff3d6e;font-size:10px;cursor:pointer;padding:2px 7px;' +
+        'touch-action:manipulation;-webkit-tap-highlight-color:transparent;';
+      closeBtn.addEventListener('click', function() { window.SG_PiP.close(); });
+      tb.appendChild(span); tb.appendChild(closeBtn);
+      var body = document.createElement('div');
+      body.style.cssText = 'padding:10px;font-family:var(--mono);font-size:9px;color:var(--t1);line-height:1.7;';
+      body.innerHTML = content;
+      pip.appendChild(tb); pip.appendChild(body);
+      /* Drag (touch) */
+      var _sx = 0, _sy = 0, _dragging = false;
+      tb.addEventListener('touchstart', function(e) {
+        _dragging = true;
+        var r = pip.getBoundingClientRect();
+        _sx = e.touches[0].clientX - r.left;
+        _sy = e.touches[0].clientY - r.top;
+      }, { passive: true });
+      document.addEventListener('touchmove', function(e) {
+        if (!_dragging) return;
+        pip.style.left = (e.touches[0].clientX - _sx) + 'px';
+        pip.style.top  = (e.touches[0].clientY - _sy) + 'px';
+        pip.style.right = 'auto'; pip.style.bottom = 'auto';
+      }, { passive: true });
+      document.addEventListener('touchend', function() { _dragging = false; }, { passive: true });
+      document.body.appendChild(pip);
+      this._el = pip;
+    },
+    close: function() {
+      if (this._el && this._el.parentNode) { this._el.parentNode.removeChild(this._el); }
+      this._el = null;
+      if (_isWKWebView && window.webkit.messageHandlers && window.webkit.messageHandlers.pipKit) {
+        try { window.webkit.messageHandlers.pipKit.postMessage({ action: 'close' }); } catch(e) {}
+      }
+    },
+    openBridgeStatus: function() {
+      var br = typeof BRIDGE !== 'undefined' && BRIDGE.connected;
+      var nd = typeof BRIDGE_NODE !== 'undefined' && BRIDGE_NODE.connected;
+      var ko = !!window._koderOnline;
+      window.SG_PiP.open({
+        title: '\uD83D\uDCCA SuperGrok Status',
+        content: '<div style="line-height:2">' +
+          '<div>\uD83D\uDC0D Python :9897 <b style="color:' + (br ? 'var(--acid)' : 'var(--pulse)') + '">' + (br ? 'LIVE' : 'OFFLINE') + '</b></div>' +
+          '<div>\u26A1 Node   :9899 <b style="color:' + (nd ? 'var(--volt)' : 'var(--t3)') + '">' + (nd ? 'LIVE' : 'OFFLINE') + '</b></div>' +
+          '<div>\uD83D\uDCF1 KODER  :9898 <b style="color:' + (ko ? 'var(--sun)' : 'var(--t3)') + '">' + (ko ? 'ONLINE' : 'N/A') + '</b></div>' +
+          '<div style="margin-top:6px;border-top:1px solid var(--wire);padding-top:6px">' +
+          '<button onclick="BRIDGE&&BRIDGE.tryWebSocket&&BRIDGE.tryWebSocket();BRIDGE_NODE&&BRIDGE_NODE.tryWebSocket&&BRIDGE_NODE.tryWebSocket();toast(\'Reconnecting...\',\'\')" ' +
+          'style="background:rgba(0,255,200,.1);border:1px solid rgba(0,255,200,.3);color:var(--acid);border-radius:5px;padding:4px 10px;font-family:var(--mono);font-size:8px;cursor:pointer;touch-action:manipulation">&#x1F50C; Reconnect</button>' +
+          '</div>' +
+          '</div>'
+      });
+    }
+  };
+
+  /* ── iOS Event Listeners ─────────────────────────────────────────────── */
+
+  /* visibilitychange — iOS background/foreground */
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'hidden') {
+      typeof addAudit === 'function' && addAudit('APP_BACKGROUND', 'iOS: app moved to background');
+      window.SG_AVAudio.deactivate();
+    } else {
+      typeof addAudit === 'function' && addAudit('APP_FOREGROUND', 'iOS: app returned to foreground');
+      window.SG_AVAudio.activate('playback');
+      /* Re-attempt bridge connections after resume */
+      setTimeout(function() {
+        if (typeof BRIDGE !== 'undefined' && !BRIDGE.connected)           { try { BRIDGE.tryWebSocket && BRIDGE.tryWebSocket(); } catch(e) {} }
+        if (typeof BRIDGE_NODE !== 'undefined' && !BRIDGE_NODE.connected)  { try { BRIDGE_NODE.tryWebSocket(); } catch(e) {} }
+        if (typeof PiperTTS !== 'undefined' && (!PiperTTS.ws || PiperTTS.ws.readyState > 1)) { try { PiperTTS.connect(); } catch(e) {} }
+      }, 800);
+    }
+  });
+
+  /* pageshow / pagehide — iOS bfcache navigation */
+  window.addEventListener('pageshow', function(e) {
+    if (e.persisted) {
+      typeof addAudit === 'function' && addAudit('PAGE_RESTORED', 'iOS: page restored from bfcache');
+      setTimeout(function() {
+        typeof BRIDGE !== 'undefined' && BRIDGE.pollHealth && BRIDGE.pollHealth();
+        window.SG_AVAudio.activate('ambient');
+      }, 400);
+    }
+  });
+  window.addEventListener('pagehide', function() {
+    typeof addAudit === 'function' && addAudit('PAGE_HIDE', 'iOS: pagehide fired');
+  });
+
+  /* orientationchange — iOS screen rotation */
+  window.addEventListener('orientationchange', function() {
+    var angle = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
+    typeof addAudit === 'function' && addAudit('ORIENTATION_CHANGE', 'Angle: ' + angle + 'deg');
+    /* Close floating PiP on rotation to avoid clipped positioning */
+    if (window.SG_PiP && window.SG_PiP._el) { window.SG_PiP.close(); }
+  });
+
+  /* focus / blur — window focus (split-view on iPad) */
+  window.addEventListener('focus', function() {
+    window.SG_AVAudio.activate('ambient');
+  });
+
+  /* Audio context unlock on first user gesture (required by iOS) */
+  document.addEventListener('touchstart', function _unlockAudio() {
+    document.removeEventListener('touchstart', _unlockAudio);
+    var ctx = window.SG_AVAudio.getContext();
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume().then(function() {
+        window.SG_AVAudio.setOutputToSpeaker();
+        typeof addAudit === 'function' && addAudit('AUDIO_UNLOCKED', 'Web Audio context unlocked on touch');
+      }).catch(function() {});
+    }
+  }, { passive: true, once: true });
+
+  /* ── WKWebView native callback receiver ─────────────────────────────── */
+  /* Swift calls: window.sgNativeCallback('type', JSON.stringify(data)) */
+  window.sgNativeCallback = function(type, data) {
+    try { data = (typeof data === 'string') ? JSON.parse(data) : (data || {}); } catch(_) { data = {}; }
+    switch (type) {
+      case 'avSpeechDone':
+        typeof addAudit === 'function' && addAudit('AV_SPEECH_DONE', String(data.text || '').slice(0, 60));
+        break;
+      case 'avAudioRoute':
+        typeof addAudit === 'function' && addAudit('AV_AUDIO_ROUTE', JSON.stringify(data).slice(0, 80));
+        break;
+      case 'avVoiceList':
+        window.SG_AVSpeech._voices = data.voices || [];
+        break;
+      case 'pipClosed':
+        if (window.SG_PiP) window.SG_PiP._el = null;
+        break;
+      case 'bridgeReady':
+        typeof addAudit === 'function' && addAudit('NATIVE_BRIDGE_READY', 'iOS native bridge ready');
+        setTimeout(function() {
+          typeof BRIDGE !== 'undefined' && BRIDGE.tryWebSocket && BRIDGE.tryWebSocket();
+          typeof BRIDGE_NODE !== 'undefined' && BRIDGE_NODE.tryWebSocket && BRIDGE_NODE.tryWebSocket();
+        }, 300);
+        break;
+      case 'koderFile':
+        document.dispatchEvent(new CustomEvent('sg:koderFile', { detail: data }));
+        break;
+    }
+    document.dispatchEvent(new CustomEvent('sg:nativeCallback', { detail: { type: type, data: data } }));
+  };
+
+  /* Expose PiP open as a global shortcut for toolbar button */
+  window.sgOpenPiP = function() { window.SG_PiP.openBridgeStatus(); };
+
+  console.log(
+    '%c[SG iOS v1.0] AVSpeechSynthesizer · AVAudioSession · PiPKit · Events active' +
+    (_isWKWebView ? ' \u2014 WKWebView detected' : ' \u2014 Safari/web mode'),
+    'color:#00ffc8;font-size:9px'
+  );
 })();
 </script>
 
