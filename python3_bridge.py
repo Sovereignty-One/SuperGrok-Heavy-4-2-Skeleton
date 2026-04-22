@@ -317,53 +317,118 @@ def post_json(url: str, headers: dict, body: dict):
         return None, str(e)
 
 
-def ai_claude(messages, model: str = "claude-opus-4-5"):
+# ── Newest-first model chains with automatic fallback ──────────────────────
+_CLAUDE_MODELS  = ["claude-opus-4-6", "claude-opus-4-5", "claude-sonnet-4-6"]
+_OPENAI_MODELS  = ["gpt-5.4", "gpt-5.1-codex-max", "gpt-4o"]
+_CODEX_MODELS   = ["gpt-5.1-codex-max", "gpt-5.4", "gpt-4o"]
+_GROK_MODELS    = ["grok-4.3", "grok-3-latest"]
+
+
+def _is_model_error(err: str | None) -> bool:
+    """Return True if err indicates the model was not found (safe to retry next model)."""
+    if not err:
+        return False
+    e = err.lower()
+    return any(x in e for x in ("not_found", "invalid_model", "no such model",
+                                 "model_not_found", "does not exist", "404"))
+
+
+def ai_claude(messages, model: str = "claude-opus-4-6"):
     k = KEYS["anthropic"]
     if not k:
         return None, "ANTHROPIC_API_KEY not set"
     _key_use("anthropic")
-    r, e = post_json(
-        "https://api.anthropic.com/v1/messages",
-        {
-            "Content-Type": "application/json",
-            "x-api-key": k,
-            "anthropic-version": "2023-06-01",
-        },
-        {"model": model, "max_tokens": 2000, "messages": messages},
-    )
-    return (r["content"][0]["text"], None) if r else (None, e)
+    # Try requested model then fall back through the chain
+    chain = [model] + [m for m in _CLAUDE_MODELS if m != model]
+    last_err = None
+    for m in chain:
+        r, e = post_json(
+            "https://api.anthropic.com/v1/messages",
+            {
+                "Content-Type": "application/json",
+                "x-api-key": k,
+                "anthropic-version": "2023-06-01",
+            },
+            {"model": m, "max_tokens": 2000, "messages": messages},
+        )
+        if r:
+            return (r["content"][0]["text"], None)
+        last_err = e
+        if not _is_model_error(e):
+            break  # non-model error (auth, quota, etc.) — stop trying
+    return None, last_err
 
 
-def ai_openai(messages, model: str = "gpt-4o"):
+def ai_openai(messages, model: str = "gpt-5.4"):
     k = KEYS["openai"]
     if not k:
         return None, "OPENAI_API_KEY not set"
     _key_use("openai")
-    r, e = post_json(
-        "https://api.openai.com/v1/chat/completions",
-        {"Content-Type": "application/json", "Authorization": "Bearer " + k},
-        {"model": model, "max_tokens": 2000, "messages": messages},
-    )
-    return (r["choices"][0]["message"]["content"], None) if r else (None, e)
+    chain = [model] + [m for m in _OPENAI_MODELS if m != model]
+    last_err = None
+    for m in chain:
+        r, e = post_json(
+            "https://api.openai.com/v1/chat/completions",
+            {"Content-Type": "application/json", "Authorization": "Bearer " + k},
+            {"model": m, "max_tokens": 2000, "messages": messages},
+        )
+        if r:
+            return (r["choices"][0]["message"]["content"], None)
+        last_err = e
+        if not _is_model_error(e):
+            break
+    return None, last_err
 
 
-def ai_grok(messages, model: str = "grok-3-latest"):
+def ai_openai_codex(messages, model: str = "gpt-5.1-codex-max"):
+    """Codex Max — OpenAI code-specialised model chain."""
+    k = KEYS["openai"]
+    if not k:
+        return None, "OPENAI_API_KEY not set"
+    _key_use("openai")
+    chain = [model] + [m for m in _CODEX_MODELS if m != model]
+    last_err = None
+    for m in chain:
+        r, e = post_json(
+            "https://api.openai.com/v1/chat/completions",
+            {"Content-Type": "application/json", "Authorization": "Bearer " + k},
+            {"model": m, "max_tokens": 2000, "messages": messages},
+        )
+        if r:
+            return (r["choices"][0]["message"]["content"], None)
+        last_err = e
+        if not _is_model_error(e):
+            break
+    return None, last_err
+
+
+def ai_grok(messages, model: str = "grok-4.3"):
     k = KEYS["grok"]
     if not k:
         return None, "GROK_API_KEY not set"
     _key_use("grok")
-    r, e = post_json(
-        "https://api.x.ai/v1/chat/completions",
-        {"Content-Type": "application/json", "Authorization": "Bearer " + k},
-        {"model": model, "max_tokens": 2000, "messages": messages},
-    )
-    return (r["choices"][0]["message"]["content"], None) if r else (None, e)
+    chain = [model] + [m for m in _GROK_MODELS if m != model]
+    last_err = None
+    for m in chain:
+        r, e = post_json(
+            "https://api.x.ai/v1/chat/completions",
+            {"Content-Type": "application/json", "Authorization": "Bearer " + k},
+            {"model": m, "max_tokens": 2000, "messages": messages},
+        )
+        if r:
+            return (r["choices"][0]["message"]["content"], None)
+        last_err = e
+        if not _is_model_error(e):
+            break
+    return None, last_err
 
 
 def route_ai(agent: str | None, messages, model: str | None = None):
     a = (agent or "claude").lower()
-    if a in ("claude", "anthropic", "arbiter"):
+    if a in ("claude", "anthropic", "arbiter", "siri"):
         order = [ai_claude, ai_openai, ai_grok]
+    elif a in ("codex", "copilot"):
+        order = [ai_openai_codex, ai_openai, ai_claude, ai_grok]
     elif "gpt" in a or "openai" in a:
         order = [ai_openai, ai_claude, ai_grok]
     elif "grok" in a or "xai" in a:
@@ -1145,16 +1210,27 @@ if __name__ == "__main__":
             print(f"   Fix     : kill {_conflict_pid}  or set SG_PORT=<other port>")
         print()
 
-    print("=" * 58)
-    print("  SuperGrok Unified Bridge v4.0")
+    print("=" * 62)
+    print("  SuperGrok Unified Bridge v4.1")
     print(f"  HTTP + WebSocket on single port {PORT} — no split")
-    print("=" * 58)
+    print("=" * 62)
     print(f"  Dashboard  : http://127.0.0.1:{PORT}")
     print(f"  Health     : http://127.0.0.1:{PORT}/api/health")
     print(f"  Key Status : http://127.0.0.1:{PORT}/api/key-status")
     print(f"  Audit Log  : http://127.0.0.1:{PORT}/api/audit")
     print(f"  Audit File : {_AUDIT_FILE}")
     print(f"  HTML       : {HTML_FILE or 'NOT FOUND — place SGHv119.html in ~/'}")
+    print()
+    print("  Port topology:")
+    print(f"    :9897  Python bridge (this server) — primary")
+    print(f"    :9898  KODER iOS file server — optional")
+    print(f"    :9899  Node.js WS bridge (Unified_Server.js) — optional")
+    print()
+    print("  AI model chains (newest first with auto-fallback):")
+    print(f"    Claude  : {' > '.join(_CLAUDE_MODELS)}")
+    print(f"    OpenAI  : {' > '.join(_OPENAI_MODELS)}")
+    print(f"    Codex   : {' > '.join(_CODEX_MODELS)}")
+    print(f"    Grok    : {' > '.join(_GROK_MODELS)}")
     print()
     print("  Claude    : " + ("ready" if KEYS["anthropic"] else "export ANTHROPIC_API_KEY=sk-ant-…"))
     print("  OpenAI    : " + ("ready" if KEYS["openai"] else "export OPENAI_API_KEY=sk-…"))
