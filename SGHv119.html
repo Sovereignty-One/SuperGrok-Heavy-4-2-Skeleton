@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#03060f">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; connect-src 'self' ws://127.0.0.1:9899 ws://127.0.0.1:9899/ http://127.0.0.1:9899 ws://localhost:9899 wss://localhost:9899 ws://127.0.0.1:9899 ws://127.0.0.1:9899/ ws://127.0.0.1:9899/terminal ws://127.0.0.1:9899/agent ws://127.0.0.1:9899/chat ws://127.0.0.1:9899/bridge wss://127.0.0.1:9899 wss://127.0.0.1:9899/ wss://127.0.0.1:9899/terminal wss://127.0.0.1:9899/agent wss://127.0.0.1:9899/chat wss://127.0.0.1:9899/bridge ws://localhost:9899 wss://localhost:9899 http://127.0.0.1:9899 https://api.anthropic.com https://api.openai.com https://api.x.ai; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: http://127.0.0.1:9899; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob:; frame-src https://duckduckgo.com https://www.duckduckgo.com https://claude.ai https://chatgpt.com https://grok.com https://x.com https://github.com/features/copilot https://github.com https://app.tuta.com https://signal.org https://proton.me https://protonmail.com https://protonvpn.com https://signal.org https://localhost:* http://127.0.0.1:* https://worldview.earthdata.nasa.gov https://apps.sentinel-hub.com https://rammb-slider.cira.colostate.edu https://www.star.nesdis.noaa.gov https://zoom.earth https://embed.windy.com https://openstreetmap.org https://www.openstreetmap.org https://player.vimeo.com https://www.youtube-nocookie.com blob: data:; worker-src blob: blob-request:;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; connect-src 'self' http://127.0.0.1:9897 http://127.0.0.1:9898 ws://127.0.0.1:9897 ws://127.0.0.1:9897/ ws://localhost:9897 wss://127.0.0.1:9897 wss://127.0.0.1:9897/ wss://localhost:9897 ws://127.0.0.1:9897/terminal ws://127.0.0.1:9897/agent ws://127.0.0.1:9897/chat ws://127.0.0.1:9897/bridge ws://127.0.0.1:9899 ws://127.0.0.1:9899/ http://127.0.0.1:9899 ws://localhost:9899 wss://localhost:9899 ws://127.0.0.1:9899 ws://127.0.0.1:9899/ ws://127.0.0.1:9899/terminal ws://127.0.0.1:9899/agent ws://127.0.0.1:9899/chat ws://127.0.0.1:9899/bridge wss://127.0.0.1:9899 wss://127.0.0.1:9899/ wss://127.0.0.1:9899/terminal wss://127.0.0.1:9899/agent wss://127.0.0.1:9899/chat wss://127.0.0.1:9899/bridge ws://localhost:9899 wss://localhost:9899 http://127.0.0.1:9899 https://api.anthropic.com https://api.openai.com https://api.x.ai; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: http://127.0.0.1:9897 http://127.0.0.1:9899; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob:; frame-src https://duckduckgo.com https://www.duckduckgo.com https://claude.ai https://chatgpt.com https://grok.com https://x.com https://github.com/features/copilot https://github.com https://app.tuta.com https://signal.org https://proton.me https://protonmail.com https://protonvpn.com https://signal.org https://localhost:* http://127.0.0.1:* https://worldview.earthdata.nasa.gov https://apps.sentinel-hub.com https://rammb-slider.cira.colostate.edu https://www.star.nesdis.noaa.gov https://zoom.earth https://embed.windy.com https://openstreetmap.org https://www.openstreetmap.org https://player.vimeo.com https://www.youtube-nocookie.com blob: data:; worker-src blob: blob-request:;">
 <script>/* kill Script error. before anything else — also unregister stale SWs */
 (function(){
   var _s='Script error';
@@ -646,6 +646,9 @@ try { BRIDGE.ws.send(typeof msg === 'string' ? msg : JSON.stringify(msg)); sent=
 }
 if (!sent && typeof PiperTTS !== 'undefined' && PiperTTS.ws && PiperTTS.ws.readyState === 1) {
 try { PiperTTS.ws.send(typeof msg === 'string' ? msg : JSON.stringify(msg)); sent=true; } catch(e){}
+}
+if (!sent && typeof BRIDGE_NODE !== 'undefined' && BRIDGE_NODE.ws && BRIDGE_NODE.ws.readyState === 1) {
+try { BRIDGE_NODE.ws.send(typeof msg === 'string' ? msg : JSON.stringify(msg)); sent=true; } catch(e){}
 }
 if (!sent) {
 /* HTTP fallback */
@@ -2167,6 +2170,52 @@ const BRIDGE = {
   }
 };
 
+// ─── Node.js WebSocket Bridge — Port 9899 ────────────────────────
+var BRIDGE_NODE = {
+  ws: null,
+  connected: false,
+  retries: 0,
+  maxRetries: 5,
+  tryWebSocket: function() {
+    if (this.ws && this.ws.readyState < 2) return;
+    if (this.ws) { try { this.ws.close(); } catch(e) {} this.ws = null; }
+    var self = this;
+    try {
+      var ws = new WebSocket('ws://127.0.0.1:9899');
+      this.ws = ws;
+      ws.onopen = function() {
+        self.connected = true; self.retries = 0;
+        document.dispatchEvent(new CustomEvent('sg:bridgeConnected', { detail: { url: 'ws://127.0.0.1:9899', source: 'node' } }));
+        typeof addAudit === 'function' && addAudit('NODE_BRIDGE_CONNECT', 'Node.js WS bridge :9899 connected');
+        typeof toast === 'function' && toast('⚡ Node Bridge LIVE — Port 9899', 'ok');
+      };
+      ws.onmessage = function(e) {
+        try {
+          var d = JSON.parse(e.data);
+          document.dispatchEvent(new CustomEvent('sg:bridgeMsg', { detail: d }));
+        } catch(_) {}
+      };
+      ws.onerror = function() { self.connected = false; };
+      ws.onclose = function() {
+        self.connected = false; self.ws = null;
+        if (self.retries < self.maxRetries) {
+          self.retries++;
+          setTimeout(function() { self.tryWebSocket && self.tryWebSocket(); }, Math.min(5000 * self.retries, 30000));
+        }
+      };
+    } catch(e) { this.connected = false; }
+  },
+  send: function(payload) {
+    if (this.ws && this.ws.readyState === 1) {
+      try { this.ws.send(typeof payload === 'string' ? payload : JSON.stringify(payload)); return true; } catch(e) {}
+    }
+    return false;
+  }
+};
+// Start Node.js bridge connection attempt after Python bridge settles
+setTimeout(function() { BRIDGE_NODE.tryWebSocket(); }, 4000);
+setInterval(function() { if (!BRIDGE_NODE.connected) BRIDGE_NODE.tryWebSocket(); }, 45000);
+
 // Override checkCICD to use BRIDGE
 window.checkCICD = function(){
   BRIDGE.pollHealth();
@@ -3673,7 +3722,21 @@ window.saveCopilotToken = function(){
 
 window.testCopilotAgent = function(){
   toast('Testing agent connection...','info');
-  setTimeout(function(){ toast('Agent ready — use Run Agent to start','ok'); }, 800);
+  var _bws = null;
+  if (typeof BRIDGE !== 'undefined' && BRIDGE.ws && BRIDGE.ws.readyState === 1) _bws = BRIDGE.ws;
+  else if (typeof PiperTTS !== 'undefined' && PiperTTS.ws && PiperTTS.ws.readyState === 1) _bws = PiperTTS.ws;
+  else if (typeof BRIDGE_NODE !== 'undefined' && BRIDGE_NODE.ws && BRIDGE_NODE.ws.readyState === 1) _bws = BRIDGE_NODE.ws;
+  if (_bws) {
+    try {
+      _bws.send(JSON.stringify({ type: 'ping', source: 'copilot_agent_test' }));
+      toast('Bridge connected -- agent ready on :9897', 'ok');
+    } catch(e) { toast('Bridge WS error: ' + e.message, 'err'); }
+  } else {
+    /* Try HTTP health check */
+    fetch('http://127.0.0.1:9897/health', { signal: (typeof _safeAbort === 'function' ? _safeAbort(3000) : undefined) })
+      .then(function(r){ if(r.ok){ toast('Bridge HTTP -- :9897 -- reconnecting WS...','ok'); typeof BRIDGE !== 'undefined' && BRIDGE.tryWebSocket && BRIDGE.tryWebSocket(); } else { toast('Bridge HTTP error ' + r.status, 'err'); } })
+      .catch(function(){ toast('Bridge offline — start python3 python3_bridge.py', 'err'); });
+  }
 };
 
 window.runCopilotAgent = function(){
@@ -3708,9 +3771,61 @@ window.runCopilotAgent = function(){
     apiModel = 'gpt-4o';
   }
 
+  /* Try bridge first — Python bridge at 9897 has server-side API keys */
+  var _bridgeWs = null;
+  if (typeof BRIDGE !== 'undefined' && BRIDGE.ws && BRIDGE.ws.readyState === 1) _bridgeWs = BRIDGE.ws;
+  else if (typeof PiperTTS !== 'undefined' && PiperTTS.ws && PiperTTS.ws.readyState === 1) _bridgeWs = PiperTTS.ws;
+  else if (typeof BRIDGE_NODE !== 'undefined' && BRIDGE_NODE.ws && BRIDGE_NODE.ws.readyState === 1) _bridgeWs = BRIDGE_NODE.ws;
+
+  if (_bridgeWs) {
+    /* Route through bridge — no local API key needed */
+    var _rid2 = 'agent_' + Date.now();
+    var _agentStart = Date.now();
+    if(outEl) outEl.innerHTML = '<span style="color:var(--cy)">⟳ Routing via bridge :9897 [' + primary + ' / ' + mode + ']...</span>';
+    var _modeInstr = {
+      code:'You are an expert coding agent. Write clean, production-ready, well-commented code.',
+      review:'You are a code reviewer. Identify bugs, security issues, and improvements.',
+      debug:'You are a debugger. Find the bug, explain why it occurs, and provide the fix.',
+      explain:'You are a code explainer. Break down the code clearly.',
+      test:'You are a testing expert. Write comprehensive unit tests.',
+      refactor:'You are a refactoring expert. Improve code quality.',
+      docs:'You are a documentation writer.',
+      security:'You are a security auditor. Find vulnerabilities and provide mitigations.'
+    };
+    var _ctx = (_modeInstr[mode] || _modeInstr.code) + '\n\nAir-gapped device. Stay on-device.';
+    var _bt = Array(4).join(String.fromCharCode(96));
+    var _userMsg2 = prompt; if(code.trim()) _userMsg2 += '\n\n' + _bt + '\n' + code + '\n' + _bt;
+    try {
+      _bridgeWs.send(JSON.stringify({ type: 'ai_chat', request_id: _rid2, agent: primary, message: _userMsg2, context: _ctx }));
+    } catch(e) { _bridgeWs = null; }
+    if (_bridgeWs) {
+      var _agHandler = function(ev) {
+        var d = ev && ev.detail;
+        if (!d || (d.type !== 'ai_response' && d.type !== 'agent_thinking')) return;
+        if (d.request_id && d.request_id !== _rid2) return;
+        if (d.type === 'agent_thinking') {
+          if(outEl) outEl.innerHTML = '<span style="color:var(--cy)">⟳ Bridge thinking [' + (d.agent||primary) + ']...</span>';
+          return;
+        }
+        document.removeEventListener('sg:bridgeMsg', _agHandler);
+        var txt2 = d.text || d.response || '';
+        var elapsed2 = ((Date.now() - _agentStart) / 1000).toFixed(1);
+        _sessions++;
+        if(outCard) outCard.style.display = '';
+        if(outEl) outEl.textContent = txt2 || (d.error ? '⚠ Bridge error: ' + d.error : 'No response from bridge');
+        if(metaEl) metaEl.textContent = '[' + (d.agent||primary) + '] [' + mode + '] [' + elapsed2 + 's] [bridge:9897]';
+        if(typeof toast === 'function') toast('Agent completed via bridge in ' + elapsed2 + 's', 'ok');
+        if(typeof addAudit === 'function') addAudit('AGENT_BRIDGE_CALL', 'agent=' + primary + ' mode=' + mode + ' elapsed=' + elapsed2 + 's via bridge');
+      };
+      document.addEventListener('sg:bridgeMsg', _agHandler);
+      setTimeout(function() { document.removeEventListener('sg:bridgeMsg', _agHandler); if(outEl && outEl.textContent.indexOf('⟳') !== -1) outEl.innerHTML = '<span style="color:#ef4444">⚠ Bridge timeout — check bridge.py is running on :9897</span>'; }, 30000);
+      return;
+    }
+  }
+
   if(!apiKey){
-    if(outEl) outEl.innerHTML='<span style="color:#ef4444">⚠ No API key for '+primary+'. Go to → AI Providers panel to add your key.</span>';
-    toast('Add API key in AI Providers panel','err');
+    if(outEl) outEl.innerHTML='<span style="color:#ef4444">⚠ No API key for '+primary+'. Start bridge.py on :9897 for server-side keys, or add a local key in AI Providers panel.</span>';
+    toast('Add API key or start bridge','err');
     return;
   }
 
@@ -6609,6 +6724,14 @@ PANELS.dashboard=function(){
       var ok=(typeof PiperTTS!=='undefined'&&PiperTTS.ws&&PiperTTS.ws.readyState===1)||
              (typeof BRIDGE!=='undefined'&&BRIDGE.connected);
       if(!ok) _sgConnect();
+      /* Update bridge metric */
+      var mb=document.getElementById('mBridge');
+      if(mb){
+        var bOk=(typeof BRIDGE!=='undefined'&&BRIDGE.connected)||(typeof PiperTTS!=='undefined'&&PiperTTS.ws&&PiperTTS.ws.readyState===1);
+        var nOk=typeof BRIDGE_NODE!=='undefined'&&BRIDGE_NODE.connected;
+        mb.textContent = bOk?'LIVE':(nOk?'NODE':'OFFLINE');
+        mb.style.color  = bOk?'var(--acid)':(nOk?'var(--volt)':'var(--pulse)');
+      }
     },8000);
   })();
 
@@ -6618,7 +6741,7 @@ PANELS.dashboard=function(){
     '<div class="metric-item"><div class="metric-val">'+(ST.levelLabel||'L0')+'</div><div class="metric-lbl">LEVEL</div></div>'+
     '<div class="metric-item"><div class="metric-val" id="mBlocked">'+ps.blocked+'</div><div class="metric-lbl">BLOCKED</div></div>'+
     '<div class="metric-item"><div class="metric-val" id="mAudit">'+_log.length+'</div><div class="metric-lbl">AUDIT ENTRIES</div></div>'+
-    '<div class="metric-item"><div class="metric-val">LIVE</div><div class="metric-lbl">BRIDGE</div></div>'+
+    '<div class="metric-item"><div class="metric-val" id="mBridge" style="color:var(--am)">—</div><div class="metric-lbl">BRIDGE</div></div>'+
     '<div class="metric-item"><div class="metric-val">PQ</div><div class="metric-lbl">CRYPTO</div></div>'+
   '</div>'+
   '<div class="kgrid">'+
@@ -6634,10 +6757,10 @@ PANELS.dashboard=function(){
   '<div class="two">'+
     '<div class="card"><div class="card-title">🔐 Security Status</div>'+
       sr('Privacy Shield','ACTIVE','b-ok')+
-      sr('PQ Crypto Suite','ONLINE','b-ok')+
-      sr('Dilithium3','READY','b-ok')+
-      sr('ML-KEM-768','READY','b-ok')+
-      sr('Agent Bridge','localhost:9897','b-warn')+
+      sr('PQ Crypto Suite','SIM+LIVE','b-ok')+
+      sr('Dilithium3',window._noblePostQuantumReady?'READY':'SIM','b-ok')+
+      sr('ML-KEM-768',window._noblePostQuantumReady?'READY':'SIM','b-ok')+
+      sr('Agent Bridge',(typeof BRIDGE!=='undefined'&&BRIDGE.connected)?'9897 LIVE':(typeof BRIDGE_NODE!=='undefined'&&BRIDGE_NODE.connected)?'9899 LIVE':'OFFLINE',(typeof BRIDGE!=='undefined'&&BRIDGE.connected)?'b-ok':(typeof BRIDGE_NODE!=='undefined'&&BRIDGE_NODE.connected)?'b-ok':'b-warn')+
       sr('Secure Enclave','READY','b-ok')+
       sr('Audit Chain','VERIFIED','b-ok')+
     '</div>'+
@@ -15665,11 +15788,12 @@ if (output) output.textContent = '\u23f3 Analyzing ' + lang + ' code via bridge.
 if (applyBtn) applyBtn.style.display = 'none';
 panel && panel.scrollIntoView({behavior:'smooth'});
 
-/* Use whichever bridge WebSocket is live: window.ws, PiperTTS.ws, or BRIDGE.ws */
+/* Use whichever bridge WebSocket is live: BRIDGE.ws (9897), PiperTTS.ws (9897), BRIDGE_NODE.ws (9899), or window.ws */
 var _bws = null;
-if (window.ws && window.ws.readyState === 1) _bws = window.ws;
+if (window.BRIDGE && window.BRIDGE.ws && window.BRIDGE.ws.readyState === 1) _bws = window.BRIDGE.ws;
 else if (typeof PiperTTS !== 'undefined' && PiperTTS.ws && PiperTTS.ws.readyState === 1) _bws = PiperTTS.ws;
-else if (window.BRIDGE && window.BRIDGE.ws && window.BRIDGE.ws.readyState === 1) _bws = window.BRIDGE.ws;
+else if (typeof BRIDGE_NODE !== 'undefined' && BRIDGE_NODE.ws && BRIDGE_NODE.ws.readyState === 1) _bws = BRIDGE_NODE.ws;
+else if (window.ws && window.ws.readyState === 1) _bws = window.ws;
 if (_bws) {
   try {
     var _rid = 'cm_' + Date.now();
@@ -20719,11 +20843,12 @@ if (output) output.textContent = '\u23f3 Analyzing ' + lang + ' code via bridge.
 if (applyBtn) applyBtn.style.display = 'none';
 panel && panel.scrollIntoView({behavior:'smooth'});
 
-/* Use whichever bridge WebSocket is live: window.ws, PiperTTS.ws, or BRIDGE.ws */
+/* Use whichever bridge WebSocket is live: BRIDGE.ws (9897), PiperTTS.ws (9897), BRIDGE_NODE.ws (9899), or window.ws */
 var _bws = null;
-if (window.ws && window.ws.readyState === 1) _bws = window.ws;
+if (window.BRIDGE && window.BRIDGE.ws && window.BRIDGE.ws.readyState === 1) _bws = window.BRIDGE.ws;
 else if (typeof PiperTTS !== 'undefined' && PiperTTS.ws && PiperTTS.ws.readyState === 1) _bws = PiperTTS.ws;
-else if (window.BRIDGE && window.BRIDGE.ws && window.BRIDGE.ws.readyState === 1) _bws = window.BRIDGE.ws;
+else if (typeof BRIDGE_NODE !== 'undefined' && BRIDGE_NODE.ws && BRIDGE_NODE.ws.readyState === 1) _bws = BRIDGE_NODE.ws;
+else if (window.ws && window.ws.readyState === 1) _bws = window.ws;
 if (_bws) {
   try {
     var _rid = 'cm_' + Date.now();
@@ -25544,12 +25669,21 @@ window.SG_AGENT = window.SG_AGENT || {
   }
 };
 
-/* ── 4. BRIDGESEND — fix _ws vs ws mismatch ───────────────── */
+/* ── 4. BRIDGESEND — tries all live bridge connections ─────── */
 window.bridgeSend = function(payload){
   if(!payload || typeof payload !== 'object') return;
   var s = JSON.stringify(Object.assign({source:'sg_ui',ts:Date.now()}, payload));
-  var ws = window.ws || window._ws || null;
-  if(ws && ws.readyState === 1){ ws.send(s); return; }
+  /* Try in priority order: BRIDGE (9897), PiperTTS (9897), BRIDGE_NODE (9899), window.ws */
+  var candidates = [
+    (typeof BRIDGE !== 'undefined' && BRIDGE.ws) || null,
+    (typeof PiperTTS !== 'undefined' && PiperTTS.ws) || null,
+    (typeof BRIDGE_NODE !== 'undefined' && BRIDGE_NODE.ws) || null,
+    window.ws || window._ws || null
+  ];
+  for (var i = 0; i < candidates.length; i++) {
+    var ws = candidates[i];
+    if (ws && ws.readyState === 1) { try { ws.send(s); return; } catch(e) {} }
+  }
   window._sgSendQ = window._sgSendQ || [];
   if(window._sgSendQ.length < 100) window._sgSendQ.push(s);
 };
@@ -26202,7 +26336,7 @@ document.addEventListener('touchend', function(e) {
 }, {passive: true});
 
 /* ── Mobile nav panel routing ── */
-var _NAV_MAP = {home:'home', agents:'agents', chat:'chat', codemaster:'code'};
+var _NAV_MAP = {home:'dashboard', agents:'agents', chat:'chat', codemaster:'codemaster'};
 window._mnavGo = function(panelId) {
   _closeSb();
   if (typeof window.loadPanel === 'function') window.loadPanel(panelId);
@@ -26274,7 +26408,24 @@ function _checkConflicts() {
     xhr.send();
   } catch(_e) {}
 }
+/* ── KODER (port 9898) connectivity check ── */
+function _checkKoder() {
+  try {
+    var xhr2 = new XMLHttpRequest();
+    xhr2.open('GET', 'http://127.0.0.1:9898/', true);
+    xhr2.timeout = 2000;
+    xhr2.onload = function() {
+      window._koderOnline = true;
+      typeof addAudit === 'function' && addAudit('KODER_ONLINE', 'KODER file server detected on :9898');
+      typeof toast === 'function' && toast('\uD83D\uDCF1 KODER file server detected on :9898', 'ok');
+    };
+    xhr2.onerror = function() { window._koderOnline = false; };
+    xhr2.ontimeout = function() { window._koderOnline = false; };
+    xhr2.send();
+  } catch(_e) { window._koderOnline = false; }
+}
 setTimeout(_checkConflicts, 3000);
+setTimeout(_checkKoder, 5000);
 
 /* ── Key Rotation Badges ── */
 window._renderKeyRotationBadges = function(status) {
