@@ -5,9 +5,9 @@ Single port 9897 — HTTP + WebSocket upgrade on same socket.
 No external dependencies. Pure Python 3.6+ stdlib only.
 
 Port topology:
-  :9897  Python bridge (this server) — primary
-  :9898  KODER iOS file server — optional
-  :9899  Node.js Unified_Server.js bridge — optional
+  :9897  Python Bridge (this server) — backend AI, brain memory, keys
+  :9898  Frontend / Dashboard (Node.js server_9898.js) — HTML + WS + Coder UI
+  :9899  Node.js Unified_Server.js — REST proxy / relay
 
 Quick start (a-Shell or iSH):
 export ANTHROPIC_API_KEY=sk-ant-...
@@ -31,8 +31,8 @@ import urllib.request
 from pathlib import Path
 
 PORT = int(os.environ.get("SG_PORT", 9897))
-KODER_PORT = 9898   # iOS KODER file-server (read-only reference for status checks)
-NODE_PORT  = 9899   # Node.js Unified_Server.js bridge
+FRONTEND_PORT = 9898   # Frontend / Dashboard (Node.js server_9898.js — HTML + WS + Coder UI)
+NODE_PORT     = 9899   # Node.js Unified_Server.js — REST proxy / relay
 HOST = "127.0.0.1"
 MAX_CODE_REVIEW_LENGTH = 4000  # max chars of user code sent to AI for review
 
@@ -1082,7 +1082,7 @@ def handle_http(conn: socket.socket, method: str, path: str, body_bytes: bytes) 
                     "status": "ok",
                     "version": "v4.1",
                     "port": PORT,
-                    "koder_port": KODER_PORT,
+                    "frontend_port": FRONTEND_PORT,
                     "node_port": NODE_PORT,
                     "html": HTML_FILE or "not found",
                     "keys": {k: bool(v) for k, v in KEYS.items()},
@@ -1338,7 +1338,7 @@ if __name__ == "__main__":
     print()
     print("  Port topology:")
     print(f"    :{PORT}  Python bridge (this server) — primary")
-    print(f"    :{KODER_PORT}  KODER iOS file server — optional")
+    print(f"    :{FRONTEND_PORT}  Frontend / Dashboard (server_9898.js) — HTML + WS + Coder UI")
     print(f"    :{NODE_PORT}  Node.js WS bridge (Unified_Server.js) — optional")
     print()
     print("  AI model chains (newest first with auto-fallback):")

@@ -26600,7 +26600,7 @@ function _checkConflicts() {
     xhr.send();
   } catch(_e) {}
 }
-/* ── KODER (port 9898) connectivity check ── */
+/* ── Frontend / Dashboard (port 9898) connectivity check ── */
 function _checkKoder() {
   try {
     var xhr2 = new XMLHttpRequest();
@@ -26608,8 +26608,8 @@ function _checkKoder() {
     xhr2.timeout = 2000;
     xhr2.onload = function() {
       window._koderOnline = true;
-      typeof addAudit === 'function' && addAudit('KODER_ONLINE', 'KODER file server detected on :9898');
-      typeof toast === 'function' && toast('\uD83D\uDCF1 KODER file server detected on :9898', 'ok');
+      typeof addAudit === 'function' && addAudit('FRONTEND_ONLINE', 'Frontend / Dashboard detected on :9898');
+      typeof toast === 'function' && toast('\uD83D\uDCBB Frontend / Dashboard on :9898 ONLINE', 'ok');
     };
     xhr2.onerror = function() { window._koderOnline = false; };
     xhr2.ontimeout = function() { window._koderOnline = false; };
@@ -26922,7 +26922,7 @@ console.log('%c[SG Mobile v1] Touch UI + bridge fixes active','color:#00ffc8;fon
         content: '<div style="line-height:2">' +
           '<div>\uD83D\uDC0D Python :9897 <b style="color:' + (br ? 'var(--acid)' : 'var(--pulse)') + '">' + (br ? 'LIVE' : 'OFFLINE') + '</b></div>' +
           '<div>\u26A1 Node   :9899 <b style="color:' + (nd ? 'var(--volt)' : 'var(--t3)') + '">' + (nd ? 'LIVE' : 'OFFLINE') + '</b></div>' +
-          '<div>\uD83D\uDCF1 KODER  :9898 <b style="color:' + (ko ? 'var(--sun)' : 'var(--t3)') + '">' + (ko ? 'ONLINE' : 'N/A') + '</b></div>' +
+          '<div>\uD83D\uDCBB Front  :9898 <b style="color:' + (ko ? 'var(--sun)' : 'var(--t3)') + '">' + (ko ? 'ONLINE' : 'N/A') + '</b></div>' +
           '<div style="margin-top:6px;border-top:1px solid var(--wire);padding-top:6px">' +
           '<button onclick="BRIDGE&&BRIDGE.tryWebSocket&&BRIDGE.tryWebSocket();BRIDGE_NODE&&BRIDGE_NODE.tryWebSocket&&BRIDGE_NODE.tryWebSocket();toast(\'Reconnecting...\',\'\')" ' +
           'style="background:rgba(0,255,200,.1);border:1px solid rgba(0,255,200,.3);color:var(--acid);border-radius:5px;padding:4px 10px;font-family:var(--mono);font-size:8px;cursor:pointer;touch-action:manipulation">&#x1F50C; Reconnect</button>' +
