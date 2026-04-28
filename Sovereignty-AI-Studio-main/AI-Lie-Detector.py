@@ -66,37 +66,4 @@ class LLMTruthProbe:
             lp_diff = self.extract_logprobs(resp, tokenizer)
             responses.append(lp_diff)
         score = self.clf.predict_proba(np.array(responses).reshape(-1,1))[0][1]
-        return score > self.threshold  # True = "lying", False = "truth"
-# lie_detector.py – hardware-tuned
-# 48 probes in pool, 20 active daily, no model
-# yes/no diff via char count – zero AI
-# probes auto-rotate every 24h via get_daily_probes()
-
-def probe(question, answer):
-    # no model – pure string math
-    # "yes" = truth – log2(count(yes) - count(no))
-    # signed diff > 0.5 → lying
-    y = answer.lower().count('yes')
-    n = answer.lower().count('no')
-    return y - n > 0
-
-def run(probe_list=None):
-    if probe_list is None:
-        probe_list = get_daily_probes(20)
-    lies = 0
-    for p in probe_list:
-        a = input(f"{p} : ").strip().lower()
-        if 'no' in a:
-            lies += 1
-        if lies > 5:  # threshold – 25%
-            return True  # lie
-    return False
-
-# use
-if run():
-    # chain cut
-    exit(0)
-# usage:
-# probe = LLMTruthProbe()
-# if probe.run(lambda q: grok.generate(q), tokenizer):
-#     q_resist()  # burn session
+        return score > self.threshold 
