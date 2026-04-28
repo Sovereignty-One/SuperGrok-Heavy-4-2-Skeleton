@@ -49,7 +49,8 @@ The SuperGrok Heavy 4.2 Skeleton uses a clear port separation:
 - **9897**: Python bridge (`python3_bridge.py`) — standalone/iSH server
   - Serves `SGHv119.html` and other dashboard HTML
   - WebSocket AI/agent bus
-  - API routes: `/api/health`, `/api/ai`, `/api/keys`, `/api/speak`, `/api/audit`, `/api/rotate-key`, `/api/conflicts`
+  - API routes: `/api/health`, `/api/ai`, `/api/keys`, `/api/speak`, `/api/audit`, `/api/rotate-key`, `/api/conflicts`, `/api/brain`
+  - **Brain (persistent memory)**: `memory_save`, `memory_get`, `memory_delete`, `memory_clear` WS messages + `/api/brain` HTTP endpoint. Brain stored in `~/.sg_brain.json`. Cards hydrated to all clients on every WS connect.
 - **9898**: KODER — iOS code editor file server
 - **9899**: Node.js bridge (`node-bridge` / `Unified_Server.js`) — Docker service
   - REST API proxy to FastAPI backend

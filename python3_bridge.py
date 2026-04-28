@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """
-SuperGrok Unified Bridge v4.0
+SuperGrok Unified Bridge v4.1
 Single port 9897 — HTTP + WebSocket upgrade on same socket.
 No external dependencies. Pure Python 3.6+ stdlib only.
 
+Port topology:
+  :9897  Python bridge (this server) — primary
+  :9898  KODER iOS file server — optional
+  :9899  Node.js Unified_Server.js bridge — optional
+
 Quick start (a-Shell or iSH):
-export ANTHROPIC_API_KEY=sk-ant-…
-python3 bridge.py
+export ANTHROPIC_API_KEY=sk-ant-...
+python3 python3_bridge.py
 
 Then open Safari at:  http://127.0.0.1:9897
 """
@@ -26,6 +31,8 @@ import urllib.request
 from pathlib import Path
 
 PORT = int(os.environ.get("SG_PORT", 9897))
+KODER_PORT = 9898   # iOS KODER file-server (read-only reference for status checks)
+NODE_PORT  = 9899   # Node.js Unified_Server.js bridge
 HOST = "127.0.0.1"
 MAX_CODE_REVIEW_LENGTH = 4000  # max chars of user code sent to AI for review
 
@@ -47,6 +54,56 @@ _AUDIT_LOCK = threading.Lock()
 # In-memory ring buffer for /api/audit endpoint (capped at 500 entries)
 _AUDIT_RING: list = []
 _AUDIT_MAX = 500
+
+
+# ---------------------------------------------------------------------
+# Persistent Brain — cross-session memory store (~/.sg_brain.json)
+# ---------------------------------------------------------------------
+
+_BRAIN_FILE = Path.home() / ".sg_brain.json"
+_BRAIN_LOCK = threading.Lock()
+# Max number of memory cards retained in the brain file.
+_BRAIN_MAX_CARDS = 200
+
+
+def _brain_load() -> list:
+    """Return the list of stored memory cards, or [] on any error."""
+    with _BRAIN_LOCK:
+        try:
+            if _BRAIN_FILE.exists():
+                data = json.loads(_BRAIN_FILE.read_text("utf-8"))
+                if isinstance(data, list):
+                    return data
+        except Exception as exc:
+            print(f"[WARN] Brain load error: {exc}", file=sys.stderr)
+    return []
+
+
+def _brain_save(cards: list) -> None:
+    """Atomically persist the memory cards list to disk."""
+    with _BRAIN_LOCK:
+        try:
+            # Keep only the most recent N cards
+            cards = cards[-_BRAIN_MAX_CARDS:]
+            _BRAIN_FILE.write_text(json.dumps(cards, separators=(",", ":"), ensure_ascii=False), "utf-8")
+        except Exception as exc:
+            print(f"[WARN] Brain save error: {exc}", file=sys.stderr)
+
+
+def _brain_add(title: str, content: str, role: str = "", user: str = "") -> dict:
+    """Append one memory card to the brain and persist. Returns the new card."""
+    card = {
+        "id": secrets.token_hex(8),
+        "ts": int(time.time() * 1000),
+        "title": title[:200],
+        "content": content[:2000],
+        "role": role[:60],
+        "user": user[:60],
+    }
+    cards = _brain_load()
+    cards.append(card)
+    _brain_save(cards)
+    return card
 
 
 def _audit(event_type: str, data: dict | None = None) -> dict:
@@ -827,6 +884,41 @@ def handle_ws_msg(conn: socket.socket, raw: bytes) -> None:
             },
         )
 
+    elif t == "memory_save":
+        # Persist a memory card: {type:"memory_save", title:"...", content:"...", role:"...", user:"..."}
+        title = msg.get("title", "Untitled")
+        content = msg.get("content", "")
+        role = msg.get("role", "")
+        user = msg.get("user", "")
+        card = _brain_add(title, content, role, user)
+        _audit("BRAIN_SAVE", {"title": title[:60], "role": role})
+        ws_json(conn, {"type": "memory_saved", "card": card, "ts": card["ts"]})
+
+    elif t == "memory_get":
+        # Return stored memory cards: {type:"memory_get", role:"...", user:"..."}
+        role_filter = msg.get("role", "")
+        cards = _brain_load()
+        if role_filter:
+            cards = [c for c in cards if c.get("role", "") == role_filter or c.get("role", "") == ""]
+        _audit("BRAIN_GET", {"role": role_filter, "count": len(cards)})
+        ws_json(conn, {"type": "memory_result", "cards": cards, "count": len(cards)})
+
+    elif t == "memory_delete":
+        # Delete a memory card by id: {type:"memory_delete", id:"..."}
+        card_id = msg.get("id", "")
+        cards = _brain_load()
+        before = len(cards)
+        cards = [c for c in cards if c.get("id") != card_id]
+        _brain_save(cards)
+        _audit("BRAIN_DELETE", {"id": card_id[:16], "removed": before - len(cards)})
+        ws_json(conn, {"type": "memory_deleted", "id": card_id, "count": len(cards)})
+
+    elif t == "memory_clear":
+        # Wipe all brain memory: {type:"memory_clear"}
+        _brain_save([])
+        _audit("BRAIN_CLEAR", {})
+        ws_json(conn, {"type": "memory_cleared", "ts": int(time.time() * 1000)})
+
     else:
         ws_json(conn, {"type": "ack", "received": t, "ts": int(time.time() * 1000)})
 
@@ -848,11 +940,15 @@ def run_ws(conn: socket.socket, addr, path: str) -> None:
         "key_status": _key_status_payload(),
         "stale_keys": stale,
         "piperReady": piper_ready,
-        "features": ["ai_chat", "ai_code_review", "piper_tts", "key_rotation", "audit", "shell", "stt"],
+        "features": ["ai_chat", "ai_code_review", "piper_tts", "key_rotation", "audit", "shell", "stt", "brain", "memory_hydration"],
     }
     ws_json(conn, dict(_bridge_payload, type="connected"))
     # Also send a "hello" for PiperTTS.ws.onmessage compatibility
     ws_json(conn, dict(_bridge_payload, type="hello"))
+    # Brain hydration — push stored memory cards to the client immediately on connect
+    _brain_cards = _brain_load()
+    if _brain_cards:
+        ws_json(conn, {"type": "memory_result", "cards": _brain_cards, "count": len(_brain_cards), "source": "hydration"})
     if stale:
         for p in stale:
             _audit("KEY_STALE_WARN", {"provider": p, "age_days": _key_status_payload()[p]["age_days"]})
@@ -982,10 +1078,13 @@ def handle_http(conn: socket.socket, method: str, path: str, body_bytes: bytes) 
                 200,
                 {
                     "status": "ok",
-                    "version": "v4.0",
+                    "version": "v4.1",
                     "port": PORT,
+                    "koder_port": KODER_PORT,
+                    "node_port": NODE_PORT,
                     "html": HTML_FILE or "not found",
                     "keys": {k: bool(v) for k, v in KEYS.items()},
+                    "brain_cards": len(_brain_load()),
                     "ts": int(time.time()),
                 },
             )
@@ -1020,6 +1119,10 @@ def handle_http(conn: socket.socket, method: str, path: str, body_bytes: bytes) 
             with _AUDIT_LOCK:
                 recent = list(_AUDIT_RING[-limit:])
             http_send(conn, 200, {"entries": recent, "total": len(_AUDIT_RING)})
+
+        elif path == "/api/brain":
+            cards = _brain_load()
+            http_send(conn, 200, {"cards": cards, "count": len(cards)})
 
         else:
             http_send(conn, 404, {"error": "not found"})
@@ -1089,6 +1192,15 @@ def handle_http(conn: socket.socket, method: str, path: str, body_bytes: bytes) 
                 except Exception:
                     pass
             http_send(conn, 200, {"done": True})
+
+        elif path == "/api/brain":
+            title = body.get("title", "Untitled")
+            content = body.get("content", "")
+            role = body.get("role", "")
+            user = body.get("user", "")
+            card = _brain_add(title, content, role, user)
+            _audit("BRAIN_SAVE_HTTP", {"title": title[:60]})
+            http_send(conn, 200, {"saved": True, "card": card, "count": len(_brain_load())})
 
         else:
             http_send(conn, 404, {"error": "not found"})
@@ -1219,12 +1331,13 @@ if __name__ == "__main__":
     print(f"  Key Status : http://127.0.0.1:{PORT}/api/key-status")
     print(f"  Audit Log  : http://127.0.0.1:{PORT}/api/audit")
     print(f"  Audit File : {_AUDIT_FILE}")
+    print(f"  Brain File : {_BRAIN_FILE}  ({len(_brain_load())} cards stored)")
     print(f"  HTML       : {HTML_FILE or 'NOT FOUND — place SGHv119.html in ~/'}")
     print()
     print("  Port topology:")
-    print(f"    :9897  Python bridge (this server) — primary")
-    print(f"    :9898  KODER iOS file server — optional")
-    print(f"    :9899  Node.js WS bridge (Unified_Server.js) — optional")
+    print(f"    :{PORT}  Python bridge (this server) — primary")
+    print(f"    :{KODER_PORT}  KODER iOS file server — optional")
+    print(f"    :{NODE_PORT}  Node.js WS bridge (Unified_Server.js) — optional")
     print()
     print("  AI model chains (newest first with auto-fallback):")
     print(f"    Claude  : {' > '.join(_CLAUDE_MODELS)}")
