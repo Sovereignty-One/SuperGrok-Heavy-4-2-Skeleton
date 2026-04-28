@@ -83,9 +83,9 @@ def _brain_save(cards: list) -> None:
     """Atomically persist the memory cards list to disk."""
     with _BRAIN_LOCK:
         try:
-            # Keep only the most recent N cards
-            cards = cards[-_BRAIN_MAX_CARDS:]
-            _BRAIN_FILE.write_text(json.dumps(cards, separators=(",", ":"), ensure_ascii=False), "utf-8")
+            # Keep only the most recent N cards (create a new list, don't mutate input)
+            trimmed = list(cards[-_BRAIN_MAX_CARDS:])
+            _BRAIN_FILE.write_text(json.dumps(trimmed, separators=(",", ":"), ensure_ascii=False), "utf-8")
         except Exception as exc:
             print(f"[WARN] Brain save error: {exc}", file=sys.stderr)
 
@@ -899,7 +899,9 @@ def handle_ws_msg(conn: socket.socket, raw: bytes) -> None:
         role_filter = msg.get("role", "")
         cards = _brain_load()
         if role_filter:
-            cards = [c for c in cards if c.get("role", "") == role_filter or c.get("role", "") == ""]
+            # Return cards that match the requested role, plus cards with no role
+            # (role='' cards are shared across all roles — global context).
+            cards = [c for c in cards if c.get("role", "") in (role_filter, "")]
         _audit("BRAIN_GET", {"role": role_filter, "count": len(cards)})
         ws_json(conn, {"type": "memory_result", "cards": cards, "count": len(cards)})
 
