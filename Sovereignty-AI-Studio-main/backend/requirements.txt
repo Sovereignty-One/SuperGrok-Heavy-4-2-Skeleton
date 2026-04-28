@@ -1,19 +1,25 @@
-fastapi==0.115.0
-uvicorn[standard]==0.32.0
-sqlalchemy==2.0.23
-alembic==1.12.1
-psycopg2-binary==2.9.9
-redis==5.0.1
-python-multipart==0.0.22
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+sqlalchemy>=2.0.23
+alembic>=1.12.1
+psycopg2-binary>=2.9.9
+redis>=5.0.1
+python-multipart>=0.0.22
 python-jose[cryptography]==3.5.0
 passlib[bcrypt]==1.7.4
-pydantic[email]==2.9.0
-pydantic-settings==2.1.0
-httpx==0.25.2
-websockets==12.0
-celery==5.4.0
-pillow==12.1.1
-python-dotenv==1.1.0
-openai==1.3.5
-stability-sdk==0.8.1
-boto3==1.34.0
+pydantic[email]>=2.9.0
+pydantic-settings>=2.1.0
+httpx>=0.25.0
+websockets>=12.0
+celery>=5.4.0
+# pillow>=12.2.0 fixes FITS GZIP decompression bomb (CVE / GHSA)
+pillow>=12.2.0
+python-dotenv>=1.0.0
+# openai>=2.0.0: v2.x API replaces the deprecated v1.x ChatCompletion interface
+openai>=2.0.0
+# anthropic: required for Claude Opus/Sonnet Council member
+anthropic>=0.50.0
+# xai-sdk: required for Grok/xAI Council member
+xai-sdk>=1.0.0
+stability-sdk>=0.8.1
+boto3>=1.34.0
