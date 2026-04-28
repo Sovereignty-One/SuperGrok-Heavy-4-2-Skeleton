@@ -1,7 +1,7 @@
 /**
- * SuperGrok AI Platform — Bridge Server (Port 9899)
+ * SuperGrok AI Platform — Frontend / Dashboard Server (Port 9898)
  *
- * Provides the local backend for Global_Roles_Dashboard.html:
+ * Serves the SGHv119.html dashboard and provides the local backend for it:
  *   GET  /health                   – health check
  *   POST /api/ai/chat              – AI proxy (Claude / GPT-4o / Grok)
  *   POST /api/execute-command      – safe terminal command execution
@@ -10,15 +10,20 @@
  *   DELETE /api/memory/:id         – remove a memory entry
  *   GET  /api/audit                – list audit log entries
  *   POST /api/audit                – append an audit entry
- *   WS   ws://localhost:9899       – real-time channel
+ *   WS   ws://localhost:9898       – real-time channel
  *     → ping                       – responds with pong
  *     → ai_query                   – proxy AI request, stream reply back
  *     → piper_speak                – synthesise speech via Piper TTS
  *
+ * Port topology:
+ *   9897  Python Bridge (python3_bridge.py)  — backend AI / brain / keys
+ *   9898  Frontend / Dashboard (this file)   — HTML + WS + Coder UI
+ *   9899  Node.js Unified_Server.js          — REST proxy / relay
+ *
  * Environment variables (all optional – keys enable live AI):
- *   PORT              server port (default 9899)
- *   ANTHROPIC_API_KEY Claude key  (sk-ant-…)
- *   OPENAI_API_KEY    OpenAI key  (sk-…)
+ *   PORT              server port (default 9898)
+ *   ANTHROPIC_API_KEY Claude key  (sk-ant-...)
+ *   OPENAI_API_KEY    OpenAI key  (sk-...)
  *   XAI_API_KEY       xAI key
  *   PIPER_BIN         path to piper binary (default: piper)
  *   DATA_DIR          directory for JSON data files (default: ./data)
@@ -42,7 +47,7 @@ const { URL } = require('url');
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
-const PORT      = parseInt(process.env.PORT || '9899', 10);
+const PORT      = parseInt(process.env.PORT || '9898', 10);
 const DATA_DIR  = process.env.DATA_DIR || path.join(__dirname, 'data');
 const PIPER_BIN = process.env.PIPER_BIN || 'piper';
 

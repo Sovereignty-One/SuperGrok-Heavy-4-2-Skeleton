@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#03060f">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; connect-src 'self' http://127.0.0.1:9897 http://127.0.0.1:9898 ws://127.0.0.1:9897 ws://127.0.0.1:9897/ ws://localhost:9897 wss://127.0.0.1:9897 wss://127.0.0.1:9897/ wss://localhost:9897 ws://127.0.0.1:9897/terminal ws://127.0.0.1:9897/agent ws://127.0.0.1:9897/chat ws://127.0.0.1:9897/bridge ws://127.0.0.1:9899 ws://127.0.0.1:9899/ http://127.0.0.1:9899 ws://localhost:9899 wss://localhost:9899 ws://127.0.0.1:9899 ws://127.0.0.1:9899/ ws://127.0.0.1:9899/terminal ws://127.0.0.1:9899/agent ws://127.0.0.1:9899/chat ws://127.0.0.1:9899/bridge wss://127.0.0.1:9899 wss://127.0.0.1:9899/ wss://127.0.0.1:9899/terminal wss://127.0.0.1:9899/agent wss://127.0.0.1:9899/chat wss://127.0.0.1:9899/bridge ws://localhost:9899 wss://localhost:9899 http://127.0.0.1:9899 https://api.anthropic.com https://api.openai.com https://api.x.ai; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: http://127.0.0.1:9897 http://127.0.0.1:9899; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob:; frame-src https://duckduckgo.com  https://claude.ai https://grok.x.ai https://x.ai https://chatgpt.com https://grok.com https://x.com https://github.com/features/copilot https://github.com https://app.tuta.com https://signal.org https://tuta.com https://localhost:* http://127.0.0.1:* https://worldview.earthdata.nasa.gov https://apps.sentinel-hub.com https://rammb-slider.cira.colostate.edu https://www.star.nesdis.noaa.gov https://zoom.earth https://embed.windy.com https://openstreetmap.org  https://player.vimeo.com https://www.youtube-nocookie.com blob: data:; worker-src blob: blob-request:;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; connect-src 'self' http://127.0.0.1:9897 http://127.0.0.1:9898 http://127.0.0.1:9899 ws://127.0.0.1:9897 ws://127.0.0.1:9897/ ws://localhost:9897 wss://127.0.0.1:9897 wss://127.0.0.1:9897/ wss://localhost:9897 ws://127.0.0.1:9897/terminal ws://127.0.0.1:9897/agent ws://127.0.0.1:9897/chat ws://127.0.0.1:9897/bridge ws://127.0.0.1:9898 ws://127.0.0.1:9898/ wss://127.0.0.1:9898 wss://127.0.0.1:9898/ ws://127.0.0.1:9899 ws://127.0.0.1:9899/ http://127.0.0.1:9899 ws://localhost:9899 wss://localhost:9899 ws://127.0.0.1:9899 ws://127.0.0.1:9899/ ws://127.0.0.1:9899/terminal ws://127.0.0.1:9899/agent ws://127.0.0.1:9899/chat ws://127.0.0.1:9899/bridge wss://127.0.0.1:9899 wss://127.0.0.1:9899/ wss://127.0.0.1:9899/terminal wss://127.0.0.1:9899/agent wss://127.0.0.1:9899/chat wss://127.0.0.1:9899/bridge ws://localhost:9899 wss://localhost:9899 http://127.0.0.1:9899 https://api.anthropic.com https://api.openai.com https://api.x.ai; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: http://127.0.0.1:9897 http://127.0.0.1:9899; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob:; frame-src https://duckduckgo.com  https://claude.ai https://grok.x.ai https://x.ai https://chatgpt.com https://grok.com https://x.com https://github.com/features/copilot https://github.com https://app.tuta.com https://signal.org https://tuta.com https://localhost:* http://127.0.0.1:* https://worldview.earthdata.nasa.gov https://apps.sentinel-hub.com https://rammb-slider.cira.colostate.edu https://www.star.nesdis.noaa.gov https://zoom.earth https://embed.windy.com https://openstreetmap.org  https://player.vimeo.com https://www.youtube-nocookie.com blob: data:; worker-src blob: blob-request:;">
 <script>/* kill Script error. before anything else — also unregister stale SWs */
 (function(){
   var _s='Script error';
@@ -3554,10 +3554,164 @@ PANEL_MAP.killswitch = function() { return renderKillswitch(); };
 PANEL_MAP.ids        = function() { return renderIDSPanel(); };
 PANEL_MAP.linearcard = function() { return renderLinearCard(); };
 PANEL_MAP.copilot_agent = function() { return renderCopilotAgent(); };
+PANEL_MAP.brain      = function() { return renderBrainPanel(); };
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  COPILOT AGENT PANEL  v4.3
+//  BRAIN PANEL v1.0 — Persistent Cross-Session Memory
+//  WS: memory_save / memory_get / memory_delete / memory_clear
+//  HTTP: GET|POST /api/brain
+//  Hydration: cards pushed on every WS connect
+// ═══════════════════════════════════════════════════════════════
+window._brainCards = [];
+window._brainLoaded = false;
+
+window._brainHydrate = function(cards) {
+  if (!Array.isArray(cards)) return;
+  cards.forEach(function(c) {
+    if (!c || !c.id) return;
+    var idx = window._brainCards.findIndex(function(x) { return x.id === c.id; });
+    if (idx === -1) window._brainCards.push(c);
+    else window._brainCards[idx] = c;
+  });
+  window._brainLoaded = true;
+  var el = document.getElementById('brain-cards-list');
+  if (el) window._brainRenderList(el);
+};
+
+window._brainRenderList = function(el) {
+  if (!el) return;
+  var cards = window._brainCards.slice().reverse();
+  if (!cards.length) {
+    el.innerHTML = '<div style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:16px 0">No memory cards yet. Save a note to begin building the brain.</div>';
+    return;
+  }
+  el.innerHTML = cards.map(function(c) {
+    var d = c.ts ? new Date(c.ts).toLocaleString() : '';
+    return '<div style="background:var(--sf2);border:1px solid var(--wire);border-radius:8px;padding:10px 12px;margin-bottom:8px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">' +
+      '<span style="font-family:var(--mono);font-size:10px;color:var(--acid);font-weight:700">' + (c.title||'Untitled').replace(/</g,'&lt;') + '</span>' +
+      '<span style="font-family:var(--mono);font-size:7px;color:var(--t3)">' + d + '</span>' +
+      '</div>' +
+      (c.role ? '<div style="font-family:var(--mono);font-size:7px;color:var(--cy);margin-bottom:3px">Role: ' + c.role.replace(/</g,'&lt;') + '</div>' : '') +
+      '<div style="font-family:var(--mono);font-size:8px;color:var(--t2);line-height:1.6;white-space:pre-wrap;word-break:break-word">' + (c.content||'').replace(/</g,'&lt;').slice(0,400) + '</div>' +
+      '<div style="text-align:right;margin-top:6px">' +
+      '<button onclick="window._brainDelete(\'' + c.id + '\')" style="background:rgba(255,61,110,.1);border:1px solid rgba(255,61,110,.3);color:var(--rd);border-radius:4px;padding:2px 8px;font-family:var(--mono);font-size:7px;cursor:pointer">Delete</button>' +
+      '</div></div>';
+  }).join('');
+};
+
+window._brainDelete = function(id) {
+  if (typeof window.bridgeSend === 'function') {
+    window.bridgeSend({ type: 'memory_delete', id: id });
+  }
+  window._brainCards = window._brainCards.filter(function(c) { return c.id !== id; });
+  var el = document.getElementById('brain-cards-list');
+  if (el) window._brainRenderList(el);
+  typeof addAudit === 'function' && addAudit('BRAIN_DELETE_UI', id);
+};
+
+window._brainSave = function() {
+  var titleEl   = document.getElementById('brain-title');
+  var contentEl = document.getElementById('brain-content');
+  var title   = titleEl   ? titleEl.value.trim()   : '';
+  var content = contentEl ? contentEl.value.trim() : '';
+  if (!title && !content) { typeof toast === 'function' && toast('Enter a title or content', ''); return; }
+  title = title || 'Note';
+  var role = (typeof ST !== 'undefined' && ST && ST.role) ? ST.role : '';
+  var user = (typeof ST !== 'undefined' && ST && ST.name) ? ST.name : '';
+  if (typeof window.bridgeSend === 'function') {
+    window.bridgeSend({ type: 'memory_save', title: title, content: content, role: role, user: user });
+  }
+  typeof addAudit === 'function' && addAudit('BRAIN_SAVE_UI', title.slice(0,60));
+  typeof toast === 'function' && toast('\uD83E\uDDE0 Memory saved: ' + title.slice(0,40), 'ok');
+  if (titleEl)   titleEl.value   = '';
+  if (contentEl) contentEl.value = '';
+};
+
+window.renderBrainPanel = function() {
+  setTimeout(function() {
+    var el = document.getElementById('brain-cards-list');
+    if (el) window._brainRenderList(el);
+    if (!window._brainLoaded && typeof window.bridgeSend === 'function') {
+      var role = (typeof ST !== 'undefined' && ST && ST.role) ? ST.role : '';
+      window.bridgeSend({ type: 'memory_get', role: role });
+    }
+  }, 80);
+  return '<div class="panel-hdr"><h2>\uD83E\uDDE0 Brain / Persistent Memory</h2>' +
+    '<p>// Cross-session knowledge store &middot; Hydrated on every bridge connect &middot; ' +
+    'Zero cloud &middot; ~/.sg_brain.json</p></div>' +
+
+    '<div class="g2" style="margin-bottom:12px">' +
+    '<div class="card">' +
+    '<div class="card-t"><div class="ctd"></div>SAVE MEMORY</div>' +
+    '<div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">' +
+    '<input id="brain-title" placeholder="Title / topic" style="padding:8px 10px;background:var(--sf2);border:1px solid var(--bd2);border-radius:6px;color:var(--tx);font-family:var(--mono);font-size:10px">' +
+    '<textarea id="brain-content" rows="4" placeholder="Content — facts, context, instructions..." style="padding:8px 10px;background:var(--sf2);border:1px solid var(--bd2);border-radius:6px;color:var(--tx);font-family:var(--mono);font-size:10px;resize:vertical"></textarea>' +
+    '<div style="display:flex;gap:8px">' +
+    '<button onclick="window._brainSave()" class="btn-p" style="flex:1">&#x1F9E0; Save to Brain</button>' +
+    '<button onclick="window.bridgeSend&&window.bridgeSend({type:\'memory_get\'});typeof toast===\'function\'&&toast(\'Refreshing...\',\'\')" class="btn-s" style="flex-shrink:0">&#x1F504; Refresh</button>' +
+    '</div></div></div>' +
+
+    '<div class="card">' +
+    '<div class="card-t"><div class="ctd"></div>BRAIN STATUS</div>' +
+    '<div style="margin-top:8px;font-family:var(--mono);font-size:9px;line-height:2;color:var(--t2)">' +
+    '<div>Storage: <b style="color:var(--acid)">~/.sg_brain.json</b></div>' +
+    '<div>Cards loaded: <b id="brain-count" style="color:var(--volt)">0</b></div>' +
+    '<div>Hydration: <b style="color:var(--gn)">Auto on bridge connect</b></div>' +
+    '<div>Port: <b style="color:var(--cy)">:9897 (Python bridge)</b></div>' +
+    '</div>' +
+    '<button onclick="if(confirm(\'Clear all brain memory?\'))window.bridgeSend&&window.bridgeSend({type:\'memory_clear\'})" ' +
+    'class="btn-s" style="width:100%;margin-top:10px;color:var(--rd);border-color:rgba(255,61,110,.3)">&#x1F5D1; Clear All Memory</button>' +
+    '</div></div>' +
+
+    '<div class="card">' +
+    '<div class="card-t"><div class="ctd"></div>MEMORY CARDS (' +
+    '<span id="brain-count-hdr">' + window._brainCards.length + '</span>)</div>' +
+    '<div id="brain-cards-list" style="margin-top:8px">' +
+    '<div style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:16px 0">Loading brain...</div>' +
+    '</div></div>';
+};
+
+// ─── Bridge message handler: brain hydration + memory_result ─────────
+document.addEventListener('sg:bridgeMsg', function(ev) {
+  var d = ev && ev.detail;
+  if (!d) return;
+  if (d.type === 'memory_result' || d.type === 'memory_saved') {
+    if (d.type === 'memory_saved' && d.card) {
+      var idx = window._brainCards.findIndex(function(x) { return x.id === d.card.id; });
+      if (idx === -1) window._brainCards.push(d.card);
+      else window._brainCards[idx] = d.card;
+    }
+    if (d.type === 'memory_result' && Array.isArray(d.cards)) {
+      window._brainHydrate(d.cards);
+    }
+    var countEls = [document.getElementById('brain-count'), document.getElementById('brain-count-hdr')];
+    countEls.forEach(function(el) { if (el) el.textContent = window._brainCards.length; });
+    var listEl = document.getElementById('brain-cards-list');
+    if (listEl) window._brainRenderList(listEl);
+  }
+  if (d.type === 'memory_deleted' || d.type === 'memory_cleared') {
+    if (d.type === 'memory_cleared') window._brainCards = [];
+    var countEls2 = [document.getElementById('brain-count'), document.getElementById('brain-count-hdr')];
+    countEls2.forEach(function(el) { if (el) el.textContent = window._brainCards.length; });
+    var listEl2 = document.getElementById('brain-cards-list');
+    if (listEl2) window._brainRenderList(listEl2);
+  }
+});
+
+// ─── Hydrate brain on every bridge connect ───────────────────────────
+document.addEventListener('sg:bridgeConnected', function() {
+  setTimeout(function() {
+    if (typeof PiperTTS !== 'undefined' && PiperTTS.ws && PiperTTS.ws.readyState === 1) {
+      var role = (typeof ST !== 'undefined' && ST && ST.role) ? ST.role : '';
+      PiperTTS.ws.send(JSON.stringify({ type: 'memory_get', role: role }));
+    } else if (typeof window.bridgeSend === 'function') {
+      var role2 = (typeof ST !== 'undefined' && ST && ST.role) ? ST.role : '';
+      window.bridgeSend({ type: 'memory_get', role: role2 });
+    }
+  }, 600);
+});
 //  On-device AI coding agent — Copilot-compatible, no Google/Meta
 // ═══════════════════════════════════════════════════════════════
 window.renderCopilotAgent = function() {
@@ -5873,6 +6027,7 @@ var NAV_ITEMS=[
   {sec:'EDUCATION',   ic:'\ud83c\udf93',lb:'GrokEDU',             p:'grokedu',     lv:0},
   {sec:'EDUCATION',   ic:'\ud83c\udfe5',lb:'MedEd',               p:'meded',       lv:0},
   {sec:'EDUCATION',   ic:'\ud83e\udde9',lb:'Memory Cards',        p:'memorycards', lv:0},
+  {sec:'BRAIN',       ic:'\ud83e\udde0',lb:'Brain / Memory',       p:'brain',       lv:0},
   {sec:'ADMIN',       ic:'\ud83c\udf9b',lb:'Dashboard Builder',   p:'dashbuilder', lv:3},
   {sec:'ADMIN',       ic:'\u2699',       lb:'Role Editor',         p:'roleeditor',  lv:4},
   {sec:'ADMIN',       ic:'\ud83d\udd34',lb:'Kill Switch',         p:'killswitch',  lv:4},
@@ -26445,7 +26600,7 @@ function _checkConflicts() {
     xhr.send();
   } catch(_e) {}
 }
-/* ── KODER (port 9898) connectivity check ── */
+/* ── Frontend / Dashboard (port 9898) connectivity check ── */
 function _checkKoder() {
   try {
     var xhr2 = new XMLHttpRequest();
@@ -26453,8 +26608,8 @@ function _checkKoder() {
     xhr2.timeout = 2000;
     xhr2.onload = function() {
       window._koderOnline = true;
-      typeof addAudit === 'function' && addAudit('KODER_ONLINE', 'KODER file server detected on :9898');
-      typeof toast === 'function' && toast('\uD83D\uDCF1 KODER file server detected on :9898', 'ok');
+      typeof addAudit === 'function' && addAudit('FRONTEND_ONLINE', 'Frontend / Dashboard detected on :9898');
+      typeof toast === 'function' && toast('\uD83D\uDCBB Frontend / Dashboard on :9898 ONLINE', 'ok');
     };
     xhr2.onerror = function() { window._koderOnline = false; };
     xhr2.ontimeout = function() { window._koderOnline = false; };
@@ -26767,7 +26922,7 @@ console.log('%c[SG Mobile v1] Touch UI + bridge fixes active','color:#00ffc8;fon
         content: '<div style="line-height:2">' +
           '<div>\uD83D\uDC0D Python :9897 <b style="color:' + (br ? 'var(--acid)' : 'var(--pulse)') + '">' + (br ? 'LIVE' : 'OFFLINE') + '</b></div>' +
           '<div>\u26A1 Node   :9899 <b style="color:' + (nd ? 'var(--volt)' : 'var(--t3)') + '">' + (nd ? 'LIVE' : 'OFFLINE') + '</b></div>' +
-          '<div>\uD83D\uDCF1 KODER  :9898 <b style="color:' + (ko ? 'var(--sun)' : 'var(--t3)') + '">' + (ko ? 'ONLINE' : 'N/A') + '</b></div>' +
+          '<div>\uD83D\uDCBB Front  :9898 <b style="color:' + (ko ? 'var(--sun)' : 'var(--t3)') + '">' + (ko ? 'ONLINE' : 'N/A') + '</b></div>' +
           '<div style="margin-top:6px;border-top:1px solid var(--wire);padding-top:6px">' +
           '<button onclick="BRIDGE&&BRIDGE.tryWebSocket&&BRIDGE.tryWebSocket();BRIDGE_NODE&&BRIDGE_NODE.tryWebSocket&&BRIDGE_NODE.tryWebSocket();toast(\'Reconnecting...\',\'\')" ' +
           'style="background:rgba(0,255,200,.1);border:1px solid rgba(0,255,200,.3);color:var(--acid);border-radius:5px;padding:4px 10px;font-family:var(--mono);font-size:8px;cursor:pointer;touch-action:manipulation">&#x1F50C; Reconnect</button>' +
