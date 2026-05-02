@@ -4,7 +4,8 @@ cryptography==46.0.5
 pqcrypto==0.4.0
 argon2-cffi==23.1.0
 pyjwt==2.10.1
-encypher-ai==1.0.0
+# encypher-ai>=1.0.0: current release is 3.x; use minimum constraint to allow upgrades
+encypher-ai>=1.0.0
 
 # ML / AI
 torch==2.8.0
@@ -20,6 +21,13 @@ ai-model-picker==0.1.0
 nlweb-core==0.7.0
 openintent==0.14.1
 blocksolver==0.9.4
+# Council AI providers — future-proof minimum constraints
+# openai>=2.0.0: v2.x API required (v1.x ChatCompletion is deprecated)
+openai>=2.0.0
+# anthropic: Claude Opus/Sonnet Council member
+anthropic>=0.50.0
+# xai-sdk: Grok/xAI Council member
+xai-sdk>=1.0.0
 
 # Web Frameworks
 fastapi==0.115.0
