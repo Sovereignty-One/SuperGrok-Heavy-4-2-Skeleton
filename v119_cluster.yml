@@ -557,8 +557,8 @@ python gateway.py
 
 Access
 
-http://localhost:9899/health
-ws://localhost:9899/ws
+http://localhost:9897/health
+ws://localhost:9897/ws
 
 
 ⸻
