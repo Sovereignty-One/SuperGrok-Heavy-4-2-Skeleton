@@ -1,0 +1,43 @@
+# SuperGrok Heavy 4.2 — Local HTTPS Reverse Proxy
+#
+# Port topology served through Caddy:
+#   :9897  Python Bridge (python3_bridge.py) — backend AI + brain memory
+#   :9898  Frontend / Dashboard              — static PWA dist/ + KODER UI
+#   :9899  Node.js WebSocket telemetry       — ws:// relay
+#
+# Usage:
+#   caddy run --config Caddyfile
+#   caddy run --config Caddyfile --adapter caddyfile
+#
+# Requires Caddy 2.x with the `tls internal` feature (ships in the standard build).
+
+https://localhost {
+    root * /var/www/pwa/dist
+    encode gzip
+
+    # Self-signed certificate issued by Caddy's local CA for development.
+    # Run `caddy trust` once to add the CA to your system trust store.
+    tls internal
+
+    # HSTS — tell browsers to always use HTTPS for this origin.
+    header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+
+    # WebSocket / telemetry traffic → Node.js server on :9899
+    handle /ws/* {
+        reverse_proxy localhost:9899
+    }
+
+    # Everything else → Python backend API on :9897
+    handle /api/* {
+        reverse_proxy localhost:9897
+    }
+
+    # PWA static files — fall back to index.html for client-side routing.
+    handle {
+        try_files {path} /index.html
+        file_server
+    }
+
+    # Shallow health probe used by Start_All.sh and orchestration tools.
+    respond /health 200
+}
