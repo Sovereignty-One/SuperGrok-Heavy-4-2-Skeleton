@@ -15,7 +15,7 @@
  *   WS_PORT   — listen port (default: 9899)
  */
 
-const { WebSocketServer } = require('ws');
+const { WebSocket, WebSocketServer } = require('ws');
 
 const PORT = parseInt(process.env.WS_PORT || '9899', 10);
 const wss  = new WebSocketServer({ port: PORT });
@@ -27,7 +27,7 @@ wss.on('connection', ws => {
 
   // Send one heartbeat per second while the socket is open.
   const heartbeatTimer = setInterval(() => {
-    if (ws.readyState === ws.OPEN) {
+    if (ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ heartbeat: Date.now() }));
     }
   }, 1000);

@@ -1,7 +1,7 @@
 # SuperGrok Heavy 4.2 — Local HTTPS Reverse Proxy
 #
 # Port topology served through Caddy:
-#   :9897  Python Bridge (python3_bridge.py) — backend AI + brain memory
+#   :9897  Python Backend (backend.py)      — JWT auth + secure-data API
 #   :9898  Frontend / Dashboard              — static PWA dist/ + KODER UI
 #   :9899  Node.js WebSocket telemetry       — ws:// relay
 #

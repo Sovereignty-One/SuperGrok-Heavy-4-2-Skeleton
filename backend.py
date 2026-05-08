@@ -58,7 +58,7 @@ def login():
         {
             "username": username,
             "role": role,
-            "exp": time.time() + _TOKEN_TTL,
+            "exp": int(time.time()) + _TOKEN_TTL,
         },
         JWT_SIGNING_KEY,
         algorithm="HS256",
