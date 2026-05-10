@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 """
-SuperGrok Unified Bridge v4.0
-Single port 9898 — HTTP + WebSocket upgrade on same socket.
+SuperGrok Unified Bridge v4.1
+Single port 9897 — HTTP + WebSocket upgrade on same socket.
 No external dependencies. Pure Python 3.6+ stdlib only.
 
-Quick start (a-Shell or iSH):
-export ANTHROPIC_API_KEY=sk-ant-…
-python3 bridge.py
+Port topology:
+  :9897  Python Bridge (this server) — backend AI, brain memory, keys
+  :9898  Frontend / Dashboard (Node.js server_9898.js) — HTML + WS + Coder UI
+  :9899  Node.js Unified_Server.js — REST proxy / relay
 
-Then open Safari at:  http://127.0.0.1:9898
+Quick start (a-Shell or iSH):
+export ANTHROPIC_API_KEY=sk-ant-...
+python3 python3_bridge.py
+
+Then open Safari at:  http://127.0.0.1:9897
 """
 
 import base64
@@ -25,7 +30,9 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-PORT = int(os.environ.get("SG_PORT", 9898))
+PORT = int(os.environ.get("SG_PORT", 9897))
+FRONTEND_PORT = 9898   # Frontend / Dashboard (Node.js server_9898.js — HTML + WS + Coder UI)
+NODE_PORT     = 9899   # Node.js Unified_Server.js — REST proxy / relay
 HOST = "127.0.0.1"
 MAX_CODE_REVIEW_LENGTH = 4000  # max chars of user code sent to AI for review
 
@@ -47,6 +54,56 @@ _AUDIT_LOCK = threading.Lock()
 # In-memory ring buffer for /api/audit endpoint (capped at 500 entries)
 _AUDIT_RING: list = []
 _AUDIT_MAX = 500
+
+
+# ---------------------------------------------------------------------
+# Persistent Brain — cross-session memory store (~/.sg_brain.json)
+# ---------------------------------------------------------------------
+
+_BRAIN_FILE = Path.home() / ".sg_brain.json"
+_BRAIN_LOCK = threading.Lock()
+# Max number of memory cards retained in the brain file.
+_BRAIN_MAX_CARDS = 200
+
+
+def _brain_load() -> list:
+    """Return the list of stored memory cards, or [] on any error."""
+    with _BRAIN_LOCK:
+        try:
+            if _BRAIN_FILE.exists():
+                data = json.loads(_BRAIN_FILE.read_text("utf-8"))
+                if isinstance(data, list):
+                    return data
+        except Exception as exc:
+            print(f"[WARN] Brain load error: {exc}", file=sys.stderr)
+    return []
+
+
+def _brain_save(cards: list) -> None:
+    """Atomically persist the memory cards list to disk."""
+    with _BRAIN_LOCK:
+        try:
+            # Keep only the most recent N cards (create a new list, don't mutate input)
+            trimmed = list(cards[-_BRAIN_MAX_CARDS:])
+            _BRAIN_FILE.write_text(json.dumps(trimmed, separators=(",", ":"), ensure_ascii=False), "utf-8")
+        except Exception as exc:
+            print(f"[WARN] Brain save error: {exc}", file=sys.stderr)
+
+
+def _brain_add(title: str, content: str, role: str = "", user: str = "") -> dict:
+    """Append one memory card to the brain and persist. Returns the new card."""
+    card = {
+        "id": secrets.token_hex(8),
+        "ts": int(time.time() * 1000),
+        "title": title[:200],
+        "content": content[:2000],
+        "role": role[:60],
+        "user": user[:60],
+    }
+    cards = _brain_load()
+    cards.append(card)
+    _brain_save(cards)
+    return card
 
 
 def _audit(event_type: str, data: dict | None = None) -> dict:
@@ -317,53 +374,118 @@ def post_json(url: str, headers: dict, body: dict):
         return None, str(e)
 
 
-def ai_claude(messages, model: str = "claude-opus-4-5"):
+# ── Newest-first model chains with automatic fallback ──────────────────────
+_CLAUDE_MODELS  = ["claude-opus-4-6", "claude-opus-4-5", "claude-sonnet-4-6"]
+_OPENAI_MODELS  = ["gpt-5.4", "gpt-5.1-codex-max", "gpt-4o"]
+_CODEX_MODELS   = ["gpt-5.1-codex-max", "gpt-5.4", "gpt-4o"]
+_GROK_MODELS    = ["grok-4.3", "grok-3-latest"]
+
+
+def _is_model_error(err: str | None) -> bool:
+    """Return True if err indicates the model was not found (safe to retry next model)."""
+    if not err:
+        return False
+    e = err.lower()
+    return any(x in e for x in ("not_found", "invalid_model", "no such model",
+                                 "model_not_found", "does not exist", "404"))
+
+
+def ai_claude(messages, model: str = "claude-opus-4-6"):
     k = KEYS["anthropic"]
     if not k:
         return None, "ANTHROPIC_API_KEY not set"
     _key_use("anthropic")
-    r, e = post_json(
-        "https://api.anthropic.com/v1/messages",
-        {
-            "Content-Type": "application/json",
-            "x-api-key": k,
-            "anthropic-version": "2023-06-01",
-        },
-        {"model": model, "max_tokens": 2000, "messages": messages},
-    )
-    return (r["content"][0]["text"], None) if r else (None, e)
+    # Try requested model then fall back through the chain
+    chain = [model] + [m for m in _CLAUDE_MODELS if m != model]
+    last_err = None
+    for m in chain:
+        r, e = post_json(
+            "https://api.anthropic.com/v1/messages",
+            {
+                "Content-Type": "application/json",
+                "x-api-key": k,
+                "anthropic-version": "2023-06-01",
+            },
+            {"model": m, "max_tokens": 2000, "messages": messages},
+        )
+        if r:
+            return (r["content"][0]["text"], None)
+        last_err = e
+        if not _is_model_error(e):
+            break  # non-model error (auth, quota, etc.) — stop trying
+    return None, last_err
 
 
-def ai_openai(messages, model: str = "gpt-4o"):
+def ai_openai(messages, model: str = "gpt-5.4"):
     k = KEYS["openai"]
     if not k:
         return None, "OPENAI_API_KEY not set"
     _key_use("openai")
-    r, e = post_json(
-        "https://api.openai.com/v1/chat/completions",
-        {"Content-Type": "application/json", "Authorization": "Bearer " + k},
-        {"model": model, "max_tokens": 2000, "messages": messages},
-    )
-    return (r["choices"][0]["message"]["content"], None) if r else (None, e)
+    chain = [model] + [m for m in _OPENAI_MODELS if m != model]
+    last_err = None
+    for m in chain:
+        r, e = post_json(
+            "https://api.openai.com/v1/chat/completions",
+            {"Content-Type": "application/json", "Authorization": "Bearer " + k},
+            {"model": m, "max_tokens": 2000, "messages": messages},
+        )
+        if r:
+            return (r["choices"][0]["message"]["content"], None)
+        last_err = e
+        if not _is_model_error(e):
+            break
+    return None, last_err
 
 
-def ai_grok(messages, model: str = "grok-3-latest"):
+def ai_openai_codex(messages, model: str = "gpt-5.1-codex-max"):
+    """Codex Max — OpenAI code-specialised model chain."""
+    k = KEYS["openai"]
+    if not k:
+        return None, "OPENAI_API_KEY not set"
+    _key_use("openai")
+    chain = [model] + [m for m in _CODEX_MODELS if m != model]
+    last_err = None
+    for m in chain:
+        r, e = post_json(
+            "https://api.openai.com/v1/chat/completions",
+            {"Content-Type": "application/json", "Authorization": "Bearer " + k},
+            {"model": m, "max_tokens": 2000, "messages": messages},
+        )
+        if r:
+            return (r["choices"][0]["message"]["content"], None)
+        last_err = e
+        if not _is_model_error(e):
+            break
+    return None, last_err
+
+
+def ai_grok(messages, model: str = "grok-4.3"):
     k = KEYS["grok"]
     if not k:
         return None, "GROK_API_KEY not set"
     _key_use("grok")
-    r, e = post_json(
-        "https://api.x.ai/v1/chat/completions",
-        {"Content-Type": "application/json", "Authorization": "Bearer " + k},
-        {"model": model, "max_tokens": 2000, "messages": messages},
-    )
-    return (r["choices"][0]["message"]["content"], None) if r else (None, e)
+    chain = [model] + [m for m in _GROK_MODELS if m != model]
+    last_err = None
+    for m in chain:
+        r, e = post_json(
+            "https://api.x.ai/v1/chat/completions",
+            {"Content-Type": "application/json", "Authorization": "Bearer " + k},
+            {"model": m, "max_tokens": 2000, "messages": messages},
+        )
+        if r:
+            return (r["choices"][0]["message"]["content"], None)
+        last_err = e
+        if not _is_model_error(e):
+            break
+    return None, last_err
 
 
 def route_ai(agent: str | None, messages, model: str | None = None):
     a = (agent or "claude").lower()
-    if a in ("claude", "anthropic", "arbiter"):
+    if a in ("claude", "anthropic", "arbiter", "siri"):
         order = [ai_claude, ai_openai, ai_grok]
+    elif a in ("codex", "copilot"):
+        order = [ai_openai_codex, ai_openai, ai_claude, ai_grok]
     elif "gpt" in a or "openai" in a:
         order = [ai_openai, ai_claude, ai_grok]
     elif "grok" in a or "xai" in a:
@@ -762,6 +884,43 @@ def handle_ws_msg(conn: socket.socket, raw: bytes) -> None:
             },
         )
 
+    elif t == "memory_save":
+        # Persist a memory card: {type:"memory_save", title:"...", content:"...", role:"...", user:"..."}
+        title = msg.get("title", "Untitled")
+        content = msg.get("content", "")
+        role = msg.get("role", "")
+        user = msg.get("user", "")
+        card = _brain_add(title, content, role, user)
+        _audit("BRAIN_SAVE", {"title": title[:60], "role": role})
+        ws_json(conn, {"type": "memory_saved", "card": card, "ts": card["ts"]})
+
+    elif t == "memory_get":
+        # Return stored memory cards: {type:"memory_get", role:"...", user:"..."}
+        role_filter = msg.get("role", "")
+        cards = _brain_load()
+        if role_filter:
+            # Return cards that match the requested role, plus cards with no role
+            # (role='' cards are shared across all roles — global context).
+            cards = [c for c in cards if c.get("role", "") in (role_filter, "")]
+        _audit("BRAIN_GET", {"role": role_filter, "count": len(cards)})
+        ws_json(conn, {"type": "memory_result", "cards": cards, "count": len(cards)})
+
+    elif t == "memory_delete":
+        # Delete a memory card by id: {type:"memory_delete", id:"..."}
+        card_id = msg.get("id", "")
+        cards = _brain_load()
+        before = len(cards)
+        cards = [c for c in cards if c.get("id") != card_id]
+        _brain_save(cards)
+        _audit("BRAIN_DELETE", {"id": card_id[:16], "removed": before - len(cards)})
+        ws_json(conn, {"type": "memory_deleted", "id": card_id, "count": len(cards)})
+
+    elif t == "memory_clear":
+        # Wipe all brain memory: {type:"memory_clear"}
+        _brain_save([])
+        _audit("BRAIN_CLEAR", {})
+        ws_json(conn, {"type": "memory_cleared", "ts": int(time.time() * 1000)})
+
     else:
         ws_json(conn, {"type": "ack", "received": t, "ts": int(time.time() * 1000)})
 
@@ -783,11 +942,15 @@ def run_ws(conn: socket.socket, addr, path: str) -> None:
         "key_status": _key_status_payload(),
         "stale_keys": stale,
         "piperReady": piper_ready,
-        "features": ["ai_chat", "ai_code_review", "piper_tts", "key_rotation", "audit", "shell", "stt"],
+        "features": ["ai_chat", "ai_code_review", "piper_tts", "key_rotation", "audit", "shell", "stt", "brain", "memory_hydration"],
     }
     ws_json(conn, dict(_bridge_payload, type="connected"))
     # Also send a "hello" for PiperTTS.ws.onmessage compatibility
     ws_json(conn, dict(_bridge_payload, type="hello"))
+    # Brain hydration — push stored memory cards to the client immediately on connect
+    _brain_cards = _brain_load()
+    if _brain_cards:
+        ws_json(conn, {"type": "memory_result", "cards": _brain_cards, "count": len(_brain_cards), "source": "hydration"})
     if stale:
         for p in stale:
             _audit("KEY_STALE_WARN", {"provider": p, "age_days": _key_status_payload()[p]["age_days"]})
@@ -917,10 +1080,13 @@ def handle_http(conn: socket.socket, method: str, path: str, body_bytes: bytes) 
                 200,
                 {
                     "status": "ok",
-                    "version": "v4.0",
+                    "version": "v4.1",
                     "port": PORT,
+                    "frontend_port": FRONTEND_PORT,
+                    "node_port": NODE_PORT,
                     "html": HTML_FILE or "not found",
                     "keys": {k: bool(v) for k, v in KEYS.items()},
+                    "brain_cards": len(_brain_load()),
                     "ts": int(time.time()),
                 },
             )
@@ -955,6 +1121,10 @@ def handle_http(conn: socket.socket, method: str, path: str, body_bytes: bytes) 
             with _AUDIT_LOCK:
                 recent = list(_AUDIT_RING[-limit:])
             http_send(conn, 200, {"entries": recent, "total": len(_AUDIT_RING)})
+
+        elif path == "/api/brain":
+            cards = _brain_load()
+            http_send(conn, 200, {"cards": cards, "count": len(cards)})
 
         else:
             http_send(conn, 404, {"error": "not found"})
@@ -1025,6 +1195,15 @@ def handle_http(conn: socket.socket, method: str, path: str, body_bytes: bytes) 
                     pass
             http_send(conn, 200, {"done": True})
 
+        elif path == "/api/brain":
+            title = body.get("title", "Untitled")
+            content = body.get("content", "")
+            role = body.get("role", "")
+            user = body.get("user", "")
+            card = _brain_add(title, content, role, user)
+            _audit("BRAIN_SAVE_HTTP", {"title": title[:60]})
+            http_send(conn, 200, {"saved": True, "card": card, "count": len(_brain_load())})
+
         else:
             http_send(conn, 404, {"error": "not found"})
         return
@@ -1093,7 +1272,7 @@ def handle_conn(conn: socket.socket, addr) -> None:
 
 if __name__ == "__main__":
     # ------------------------------------------------------------------
-    # Port conflict detection — warn if Node.js already holds port 9898
+    # Port conflict detection — warn if Node.js already holds port 9897
     # ------------------------------------------------------------------
     def _check_port_conflict(port: int) -> tuple:
         """Return (pid, process_name) if something already owns the port, else (None, None)."""
@@ -1139,22 +1318,34 @@ if __name__ == "__main__":
         if _is_node:
             print("   Cause   : Node.js server (Unified_Server.js) already bound to this port.")
             print(f"   Fix     : Stop Node first — `kill {_conflict_pid}`")
-            print("             Node.js should run on port 9899, not 9898.")
+            print("             Node.js should run on port 9899, not 9897.")
             print("             Or set a different port: SG_PORT=9900 python3 python3_bridge.py")
         else:
             print(f"   Fix     : kill {_conflict_pid}  or set SG_PORT=<other port>")
         print()
 
-    print("=" * 58)
-    print("  SuperGrok Unified Bridge v4.0")
+    print("=" * 62)
+    print("  SuperGrok Unified Bridge v4.1")
     print(f"  HTTP + WebSocket on single port {PORT} — no split")
-    print("=" * 58)
+    print("=" * 62)
     print(f"  Dashboard  : http://127.0.0.1:{PORT}")
     print(f"  Health     : http://127.0.0.1:{PORT}/api/health")
     print(f"  Key Status : http://127.0.0.1:{PORT}/api/key-status")
     print(f"  Audit Log  : http://127.0.0.1:{PORT}/api/audit")
     print(f"  Audit File : {_AUDIT_FILE}")
+    print(f"  Brain File : {_BRAIN_FILE}  ({len(_brain_load())} cards stored)")
     print(f"  HTML       : {HTML_FILE or 'NOT FOUND — place SGHv119.html in ~/'}")
+    print()
+    print("  Port topology:")
+    print(f"    :{PORT}  Python bridge (this server) — primary")
+    print(f"    :{FRONTEND_PORT}  Frontend / Dashboard (server_9898.js) — HTML + WS + Coder UI")
+    print(f"    :{NODE_PORT}  Node.js WS bridge (Unified_Server.js) — optional")
+    print()
+    print("  AI model chains (newest first with auto-fallback):")
+    print(f"    Claude  : {' > '.join(_CLAUDE_MODELS)}")
+    print(f"    OpenAI  : {' > '.join(_OPENAI_MODELS)}")
+    print(f"    Codex   : {' > '.join(_CODEX_MODELS)}")
+    print(f"    Grok    : {' > '.join(_GROK_MODELS)}")
     print()
     print("  Claude    : " + ("ready" if KEYS["anthropic"] else "export ANTHROPIC_API_KEY=sk-ant-…"))
     print("  OpenAI    : " + ("ready" if KEYS["openai"] else "export OPENAI_API_KEY=sk-…"))

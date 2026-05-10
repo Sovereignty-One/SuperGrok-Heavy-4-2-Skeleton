@@ -586,11 +586,11 @@ function App() {
                 </div>
                 <div className="p-3 bg-slate-900 rounded">
                   <div className="text-slate-400 text-xs mb-1">Run Server:</div>
-                  <div className="text-green-400">uvicorn backend:app --host 0.0.0.0 --port 8000</div>
+                  <div className="text-green-400">uvicorn backend:app --host 0.0.0.0 --port 9897</div>
                 </div>
                 <div className="p-3 bg-slate-900 rounded">
                   <div className="text-slate-400 text-xs mb-1">Verify:</div>
-                  <div className="text-green-400">curl http://localhost:8000/health</div>
+                  <div className="text-green-400">curl http://localhost:9897/health</div>
                 </div>
               </div>
             </div>

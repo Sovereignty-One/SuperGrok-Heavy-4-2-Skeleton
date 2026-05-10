@@ -1,8 +1,9 @@
 services:
   backend:
     build: ./backend
-    ports:
-      - "9898:9898"
+    # Internal only — accessed via node-bridge proxy on 9899
+    expose:
+      - "9897"
     environment:
       - REDIS_URL=redis://redis:6379/0
     depends_on:
@@ -13,7 +14,7 @@ services:
     ports:
       - "9899:9899"
     environment:
-      - API_URL=http://backend:9898
+      - API_URL=http://backend:9897
     depends_on:
       - backend
 
@@ -31,5 +32,6 @@ services:
 
   redis:
     image: redis:7
-    ports:
-      - "6379:6379"
+    # Internal only — no external exposure needed
+    expose:
+      - "6379"

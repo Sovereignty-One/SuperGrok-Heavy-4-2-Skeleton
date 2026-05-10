@@ -5,7 +5,7 @@
 **Private Sovereign AI Research and Development Platform**  
 **Core Model:** Super Grok Heavy 4.2  
 (xAI) – Locked, Sealed, Sovereign  
-**Last Updated:** April 17, 2026
+**Last Updated:** April 23, 2026
 
 ## 📋 Overview
 
@@ -39,7 +39,7 @@ export GROK_API_KEY=xai-...
 # 3. Launch
 sh start-dashboard.sh
 
-# 4. Open Safari → http://127.0.0.1:9899
+# 4. Open Safari → http://127.0.0.1:9897
 ```
 
 ### iSH First-Time Setup
@@ -65,7 +65,7 @@ sh start-dashboard.sh
 | `/api/exec` | POST | `{"cmd":"ls -la"}` shell exec |
 | `/api/keys` | POST | Set API keys at runtime |
 | `/api/speak` | POST | `{"text":"…"}` TTS via `say`/`espeak` |
-| `ws://…:9899` | WS | Full-duplex AI + agent bus |
+| `ws://…:9897` | WS | Full-duplex AI + agent bus |
 
 ---
 
@@ -85,7 +85,7 @@ VoiceCommandIntegrity   ← strict intent + 20dB/child-voice/panic trigger
     │  "stop them" → FamilyGuardCore.activateKillSwitch()
     │  "off"       → FamilyGuardCore.goDark()
     ▼
-AIBridgeService (ws://127.0.0.1:9899)
+AIBridgeService (ws://127.0.0.1:9897)
     ├── Claude (Anthropic)
     ├── GPT-4o (OpenAI)
     └── Grok (xAI)
@@ -322,7 +322,16 @@ SuperGrok-Heavy-4-2-Skeleton/
 
 ## 🚀 Key Features
 
-### 🛡️ Security Sentinel (Active Safety Agent)
+### 🔧 Self-Fixer AI (`selffixerai/`)
+- **Autonomous Self-Healing**: Continuous loop that detects and patches its own syntax errors and unsafe patterns
+- **Encrypted State**: All code state persisted as ChaCha20-Poly1305 AEAD ciphertext
+- **Hash-Chained Tamper Lock**: Ed25519 signatures over a Blake2b rolling hash chain detect any unauthorized modification
+- **Encrypted Backup Rotation**: Gzip-compressed backups with SHA-256 checksums; old backups pruned automatically
+- **Deep Static Analysis**: Optional `astroid`-powered scan flags oversized functions and unused variables
+- **Bridge Integration**: Publishes `SELF_HEAL_EVENT` to the bridge event bus when available
+- **Stable Ecosystem**: All module constructors use `__init__`; package entry point uses an `if __name__ == "__main__"` guard with `asyncio.run()`; `astroid` is a soft dependency
+
+
 - **Always-On Protection**: Persistent watchdog process that runs alongside the server
 - **File-Integrity Monitoring**: SHA-256 baseline tracking of critical files with tamper alerts
 - **Rate-Limit Detection**: Monitors the access audit log for connection-burst / brute-force patterns
@@ -435,7 +444,7 @@ pip install -r requirements.txt
 alembic upgrade head
 
 # Start the backend server (internal - will be proxied via node-bridge)
-uvicorn app.main:app --reload --host 127.0.0.1 --port 9899
+uvicorn app.main:app --reload --host 127.0.0.1 --port 9898
 ```
 
 #### Frontend Setup
@@ -657,6 +666,15 @@ For questions, issues, or collaboration inquiries:
 
 ## 📝 Changelog
 
+### [1.5.0] - 2026-04-23
+- **Self-Fixer AI ecosystem** (`selffixerai/`): created the full package from the design specification with all documented bugs corrected — `__init__` constructors, consistent `snake_case` attribute names, `filelock` usage, `cleanup_old_backups()` called on every save, `is_valid()` guard restored, `load_state()` wrapped in try/except with graceful tamper-halt.
+- **`selffixerai/notifications.py`**: added missing `Notifier` stub (was causing `ImportError` at startup).
+- **`selffixerai/security/tamper_lock.py`**: fixed `fromprivatebytes` → `from_private_bytes`, `nodesofclass` → `nodes_of_class`, unified attribute naming (`code_file`, `sig_file`, `key_file`, `current_hash`, `private_key`, `public_key`).
+- **`selffixerai/analysis/deep_scanner.py`**: `astroid` import made a soft dependency (graceful skip if not installed); fixed API call `nodes_of_class`; replaced broken `assigned_type()` check.
+- **`selffixerai/core/self_fixer.py`**: score decay changed from `1` → `0.5` for stability; bridge `SELF_HEAL_EVENT` publish made optional (no hard import).
+- **`selffixerai/main.py`**: `if name == "main"` → `if __name__ == "__main__"`; wrapped in `async def main()` for clean shutdown via `asyncio.run()`.
+- **`security_sentinel.py`**: expanded `WATCHED_FILES` to include `python3_bridge.py`, `SGHv119.html`, and `security_sentinel.py` for full core-file integrity coverage.
+
 ### [1.4.0] - 2026-04-14
 - **Port architecture update**: Python bridge (`python3_bridge.py`) moves to port **9897**; Node.js bridge moved to port **9899** to eliminate conflict.
 - **Keycloak added**: SSO / Identity Provider now runs on ports **8080** (HTTP) and **8443** (HTTPS) in all Docker Compose configurations.
@@ -696,7 +714,7 @@ For questions, issues, or collaboration inquiries:
 
 ---
 
-**Last Updated**: April 17, 2026  
-**Version**: 1.4.0  
+**Last Updated**: April 23, 2026  
+**Version**: 1.5.0  
 **Status**: Active Development  
 **Core Model**: Super Grok Heavy 4.2
