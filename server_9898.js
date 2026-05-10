@@ -166,9 +166,15 @@ const SAFE_CMDS = new Set([
   'echo', 'cat', 'head', 'tail', 'wc',
 ]);
 
+// Shell metacharacters that could allow injection
+const SHELL_META_RE = /[;&|`$<>()\\\n\r]/;
+
 function isSafeCommand(cmd) {
-  const base = cmd.trim().split(/\s+/)[0];
-  if (SAFE_CMDS.has(cmd.trim())) return true;
+  // Reject anything with shell metacharacters before checking the allowlist
+  if (SHELL_META_RE.test(cmd)) return false;
+  const trimmed = cmd.trim();
+  const base    = trimmed.split(/\s+/)[0];
+  if (SAFE_CMDS.has(trimmed)) return true;
   if (['echo', 'cat', 'head', 'tail', 'wc', 'ls'].includes(base)) return true;
   return false;
 }
@@ -178,7 +184,9 @@ function executeCommand(cmd, role) {
     return { output: `[Bridge] Command restricted for role ${role || 'user'}: ${cmd}\nAllowed: pwd, ls, date, whoami, node --version, etc.`, exit: 1 };
   }
   try {
-    const out = cp.execSync(cmd, { timeout: 5000, encoding: 'utf8', shell: '/bin/sh' });
+    // Split into argv and use execFileSync (no shell) to prevent injection
+    const argv = cmd.trim().split(/\s+/);
+    const out  = cp.execFileSync(argv[0], argv.slice(1), { timeout: 5000, encoding: 'utf8' });
     return { output: out, exit: 0 };
   } catch (e) {
     return { output: e.message, exit: e.status || 1 };

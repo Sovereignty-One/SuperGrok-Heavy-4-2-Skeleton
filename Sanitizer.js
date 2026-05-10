@@ -42,7 +42,7 @@ class EnterpriseLogger {
   }
 
   _connectSyslog() {
-    this.syslogClient = tls.connect({ host: this.syslogHost, port: this.syslogPort, rejectUnauthorized: false });
+    this.syslogClient = tls.connect({ host: this.syslogHost, port: this.syslogPort, rejectUnauthorized: true });
     this.syslogClient.on('error', () => {
       this._registerFailure();
     });
