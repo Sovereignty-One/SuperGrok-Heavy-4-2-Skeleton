@@ -261,7 +261,7 @@ if __name__ == "__main__":
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=8000,
+        port=9897,
         log_level="info",
         access_log=True
     )
@@ -295,14 +295,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend.py .
 
 # Expose port
-EXPOSE 8000
+EXPOSE 9897
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \\
-  CMD curl -f http://localhost:8000/health || exit 1
+  CMD curl -f http://localhost:9897/health || exit 1
 
 # Run application
-CMD ["uvicorn", "backend:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+CMD ["uvicorn", "backend:app", "--host", "0.0.0.0", "--port", "9897", "--workers", "4"]
 `;
 
     const requirements = `fastapi==0.109.0
@@ -321,7 +321,7 @@ services:
     build: .
     container_name: supergrok-backend
     ports:
-      - "8000:8000"
+      - "9897:9897"
     volumes:
       - ./supergrok.db:/app/supergrok.db
       - ./logs:/app/logs
@@ -414,7 +414,7 @@ spec:
         image: supergrok/backend:latest
         imagePullPolicy: Always
         ports:
-        - containerPort: 8000
+        - containerPort: 9897
           name: http
         env:
         - name: LOG_LEVEL
@@ -432,13 +432,13 @@ spec:
         livenessProbe:
           httpGet:
             path: /health
-            port: 8000
+            port: 9897
           initialDelaySeconds: 30
           periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /health
-            port: 8000
+            port: 9897
           initialDelaySeconds: 5
           periodSeconds: 5
 
@@ -457,7 +457,7 @@ spec:
     component: backend
   ports:
   - port: 80
-    targetPort: 8000
+    targetPort: 9897
     protocol: TCP
     name: http
 

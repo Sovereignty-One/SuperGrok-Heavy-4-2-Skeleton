@@ -7,7 +7,7 @@ The SuperGrok Heavy 4.2 Skeleton uses a clear three-port separation:
 | Port | Service | Role |
 |------|---------|------|
 | **9897** | `python3_bridge.py` | Python Bridge — backend AI, brain/memory, key rotation, audit |
-| **9898** | `server_9898.js` | Frontend / Dashboard — HTML, WebSocket, Coder UI, everything the user sees |
+| **9898** | `server_9898.js` (repo root) | Frontend / Dashboard — HTML, WebSocket, Coder UI, everything the user sees |
 | **9899** | `Unified_Server.js` | Node.js — REST proxy / relay |
 | **8080** | Keycloak | SSO / Identity Provider (HTTP) |
 | **8443** | Keycloak | SSO / Identity Provider (HTTPS) |
@@ -42,7 +42,7 @@ The SuperGrok Heavy 4.2 Skeleton uses a clear three-port separation:
 - Key rotation, audit log (`~/.sg_audit.jsonl`), session tokens
 - API routes: `/api/health`, `/api/ai`, `/api/keys`, `/api/speak`, `/api/audit`, `/api/rotate-key`, `/api/conflicts`, `/api/brain`
 
-### 9898 — Frontend / Dashboard (`server_9898.js`)
+### 9898 — Frontend / Dashboard (`server_9898.js`, repo root)
 - Serves `SGHv119.html` and all dashboard HTML to the browser
 - WebSocket channel for real-time UI updates
 - AI proxy pass-through, memory, audit endpoints
@@ -75,7 +75,7 @@ python3 python3_bridge.py
 # → http://127.0.0.1:9897
 
 # Start Frontend / Dashboard (in another terminal)
-node Sovereignty-AI-Studio-main/server_9898.js
+node server_9898.js
 # → http://127.0.0.1:9898  ← open this in your browser
 
 # Or start everything at once
