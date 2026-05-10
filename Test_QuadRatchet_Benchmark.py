@@ -97,11 +97,3 @@ def test_full_json_serialization_and_reload():
     for i, (blob, proof) in enumerate(blobs):
         decrypted = restored.decrypt(blob)
         assert decrypted == f"persist-{i}".encode()
-
-✅ Fixes
-1. Removed calls to restored.quad.tree.proof() which doesn’t exist.
-2. Compared restored.quad.tree.root directly for integrity instead of trying to generate a proof.
-3. Properly aligned JSON serialization with actual QuadRatchetSession fields.
-4. Keeps private keys generated and only reconstructs state needed for decryption.
-
-This version will execute without AttributeErrors and honors the real session API.
