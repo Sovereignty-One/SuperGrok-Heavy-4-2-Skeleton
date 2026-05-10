@@ -68,7 +68,7 @@ fi
 
 # -- 9898: Frontend / Dashboard (server_9898.js) ---------------
 
-FRONTEND_JS="Sovereignty-AI-Studio-main/server_9898.js"
+FRONTEND_JS="server_9898.js"
 if [ -f "${FRONTEND_JS}" ]; then
   echo "  Starting Frontend / Dashboard on :9898..."
   PORT=9898 node "${FRONTEND_JS}" &
