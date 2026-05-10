@@ -308,7 +308,7 @@ async function handleRequest(req, res) {
   // POST /api/memory
   if (method === 'POST' && urlPath === '/api/memory') {
     const body  = await readBody(req);
-    const items = readJSON('memory.json', []);
+    let   items = readJSON('memory.json', []);
     const entry = {
       id:      Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       title:   (body.title  || 'Note').slice(0, 200),
@@ -339,7 +339,7 @@ async function handleRequest(req, res) {
   // POST /api/audit
   if (method === 'POST' && urlPath === '/api/audit') {
     const body    = await readBody(req);
-    const entries = readJSON('audit.json', []);
+    let   entries = readJSON('audit.json', []);
     const entry   = {
       id:      Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       action:  (body.action  || 'EVENT').slice(0, 100),
@@ -372,7 +372,7 @@ if (process.env.TLS_CERT && process.env.TLS_KEY) {
 }
 
 // ---------------------------------------------------------------------------
-// WebSocket server — accepts connections at any path (root ws://localhost:9899)
+// WebSocket server — accepts connections at any path (root ws://localhost:9898)
 // ---------------------------------------------------------------------------
 let wss = null;
 try {
