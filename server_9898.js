@@ -158,39 +158,59 @@ async function callAI(model, system, messages) {
 }
 
 // ---------------------------------------------------------------------------
-// Safe command execution — allowlist only
+// Safe command execution — allowlist only, fully hardcoded argv to prevent injection
 // ---------------------------------------------------------------------------
-const SAFE_CMDS = new Set([
-  'pwd', 'ls', 'date', 'whoami', 'hostname', 'uname',
-  'node --version', 'npm --version', 'python3 --version', 'python --version',
-  'echo', 'cat', 'head', 'tail', 'wc',
+
+// Map each allowed command string to a hardcoded [executable, ...args] tuple.
+// User input selects which entry to run; it never flows into exec arguments.
+const CMD_ALLOWLIST = new Map([
+  ['pwd',               ['pwd']],
+  ['ls',                ['ls']],
+  ['date',              ['date']],
+  ['whoami',            ['whoami']],
+  ['hostname',          ['hostname']],
+  ['uname',             ['uname']],
+  ['node --version',    ['node', '--version']],
+  ['npm --version',     ['npm', '--version']],
+  ['python3 --version', ['python3', '--version']],
+  ['python --version',  ['python', '--version']],
 ]);
 
-// Shell metacharacters that could allow injection
-const SHELL_META_RE = /[;&|`$<>()\\\n\r]/;
-
-function isSafeCommand(cmd) {
-  // Reject anything with shell metacharacters before checking the allowlist
-  if (SHELL_META_RE.test(cmd)) return false;
-  const trimmed = cmd.trim();
-  const base    = trimmed.split(/\s+/)[0];
-  if (SAFE_CMDS.has(trimmed)) return true;
-  if (['echo', 'cat', 'head', 'tail', 'wc', 'ls'].includes(base)) return true;
-  return false;
-}
+// Commands whose first token is allowed; extra arguments are passed through
+// only after stripping shell metacharacters from each token individually.
+const SAFE_BASE_CMDS = new Set(['echo', 'cat', 'head', 'tail', 'wc', 'ls']);
+const SHELL_META_RE  = /[;&|`$<>()\\\n\r]/;
 
 function executeCommand(cmd, role) {
-  if (!isSafeCommand(cmd)) {
-    return { output: `[Bridge] Command restricted for role ${role || 'user'}: ${cmd}\nAllowed: pwd, ls, date, whoami, node --version, etc.`, exit: 1 };
+  const trimmed = (cmd || '').trim();
+
+  // Try exact match in the hardcoded allowlist first
+  if (CMD_ALLOWLIST.has(trimmed)) {
+    try {
+      const argv = CMD_ALLOWLIST.get(trimmed);
+      const out  = cp.execFileSync(argv[0], argv.slice(1), { timeout: 5000, encoding: 'utf8' });
+      return { output: out, exit: 0 };
+    } catch (e) {
+      return { output: e.message, exit: e.status || 1 };
+    }
   }
-  try {
-    // Split into argv and use execFileSync (no shell) to prevent injection
-    const argv = cmd.trim().split(/\s+/);
-    const out  = cp.execFileSync(argv[0], argv.slice(1), { timeout: 5000, encoding: 'utf8' });
-    return { output: out, exit: 0 };
-  } catch (e) {
-    return { output: e.message, exit: e.status || 1 };
+
+  // Try safe-base-command pattern: validate each token, then exec without shell
+  const tokens = trimmed.split(/\s+/);
+  const base   = tokens[0];
+  if (SAFE_BASE_CMDS.has(base) && tokens.every(t => !SHELL_META_RE.test(t))) {
+    try {
+      const out = cp.execFileSync(base, tokens.slice(1), { timeout: 5000, encoding: 'utf8' });
+      return { output: out, exit: 0 };
+    } catch (e) {
+      return { output: e.message, exit: e.status || 1 };
+    }
   }
+
+  return {
+    output: `[Bridge] Command restricted for role ${role || 'user'}: ${trimmed}\nAllowed: pwd, ls, date, whoami, hostname, uname, node --version, npm --version, python3 --version, echo, cat, head, tail, wc`,
+    exit:   1,
+  };
 }
 
 // ---------------------------------------------------------------------------
