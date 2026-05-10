@@ -1,1 +1,0 @@
-rm -rf wasm chmod 000 killall -1 react
