@@ -1,9 +1,9 @@
-# sanitizer.js - Enterprise-Grade Production Wiper with Circuit Breaker for Syslog
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
-import zlib from 'zlib';
-import tls from 'tls';
+// sanitizer.js - Enterprise-Grade Production Wiper with Circuit Breaker for Syslog
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const zlib = require('zlib');
+const tls = require('tls');
 
 class EnterpriseLogger {
   constructor({
@@ -210,7 +210,7 @@ class EnterpriseSanitizer {
   }
 }
 
-if (process.env.NODE_ENV !== 'test' && import.meta.url === `file://${process.argv[1]}`) {
+if (process.env.NODE_ENV !== 'test' && require.main === module) {
   new EnterpriseSanitizer().run().catch(async e => {
     const timestamp = new Date().toISOString();
     const errMsg = `Error: ${e.message}`;
@@ -220,12 +220,12 @@ if (process.env.NODE_ENV !== 'test' && import.meta.url === `file://${process.arg
   });
 }
 
-export { EnterpriseSanitizer };
+module.exports = { EnterpriseSanitizer };
 
-# Enterprise Enhancements:
-# 	1.	Circuit Breaker for Syslog – Temporarily stops sending after repeated failures to avoid blocks.
-# 	2.	Gzip Log Rotation – Storage-efficient archival of logs.
-# 	3.	Secure Syslog (TLS) with retry and exponential backoff for reliability.
-# 	4.	Correlation IDs for distributed traceability in logs.
-# 	5.	Silent, Always Live – Fully production-grade behavior with enterprise observability.
+// Enterprise Enhancements:
+// 	1.	Circuit Breaker for Syslog -- Temporarily stops sending after repeated failures to avoid blocks.
+// 	2.	Gzip Log Rotation -- Storage-efficient archival of logs.
+// 	3.	Secure Syslog (TLS) with retry and exponential backoff for reliability.
+// 	4.	Correlation IDs for distributed traceability in logs.
+// 	5.	Silent, Always Live -- Fully production-grade behavior with enterprise observability.
 
