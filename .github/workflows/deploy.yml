@@ -8,10 +8,6 @@ on:
 permissions:
   contents: read
 
-defaults:
-  run:
-    working-directory: Sovereignty-AI-Studio-main
-
 jobs:
   test:
     runs-on: ubuntu-latest
