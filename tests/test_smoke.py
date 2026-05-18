@@ -1,8 +1,5 @@
 """Smoke tests – verify key modules import and behave correctly."""
 
-import json
-import tempfile
-
 
 # ---------------------------------------------------------------------------
 # logging_utils.immutable_logger
@@ -58,5 +55,5 @@ class TestSelfFixerAIImports:
         assert isinstance(results, list)
 
     def test_main_entry_importable(self):
-        import selffixerai
-        assert callable(selffixerai.main.main)
+        from selffixerai import main as main_module
+        assert callable(main_module.main)
