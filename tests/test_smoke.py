@@ -3,8 +3,6 @@
 import json
 import tempfile
 
-import pytest
-
 
 # ---------------------------------------------------------------------------
 # logging_utils.immutable_logger
