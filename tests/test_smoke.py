@@ -62,5 +62,5 @@ class TestSelfFixerAIImports:
         assert isinstance(results, list)
 
     def test_main_entry_importable(self):
-        from selffixerai import main as main_module
-        assert callable(main_module.main)
+        import selffixerai
+        assert callable(selffixerai.main.main)
