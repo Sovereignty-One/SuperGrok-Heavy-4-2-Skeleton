@@ -1,6 +1,5 @@
 """Smoke tests – verify key modules import and behave correctly."""
 
-import hashlib
 import json
 import os
 import tempfile
