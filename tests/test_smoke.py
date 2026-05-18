@@ -1,7 +1,6 @@
 """Smoke tests – verify key modules import and behave correctly."""
 
 import json
-import os
 import tempfile
 
 import pytest
