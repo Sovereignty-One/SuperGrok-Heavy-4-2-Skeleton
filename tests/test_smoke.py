@@ -40,8 +40,8 @@ class TestImmutableLogger:
 
 class TestSelfFixerAIImports:
     def test_package_import(self):
-        import selffixerai
-        assert selffixerai.__all__
+        from selffixerai import __all__
+        assert __all__
 
     def test_notifications(self):
         from selffixerai.notifications import Notifier
