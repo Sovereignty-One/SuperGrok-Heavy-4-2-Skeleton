@@ -94,4 +94,4 @@ def test_python_bridge_invalid_max_tokens_falls_back(monkeypatch):
 
     bridge = importlib.reload(python3_bridge)
 
-    assert bridge.AI_MAX_TOKENS == 2000
+    assert bridge.AI_MAX_TOKENS == 8192
