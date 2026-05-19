@@ -3,11 +3,13 @@ from pydantic import BaseModel
 import json
 import os
 import time
+import logging
 import oqs
 from gateone_enclave.tpm_attestation import verify_tpm_quote
 
 app = FastAPI(title="GATEONE PQC Verifier")
 SIG_ALG = "ML-DSA-65"
+logger = logging.getLogger(__name__)
 
 # Persist signing keys so process restarts do not regenerate them.
 KEY_DIR = os.path.join(os.path.expanduser("~"), ".gateone")
@@ -93,4 +95,5 @@ async def verify_attestation(token: AttestationToken):
             }
 
     except Exception as e:
-        return {"valid": False, "reason": str(e)}
+        logger.exception("Attestation verification failed")
+        return {"valid": False, "reason": "internal_verification_error"}

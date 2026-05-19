@@ -1,10 +1,10 @@
 import json
 import time
 import asyncio
-from sovereign_persistent_brain.scripts.persist_brain import persist_brain
-from sovereign_persistent_brain.scripts.handle_error import handle_error
-from sovereign_persistent_brain.scripts.rate_limiter import RateLimiter
-from sovereign_persistent_brain.scripts.memory_manager import MemoryManager
+from fixers.persist_brain import persist_brain
+from fixers.handle_error import handle_error
+from fixers.rate_limiter import RateLimiter
+from fixers.memory_manager import MemoryManager
 
 class SuperGrokVoiceHandler:
     def __init__(self, brain_state: dict, user_tier: str = "SUPERGROK"):
