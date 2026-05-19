@@ -7,8 +7,8 @@ The SuperGrok Heavy 4.2 Skeleton uses a clear three-port separation:
 | Port | Service | Role |
 |------|---------|------|
 | **9897** | `python3_bridge.py` | Python Bridge — backend AI, brain/memory, key rotation, audit |
-| **9898** | `server_9898.js` (repo root) | Frontend / Dashboard — HTML, WebSocket, Coder UI, everything the user sees |
-| **9899** | `Unified_Server.js` | Node.js — REST proxy / relay |
+| **9898** | `server_9898.js` (repo root) | KODER frontend / Dashboard — HTML, WebSocket, Coder UI, everything the user sees |
+| **9899** | `Unified_Server.js` | Node.js external backend — REST proxy / relay |
 | **8080** | Keycloak | SSO / Identity Provider (HTTP) |
 | **8443** | Keycloak | SSO / Identity Provider (HTTPS) |
 
@@ -18,15 +18,15 @@ The SuperGrok Heavy 4.2 Skeleton uses a clear three-port separation:
 ┌─────────────────────────────────────────────────────────────┐
 │                  External Clients                            │
 │  • iOS App / iSH / macOS (ws://127.0.0.1:9897)             │
-│  • SGHv119.html dashboard  (http://127.0.0.1:9898)         │
-│  • React / Docker clients  (http://127.0.0.1:9899)         │
+│  • KODER / SGHv119 frontend (http://127.0.0.1:9898)        │
+│  • Node external backend    (http://127.0.0.1:9899)        │
 │  • Keycloak admin          (http://localhost:8080/admin/)   │
 └──────┬──────────────────────────┬──────────────┬────────────┘
        │ Port 9897                │ Port 9898    │ Port 9899
        ▼                          ▼              ▼
 ┌──────────────────┐  ┌─────────────────────┐  ┌──────────────────┐
 │ python3_bridge.py│  │  server_9898.js     │  │ Unified_Server.js│
-│ Python Bridge    │  │  Frontend /         │  │ Node.js relay    │
+│ Python Bridge    │  │  KODER frontend     │  │ Node external    │
 │ • AI / brain     │  │  Dashboard          │  │ • REST proxy     │
 │ • Key rotation   │  │  • Serves HTML      │  │ • WS relay       │
 │ • Audit log      │  │  • WebSocket bus    │  │ • /api/v1/*      │
@@ -42,14 +42,14 @@ The SuperGrok Heavy 4.2 Skeleton uses a clear three-port separation:
 - Key rotation, audit log (`~/.sg_audit.jsonl`), session tokens
 - API routes: `/api/health`, `/api/ai`, `/api/keys`, `/api/speak`, `/api/audit`, `/api/rotate-key`, `/api/conflicts`, `/api/brain`
 
-### 9898 — Frontend / Dashboard (`server_9898.js`, repo root)
+### 9898 — KODER Frontend / Dashboard (`server_9898.js`, repo root)
 - Serves `SGHv119.html` and all dashboard HTML to the browser
 - WebSocket channel for real-time UI updates
 - AI proxy pass-through, memory, audit endpoints
 - **This is what the user sees — browser connects here**
 
 ### 9899 — Node.js Unified Server (`Unified_Server.js`)
-- REST API proxy to FastAPI backend
+- External backend / REST API proxy
 - WebSocket relay
 - Docker bridge service
 
@@ -74,7 +74,7 @@ export GROK_API_KEY=xai-...
 python3 python3_bridge.py
 # → http://127.0.0.1:9897
 
-# Start Frontend / Dashboard (in another terminal)
+# Start KODER Frontend / Dashboard (in another terminal)
 node server_9898.js
 # → http://127.0.0.1:9898  ← open this in your browser
 
@@ -123,7 +123,7 @@ curl http://127.0.0.1:9898/health       # Frontend server health
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SG_PORT` | `9897` | Python bridge listen port |
-| `PORT` (server_9898.js) | `9898` | Frontend / Dashboard listen port |
+| `PORT` (server_9898.js) | `9898` | KODER Frontend / Dashboard listen port |
 | `PORT_UNIFIED` | `9899` | Unified_Server.js listen port |
 | `NODE_BRIDGE_PORT` | `9899` | Node.js bridge listen port |
 | `KEYCLOAK_URL` | `http://127.0.0.1:8080` | Keycloak base URL |
