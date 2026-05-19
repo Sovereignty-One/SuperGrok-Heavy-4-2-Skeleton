@@ -36,7 +36,14 @@ NODE_PORT     = 9899   # Node.js Unified_Server.js — REST proxy / relay
 HOST = "127.0.0.1"
 MAX_CODE_REVIEW_LENGTH = 4000  # max chars of user code sent to AI for review
 # Max completion tokens requested from AI providers.
-AI_MAX_TOKENS = max(1, int(os.environ.get("SG_MAX_TOKENS", "2000")))
+def _parse_max_tokens(value: str, default: int = 2000) -> int:
+    try:
+        return max(1, int(value))
+    except (TypeError, ValueError):
+        return default
+
+
+AI_MAX_TOKENS = _parse_max_tokens(os.environ.get("SG_MAX_TOKENS", "2000"))
 
 # How many days before a key is flagged as stale and rotation is recommended.
 KEY_ROTATION_DAYS = int(os.environ.get("SG_KEY_ROTATION_DAYS", 30))

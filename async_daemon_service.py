@@ -24,9 +24,12 @@ class AsyncDaemonService:
     async def run(self) -> None:
         """Run the callback on an interval until stop() is called."""
         self._running = True
-        while self._running:
-            await self._callback()
-            await asyncio.sleep(self._interval_seconds)
+        try:
+            while self._running:
+                await self._callback()
+                await asyncio.sleep(self._interval_seconds)
+        finally:
+            self._running = False
 
     def stop(self) -> None:
         """Stop the daemon loop on the next iteration."""

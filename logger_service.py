@@ -31,9 +31,7 @@ def get_logger(name: str = "supergrok", *, level: int | None = None) -> logging.
     logger = logging.getLogger(name)
     if level is None:
         env_level = os.getenv("LOG_LEVEL", "INFO").upper()
-        level = logging.getLevelName(env_level)
-        if not isinstance(level, int):
-            level = logging.INFO
+        level = logging._nameToLevel.get(env_level, logging.INFO)
     return configure_logger(logger, level=level)
 
 

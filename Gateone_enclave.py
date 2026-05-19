@@ -16,7 +16,6 @@ PRIVATE_KEY_FILE = os.path.join(KEY_DIR, "ml_dsa_65_private.key")
 
 
 def _load_or_generate_signing_keys():
-    os.makedirs(KEY_DIR, exist_ok=True)
     try:
         if os.path.isfile(PUBLIC_KEY_FILE) and os.path.isfile(PRIVATE_KEY_FILE):
             with open(PUBLIC_KEY_FILE, "rb") as pub_file:
@@ -33,14 +32,23 @@ def _load_or_generate_signing_keys():
     signer = oqs.Signature(SIG_ALG)
     public_key = signer.generate_keypair()
     private_key = signer.export_secret_key()
-    with open(PUBLIC_KEY_FILE, "wb") as pub_file:
-        pub_file.write(public_key)
-    with open(PRIVATE_KEY_FILE, "wb") as priv_file:
-        priv_file.write(private_key)
+    try:
+        os.makedirs(KEY_DIR, exist_ok=True)
+        with open(PUBLIC_KEY_FILE, "wb") as pub_file:
+            pub_file.write(public_key)
+        private_fd = os.open(PRIVATE_KEY_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(private_fd, "wb") as priv_file:
+            priv_file.write(private_key)
+    except OSError:
+        # If keys cannot be persisted (read-only home, permission issue, etc.),
+        # keep the freshly generated keypair in memory and let startup continue.
+        pass
     return public_key, private_key
 
 
-_, PRIVATE_KEY = _load_or_generate_signing_keys()
+def get_signing_keys():
+    """Load persisted signing keys or generate them lazily when needed."""
+    return _load_or_generate_signing_keys()
 
 class AttestationToken(BaseModel):
     attestation_token: str
