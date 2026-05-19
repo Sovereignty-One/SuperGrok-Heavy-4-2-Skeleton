@@ -35,6 +35,15 @@ FRONTEND_PORT = 9898   # Frontend / Dashboard (Node.js server_9898.js — HTML +
 NODE_PORT     = 9899   # Node.js Unified_Server.js — REST proxy / relay
 HOST = "127.0.0.1"
 MAX_CODE_REVIEW_LENGTH = 4000  # max chars of user code sent to AI for review
+# Max completion tokens requested from AI providers.
+def _parse_max_tokens(value: str, default: int = 2000) -> int:
+    try:
+        return max(1, int(value))
+    except (TypeError, ValueError):
+        return default
+
+
+AI_MAX_TOKENS = _parse_max_tokens(os.environ.get("SG_MAX_TOKENS", "2000"))
 
 # How many days before a key is flagged as stale and rotation is recommended.
 KEY_ROTATION_DAYS = int(os.environ.get("SG_KEY_ROTATION_DAYS", 30))
@@ -406,7 +415,7 @@ def ai_claude(messages, model: str = "claude-opus-4-6"):
                 "x-api-key": k,
                 "anthropic-version": "2023-06-01",
             },
-            {"model": m, "max_tokens": 2000, "messages": messages},
+            {"model": m, "max_tokens": AI_MAX_TOKENS, "messages": messages},
         )
         if r:
             return (r["content"][0]["text"], None)
@@ -427,7 +436,7 @@ def ai_openai(messages, model: str = "gpt-5.4"):
         r, e = post_json(
             "https://api.openai.com/v1/chat/completions",
             {"Content-Type": "application/json", "Authorization": "Bearer " + k},
-            {"model": m, "max_tokens": 2000, "messages": messages},
+            {"model": m, "max_tokens": AI_MAX_TOKENS, "messages": messages},
         )
         if r:
             return (r["choices"][0]["message"]["content"], None)
@@ -449,7 +458,7 @@ def ai_openai_codex(messages, model: str = "gpt-5.1-codex-max"):
         r, e = post_json(
             "https://api.openai.com/v1/chat/completions",
             {"Content-Type": "application/json", "Authorization": "Bearer " + k},
-            {"model": m, "max_tokens": 2000, "messages": messages},
+            {"model": m, "max_tokens": AI_MAX_TOKENS, "messages": messages},
         )
         if r:
             return (r["choices"][0]["message"]["content"], None)
@@ -470,7 +479,7 @@ def ai_grok(messages, model: str = "grok-4.3"):
         r, e = post_json(
             "https://api.x.ai/v1/chat/completions",
             {"Content-Type": "application/json", "Authorization": "Bearer " + k},
-            {"model": m, "max_tokens": 2000, "messages": messages},
+            {"model": m, "max_tokens": AI_MAX_TOKENS, "messages": messages},
         )
         if r:
             return (r["choices"][0]["message"]["content"], None)
