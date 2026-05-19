@@ -9,7 +9,7 @@ echo "=============================================="
 echo ""
 echo "  Port topology:"
 echo "    :9897  Python Bridge (python3_bridge.py)  -- backend AI + brain memory"
-echo "    :9898  Frontend / Dashboard (server_9898.js) -- HTML + WS + Coder UI"
+echo "    :9898  KODER frontend (server_9898.js) -- HTML + WS + Coder UI"
 echo "    :9899  Node.js Unified_Server.js          -- REST proxy / relay"
 echo ""
 
@@ -66,11 +66,11 @@ else
   PY_PID=""
 fi
 
-# -- 9898: Frontend / Dashboard (server_9898.js) ---------------
+# -- 9898: KODER frontend (server_9898.js) ---------------------
 
 FRONTEND_JS="server_9898.js"
 if [ -f "${FRONTEND_JS}" ]; then
-  echo "  Starting Frontend / Dashboard on :9898..."
+  echo "  Starting KODER frontend on :9898..."
   PORT=9898 node "${FRONTEND_JS}" &
   FRONTEND_PID=$!
   echo "  Frontend PID: $FRONTEND_PID"
@@ -123,7 +123,7 @@ fi
 
 echo ""
 echo "  Open the dashboard in your browser:"
-echo "    http://127.0.0.1:9898  <-- Frontend / Dashboard (what you see)"
+echo "    http://127.0.0.1:9898  <-- KODER frontend (what you see)"
 echo "    http://127.0.0.1:9897  <-- Python bridge direct (AI + brain)"
 echo "  Logs:  ./logs/access.jsonl"
 echo ""

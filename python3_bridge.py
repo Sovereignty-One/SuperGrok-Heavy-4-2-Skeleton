@@ -6,8 +6,8 @@ No external dependencies. Pure Python 3.6+ stdlib only.
 
 Port topology:
   :9897  Python Bridge (this server) — backend AI, brain memory, keys
-  :9898  Frontend / Dashboard (Node.js server_9898.js) — HTML + WS + Coder UI
-  :9899  Node.js Unified_Server.js — REST proxy / relay
+  :9898  KODER frontend (Node.js server_9898.js) — HTML + WS + Coder UI
+  :9899  Node.js external backend (Unified_Server.js) — REST proxy / relay
 
 Quick start (a-Shell or iSH):
 export ANTHROPIC_API_KEY=sk-ant-...
@@ -31,19 +31,26 @@ import urllib.request
 from pathlib import Path
 
 PORT = int(os.environ.get("SG_PORT", 9897))
-FRONTEND_PORT = 9898   # Frontend / Dashboard (Node.js server_9898.js — HTML + WS + Coder UI)
-NODE_PORT     = 9899   # Node.js Unified_Server.js — REST proxy / relay
+FRONTEND_PORT = 9898   # KODER frontend (Node.js server_9898.js — HTML + WS + Coder UI)
+NODE_PORT     = 9899   # Node.js external backend (Unified_Server.js — REST proxy / relay)
 HOST = "127.0.0.1"
 MAX_CODE_REVIEW_LENGTH = 4000  # max chars of user code sent to AI for review
 # Max completion tokens requested from AI providers.
-def _parse_max_tokens(value: str, default: int = 2000) -> int:
+def _parse_max_tokens(value: str, default: int = 8192) -> int:
     try:
         return max(1, int(value))
     except (TypeError, ValueError):
         return default
 
 
-AI_MAX_TOKENS = _parse_max_tokens(os.environ.get("SG_MAX_TOKENS", "2000"))
+AI_MAX_TOKENS = _parse_max_tokens(os.environ.get("SG_MAX_TOKENS", "8192"))
+
+
+def _requested_max_tokens(value, default: int = AI_MAX_TOKENS) -> int:
+    try:
+        return max(1, int(value)) if value not in (None, "") else default
+    except (TypeError, ValueError):
+        return default
 
 # How many days before a key is flagged as stale and rotation is recommended.
 KEY_ROTATION_DAYS = int(os.environ.get("SG_KEY_ROTATION_DAYS", 30))
@@ -384,10 +391,10 @@ def post_json(url: str, headers: dict, body: dict):
 
 
 # ── Newest-first model chains with automatic fallback ──────────────────────
-_CLAUDE_MODELS  = ["claude-opus-4-6", "claude-sonnet-4-6", "claude-opus-4-5", "claude-sonnet-4-5"]
+_CLAUDE_MODELS  = ["claude-opus-4-7", "claude-opus-4-6", "claude-sonnet-4-6", "claude-sonnet-4-5"]
 _OPENAI_MODELS  = ["gpt-5.4-mini", "gpt-5.4-codex", "gpt-5.4", "gpt-5.1-codex-max", "gpt-4o"]
 _CODEX_MODELS   = ["gpt-5.4-codex", "gpt-5.4-mini", "gpt-5.4", "gpt-5.1-codex-max", "gpt-4o"]
-_GROK_MODELS    = ["grok-4.3", "grok-3-latest"]
+_GROK_MODELS    = ["grok-4.3"]
 
 
 def _is_model_error(err: str | None) -> bool:
@@ -399,7 +406,7 @@ def _is_model_error(err: str | None) -> bool:
                                  "model_not_found", "does not exist", "404"))
 
 
-def ai_claude(messages, model: str = "claude-opus-4-6"):
+def ai_claude(messages, model: str = "claude-opus-4-7", max_tokens=None):
     k = KEYS["anthropic"]
     if not k:
         return None, "ANTHROPIC_API_KEY not set"
@@ -415,7 +422,7 @@ def ai_claude(messages, model: str = "claude-opus-4-6"):
                 "x-api-key": k,
                 "anthropic-version": "2023-06-01",
             },
-            {"model": m, "max_tokens": AI_MAX_TOKENS, "messages": messages},
+            {"model": m, "max_tokens": _requested_max_tokens(max_tokens), "messages": messages},
         )
         if r:
             return (r["content"][0]["text"], None)
@@ -425,7 +432,7 @@ def ai_claude(messages, model: str = "claude-opus-4-6"):
     return None, last_err
 
 
-def ai_openai(messages, model: str = "gpt-5.4-mini"):
+def ai_openai(messages, model: str = "gpt-5.4-mini", max_tokens=None):
     k = KEYS["openai"]
     if not k:
         return None, "OPENAI_API_KEY not set"
@@ -436,7 +443,7 @@ def ai_openai(messages, model: str = "gpt-5.4-mini"):
         r, e = post_json(
             "https://api.openai.com/v1/chat/completions",
             {"Content-Type": "application/json", "Authorization": "Bearer " + k},
-            {"model": m, "max_tokens": AI_MAX_TOKENS, "messages": messages},
+            {"model": m, "max_tokens": _requested_max_tokens(max_tokens), "messages": messages},
         )
         if r:
             return (r["choices"][0]["message"]["content"], None)
@@ -446,7 +453,7 @@ def ai_openai(messages, model: str = "gpt-5.4-mini"):
     return None, last_err
 
 
-def ai_openai_codex(messages, model: str = "gpt-5.4-codex"):
+def ai_openai_codex(messages, model: str = "gpt-5.4-codex", max_tokens=None):
     """Codex Max — OpenAI code-specialised model chain."""
     k = KEYS["openai"]
     if not k:
@@ -458,7 +465,7 @@ def ai_openai_codex(messages, model: str = "gpt-5.4-codex"):
         r, e = post_json(
             "https://api.openai.com/v1/chat/completions",
             {"Content-Type": "application/json", "Authorization": "Bearer " + k},
-            {"model": m, "max_tokens": AI_MAX_TOKENS, "messages": messages},
+            {"model": m, "max_tokens": _requested_max_tokens(max_tokens), "messages": messages},
         )
         if r:
             return (r["choices"][0]["message"]["content"], None)
@@ -468,7 +475,7 @@ def ai_openai_codex(messages, model: str = "gpt-5.4-codex"):
     return None, last_err
 
 
-def ai_grok(messages, model: str = "grok-4.3"):
+def ai_grok(messages, model: str = "grok-4.3", max_tokens=None):
     k = KEYS["grok"]
     if not k:
         return None, "GROK_API_KEY not set"
@@ -479,7 +486,7 @@ def ai_grok(messages, model: str = "grok-4.3"):
         r, e = post_json(
             "https://api.x.ai/v1/chat/completions",
             {"Content-Type": "application/json", "Authorization": "Bearer " + k},
-            {"model": m, "max_tokens": AI_MAX_TOKENS, "messages": messages},
+            {"model": m, "max_tokens": _requested_max_tokens(max_tokens), "messages": messages},
         )
         if r:
             return (r["choices"][0]["message"]["content"], None)
@@ -489,7 +496,7 @@ def ai_grok(messages, model: str = "grok-4.3"):
     return None, last_err
 
 
-def route_ai(agent: str | None, messages, model: str | None = None):
+def route_ai(agent: str | None, messages, model: str | None = None, max_tokens=None):
     a = (agent or "claude").lower()
     if a in ("claude", "anthropic", "arbiter", "siri"):
         order = [ai_claude, ai_openai, ai_grok]
@@ -503,7 +510,7 @@ def route_ai(agent: str | None, messages, model: str | None = None):
         order = [ai_claude, ai_openai, ai_grok]
 
     for fn in order:
-        text, err = (fn(messages, model) if model else fn(messages))
+        text, err = (fn(messages, model, max_tokens) if model else fn(messages, max_tokens=max_tokens))
         if text:
             return text, None
     return None, "All providers failed or no API keys set"
@@ -631,7 +638,7 @@ def handle_ws_msg(conn: socket.socket, raw: bytes) -> None:
         history = msg.get("history", [])
         messages = history + [{"role": "user", "content": prompt}]
         ws_json(conn, {"type": "agent_thinking", "agent": agent, "request_id": rid})
-        text, err = route_ai(agent, messages, msg.get("model"))
+        text, err = route_ai(agent, messages, msg.get("model"), msg.get("max_tokens"))
         ws_json(
             conn,
             {
@@ -817,7 +824,7 @@ def handle_ws_msg(conn: socket.socket, raw: bytes) -> None:
             f"{prompt_text}{truncation_note}"
         )
         messages = [{"role": "user", "content": review_prompt}]
-        text, err = route_ai(None, messages)
+        text, err = route_ai(None, messages, None, msg.get("max_tokens"))
         if text:
             ws_json(conn, {"type": "ai_code_review_result", "review": text, "lang": lang, "truncated": truncated})
         else:
@@ -1347,7 +1354,7 @@ if __name__ == "__main__":
     print()
     print("  Port topology:")
     print(f"    :{PORT}  Python bridge (this server) — primary")
-    print(f"    :{FRONTEND_PORT}  Frontend / Dashboard (server_9898.js) — HTML + WS + Coder UI")
+    print(f"    :{FRONTEND_PORT}  KODER frontend (server_9898.js) — HTML + WS + Coder UI")
     print(f"    :{NODE_PORT}  Node.js WS bridge (Unified_Server.js) — optional")
     print()
     print("  AI model chains (newest first with auto-fallback):")

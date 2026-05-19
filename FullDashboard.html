@@ -3419,7 +3419,7 @@ window.runCopilotAgent = function(){
   if(primary==='claude'||primary==='copilot'){
     apiKey = localStorage.getItem('sg_ant_key')||'';
     apiUrl = 'https://api.anthropic.com/v1/messages';
-    apiModel = 'claude-opus-4-6';
+    apiModel = 'claude-opus-4-7';
   } else if(primary==='grok'){
     apiKey = localStorage.getItem('sg_xai_key')||'';
     apiUrl = 'https://api.x.ai/v1/chat/completions';
@@ -3460,10 +3460,10 @@ window.runCopilotAgent = function(){
   if(primary==='claude'||primary==='copilot'){
     headers['x-api-key'] = apiKey;
     headers['anthropic-version'] = '2023-06-01';
-    body = JSON.stringify({model:apiModel,max_tokens:2048,system:sysPrompt,messages:[{role:'user',content:userMsg}]});
+    body = JSON.stringify({model:apiModel,max_tokens:8192,system:sysPrompt,messages:[{role:'user',content:userMsg}]});
   } else {
     headers['Authorization'] = 'Bearer '+apiKey;
-    body = JSON.stringify({model:apiModel,max_tokens:2048,messages:[{role:'system',content:sysPrompt},{role:'user',content:userMsg}]});
+    body = JSON.stringify({model:apiModel,max_tokens:8192,messages:[{role:'system',content:sysPrompt},{role:'user',content:userMsg}]});
   }
 
   fetch(apiUrl,{method:'POST',headers:headers,body:body})
@@ -4692,17 +4692,17 @@ window.SGOrchestrator = (function(){
 
   var AGENTS={};
   AGENTS.claude=new Agent({id:'claude',name:'Claude Opus 4.6',icon:'🤖',color:'#cc785c',role:'Reasoning · Safety · Analysis · Code',
-    process:async function(msg,a){ return await bridge('claude','claude-opus-4-6',a.memory.slice(-10).concat([{role:'user',content:msg.content}]),1024); }});
+    process:async function(msg,a){ return await bridge('claude','claude-opus-4-7',a.memory.slice(-10).concat([{role:'user',content:msg.content}]),8192); }});
   AGENTS.gpt=new Agent({id:'gpt',name:'GPT-5.4 Mini',icon:'🧠',color:'#10a37f',role:'General · Creative · Vision · Translate',
-    process:async function(msg,a){ return await bridge('gpt','gpt-5.4-mini',a.memory.slice(-10).concat([{role:'user',content:msg.content}]),1024); }});
+    process:async function(msg,a){ return await bridge('gpt','gpt-5.4-mini',a.memory.slice(-10).concat([{role:'user',content:msg.content}]),8192); }});
   AGENTS.grok=new Agent({id:'grok',name:'Grok 4.3',icon:'⚡',color:'#f59e0b',role:'Judge · Debate · Fact-Check · Real-Time',
     process:async function(msg,a){
       var lock='MEMORY_LOCK: '+a.memory.length+' protected entries.';
       var msgs=[{role:'system',content:lock}].concat(a.memory.slice(-10)).concat([{role:'user',content:msg.content}]);
-      return await bridge('grok','grok-4.3',msgs,1024);
+      return await bridge('grok','grok-4.3',msgs,8192);
     }});
   AGENTS.copilot=new Agent({id:'copilot',name:'GPT-5.4 Codex',icon:'🐙',color:'#6366f1',role:'Code · Repo · PR · Review · Actions',
-    process:async function(msg,a){ return await bridge('copilot','gpt-5.4-codex',a.memory.slice(-8).concat([{role:'user',content:msg.content}]),1024); }});
+    process:async function(msg,a){ return await bridge('copilot','gpt-5.4-codex',a.memory.slice(-8).concat([{role:'user',content:msg.content}]),8192); }});
   AGENTS.siri=new Agent({id:'siri',name:'Voice / Siri',icon:'🎙️',color:'#a855f7',role:'Voice Commands · Device Control · On-Device',
     process:async function(msg){
       var cmd=(msg.content||'').toLowerCase();
@@ -4710,7 +4710,7 @@ window.SGOrchestrator = (function(){
         audit:'audittrail',github:'github',browser:'browser',files:'fileai',agents:'agents',shield:'privacy'};
       for(var p in panelMap){ if(cmd.includes(p)){ if(window.loadPanel) window.loadPanel(panelMap[p]); return 'Opening '+p; } }
       if(cmd.includes('logout')||cmd.includes('sign out')){ if(window.doLogout) window.doLogout(); return 'Signed out.'; }
-      return await bridge('siri','claude-sonnet-4-6',[{role:'user',content:msg.content}],256);
+      return await bridge('siri','claude-sonnet-4-6',[{role:'user',content:msg.content}],8192);
     }});
   AGENTS.arbiter=new Agent({id:'arbiter',name:'Arbiter',icon:'⚖️',color:'#00d4ff',role:'Council · Conflict · Final Authority',
     process:async function(msg){
@@ -4718,14 +4718,14 @@ window.SGOrchestrator = (function(){
         var parts=Object.keys(msg.opts.council).map(function(k){ return k+': '+String(msg.opts.council[k]).slice(0,80); });
         return 'COUNCIL: '+parts.join(' | ');
       }
-      return await bridge('arbiter','claude-sonnet-4-6',[{role:'system',content:'You are an arbiter. Be concise.'},{role:'user',content:msg.content}],512);
+      return await bridge('arbiter','claude-sonnet-4-6',[{role:'system',content:'You are an arbiter. Be concise.'},{role:'user',content:msg.content}],8192);
     }});
 
   async function councilVote(question){
     if(!question) return;
     var responses={};
     await Promise.allSettled(['claude','gpt','grok'].map(function(id){
-      return bridge(id,id==='claude'?'claude-opus-4-6':id==='gpt'?'gpt-5.4-mini':'grok-4.3',[{role:'user',content:question}],256)
+      return bridge(id,id==='claude'?'claude-opus-4-7':id==='gpt'?'gpt-5.4-mini':'grok-4.3',[{role:'user',content:question}],8192)
         .then(function(r){ responses[id]=r; });
     }));
     AGENTS.arbiter.send(question,{council:responses});
@@ -5698,7 +5698,7 @@ PANELS.dashboard=function(){
     '<div class="card"><div class="card-title">🤖 Agent Status</div>'+
       sr('Claude Sonnet 4.6','IDLE','b-info')+
       sr('GPT-4o','IDLE','b-info')+
-      sr('Grok 4.20 Judge','IDLE','b-info')+
+      sr('Grok 4.3 Judge','IDLE','b-info')+
       sr('GitHub Copilot','IDLE','b-info')+sr('Keycloak SSO','CHECKING','b-warn')+sr('Zoho 2FA','STANDBY','b-dim')+
       sr('Voice / Siri','READY','b-ok')+
       sr('Arbiter','STANDBY','b-dim')+
@@ -5809,11 +5809,11 @@ PANELS.audit=function(){
 };
 
 PANELS.agents=function(){
-  return hdr('🤖 Agent Orchestrator','Claude &middot; GPT-4o &middot; Grok 4.20 &middot; Copilot &middot; Voice/Siri &middot; Arbiter')+
+  return hdr('🤖 Agent Orchestrator','Claude &middot; GPT-4o &middot; Grok 4.3 &middot; Copilot &middot; Voice/Siri &middot; Arbiter')+
   '<div class="ag-grid">'+
     agCard('🤖','Claude Sonnet 4.6','Reasoning · Safety · Code · Analysis','b-ok','var(--acid)')+
     agCard('🧠','GPT-4o','General · Creative · Vision · Translate','b-ok','#10a37f')+
-    agCard('⚡','Grok 4.20 Judge','Judge · Debate · Fact-Check · Memory Lock','b-ok','var(--sun)')+
+    agCard('⚡','Grok 4.3 Judge','Judge · Debate · Fact-Check · Memory Lock','b-ok','var(--sun)')+
     agCard('🐙','GitHub Copilot','Code · Repo · PR · Review · Actions','b-ok','var(--plasma)')+
     agCard('🎙️','Voice / Siri','Voice Commands · Deep Links · On-Device','b-ok','#a855f7')+
     agCard('⚖️','Arbiter','Council · Conflict Resolution · Final Authority','b-dim','var(--acid)')+
@@ -5822,7 +5822,7 @@ PANELS.agents=function(){
 };
 
 PANELS.chat=function(){
-  return hdr('💬 AI Chat','Claude &middot; GPT-4o &middot; Grok 4.20 &middot; Bridge localhost:9897')+
+  return hdr('💬 AI Chat','Claude &middot; GPT-4o &middot; Grok 4.3 &middot; Bridge localhost:9897')+
   '<div class="card" style="margin-bottom:10px">'+
   '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
   '<button class="btn btn-s btn-sm ca" data-ag="claude">🤖 Claude</button>'+
@@ -5840,7 +5840,7 @@ PANELS.chat=function(){
 PANELS.council=function(){
   var votes=(function(){try{return JSON.parse(localStorage.getItem('sg_council_log')||'[]');}catch(e){return[];}})();
 
-  return hdr('\u2696\ufe0f Council Vote','Claude + GPT-4o + Grok 4.20 \u00b7 Simultaneous \u00b7 Arbiter Synthesis \u00b7 Cryptographic Verdict')+
+  return hdr('\u2696\ufe0f Council Vote','Claude + GPT-4o + Grok 4.3 \u00b7 Simultaneous \u00b7 Arbiter Synthesis \u00b7 Cryptographic Verdict')+
   '<div class="kgrid">'+
     kc(votes.length+'','Sessions','var(--acid)')+
     kc(votes.filter(function(v){return v.consensus;}).length+'','Consensus','#00e676')+
@@ -5855,7 +5855,7 @@ PANELS.council=function(){
     [
       {name:'Claude Sonnet',icon:'\ud83e\udde0',color:'#7c4dff',id:'claude'},
       {name:'GPT-5.4 Mini',       icon:'\ud83d\udcac',color:'#10a37f',id:'gpt'},
-      {name:'Grok 4.20',    icon:'\u26a1',        color:'#b8ff00',id:'grok'},
+      {name:'Grok 4.3',    icon:'\u26a1',        color:'#b8ff00',id:'grok'},
     ].map(function(j){
       return '<div style="padding:12px;border-radius:var(--r);background:var(--bg2);border:1px solid '+j.color+'22;text-align:center">'+
         '<div style="font-size:24px;margin-bottom:5px">'+j.icon+'</div>'+
@@ -18118,7 +18118,7 @@ sr(‘Audit Chain’,‘VERIFIED’,‘b-ok’)+
 ‘<div class="card"><div class="card-title">🤖 Agent Status</div>’+
 sr(‘Claude Sonnet 4.6’,‘IDLE’,‘b-info’)+
 sr(‘GPT-4o’,‘IDLE’,‘b-info’)+
-sr(‘Grok 4.20 Judge’,‘IDLE’,‘b-info’)+
+sr(‘Grok 4.3 Judge’,‘IDLE’,‘b-info’)+
 sr(‘GitHub Copilot’,‘IDLE’,‘b-info’)+
 sr(‘Voice / Siri’,‘READY’,‘b-ok’)+
 sr(‘Arbiter’,‘STANDBY’,‘b-dim’)+
@@ -18188,11 +18188,11 @@ return ‘<tr><td class="mono" style="font-size:10px">’+e.idx+’</td><td>’+
 };
 
 PANELS.agents=function(){
-return hdr(‘🤖 Agent Orchestrator’,‘Claude · GPT-4o · Grok 4.20 · Copilot · Voice/Siri · Arbiter’)+
+return hdr(‘🤖 Agent Orchestrator’,‘Claude · GPT-4o · Grok 4.3 · Copilot · Voice/Siri · Arbiter’)+
 ‘<div class="ag-grid">’+
 agCard(‘🤖’,‘Claude Sonnet 4.6’,‘Reasoning · Safety · Code · Analysis’,‘b-ok’,‘var(–acid)’)+
 agCard(‘🧠’,‘GPT-4o’,‘General · Creative · Vision · Translate’,‘b-ok’,’#10a37f’)+
-agCard(‘⚡’,‘Grok 4.20 Judge’,‘Judge · Debate · Fact-Check · Memory Lock’,‘b-ok’,‘var(–sun)’)+
+agCard(‘⚡’,‘Grok 4.3 Judge’,‘Judge · Debate · Fact-Check · Memory Lock’,‘b-ok’,‘var(–sun)’)+
 agCard(‘🐙’,‘GitHub Copilot’,‘Code · Repo · PR · Review · Actions’,‘b-ok’,‘var(–plasma)’)+
 agCard(‘🎙️’,‘Voice / Siri’,‘Voice Commands · Deep Links · On-Device’,‘b-ok’,’#a855f7’)+
 agCard(‘⚖️’,‘Arbiter’,‘Council · Conflict Resolution · Final Authority’,‘b-dim’,‘var(–acid)’)+
@@ -18201,7 +18201,7 @@ agCard(‘⚖️’,‘Arbiter’,‘Council · Conflict Resolution · Final Aut
 };
 
 PANELS.chat=function(){
-return hdr(‘💬 AI Chat’,‘Claude · GPT-4o · Grok 4.20 · Bridge localhost:9897’)+
+return hdr(‘💬 AI Chat’,‘Claude · GPT-4o · Grok 4.3 · Bridge localhost:9897’)+
 ‘<div class="card" style="margin-bottom:10px">’+
 ‘<div style="display:flex;gap:6px;flex-wrap:wrap">’+
 ‘<button class="btn btn-s btn-sm ca" data-ag="claude">🤖 Claude</button>’+
@@ -18219,7 +18219,7 @@ return hdr(‘💬 AI Chat’,‘Claude · GPT-4o · Grok 4.20 · Bridge localho
 PANELS.council=function(){
 var votes=(function(){try{return JSON.parse(localStorage.getItem(‘sg_council_log’)||’[]’);}catch(e){return[];}})();
 
-return hdr(’\u2696\ufe0f Council Vote’,‘Claude + GPT-4o + Grok 4.20 \u00b7 Simultaneous \u00b7 Arbiter Synthesis \u00b7 Cryptographic Verdict’)+
+return hdr(’\u2696\ufe0f Council Vote’,‘Claude + GPT-4o + Grok 4.3 \u00b7 Simultaneous \u00b7 Arbiter Synthesis \u00b7 Cryptographic Verdict’)+
 ‘<div class="kgrid">’+
 kc(votes.length+’’,‘Sessions’,‘var(–acid)’)+
 kc(votes.filter(function(v){return v.consensus;}).length+’’,‘Consensus’,’#00e676’)+
@@ -18234,7 +18234,7 @@ kc(‘3’,‘Judges’,‘var(–volt)’)+
 [
 {name:‘Claude Sonnet’,icon:’\ud83e\udde0’,color:’#7c4dff’,id:‘claude’},
 {name:‘GPT-4o’,       icon:’\ud83d\udcac’,color:’#10a37f’,id:‘gpt’},
-{name:‘Grok 4.20’,    icon:’\u26a1’,        color:’#b8ff00’,id:‘grok’},
+{name:‘Grok 4.3’,    icon:’\u26a1’,        color:’#b8ff00’,id:‘grok’},
 ].map(function(j){
 return ‘<div style="padding:12px;border-radius:var(--r);background:var(--bg2);border:1px solid '+j.color+'22;text-align:center">’+
 ‘<div style="font-size:24px;margin-bottom:5px">’+j.icon+’</div>’+

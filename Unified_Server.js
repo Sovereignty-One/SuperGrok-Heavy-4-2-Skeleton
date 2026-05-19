@@ -1,8 +1,8 @@
 /**
 
 - SuperGrok Unified Server -- Production Enterprise
-- Single process: Node.js + WebSocket bridge + Auth + DDG + GitHub + Plaid + Piper + ISH shell
-- Port: 9899 (unified single entry point - all services funnel through here)
+- Single process: Node.js external backend + WebSocket bridge + Auth + DDG + GitHub + Plaid + Piper + ISH shell
+- Port: 9899 (ws9899 / external backend entry point - all services funnel through here)
 - Run: node unified_server.js
   */
   'use strict';
@@ -264,21 +264,24 @@ req.end();
 }
 
 // ─── AI PROXY ─────────────────────────────────────────────────────────
-function aiProxy(model, text, system, apiKey, cb) {
+function aiProxy(model, text, system, apiKey, maxTokens, cb) {
+const tokens = Number.isFinite(Number.parseInt(maxTokens, 10)) && Number.parseInt(maxTokens, 10) > 0
+  ? Number.parseInt(maxTokens, 10)
+  : 8192;
 const providers = {
 claude: { host:'api.anthropic.com', path:'/v1/messages', envKey:'ANTHROPIC_API_KEY',
 makeHeaders: k => ({ 'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01' }),
-makeBody: t => JSON.stringify({ model:'claude-opus-4-6', max_tokens:1200,
+makeBody: t => JSON.stringify({ model:'claude-opus-4-7', max_tokens:tokens,
 system:system||'You are SuperGrok AI assistant.', messages:[{role:'user',content:t}] }),
 extract: d => d.content&&d.content[0]&&d.content[0].text },
 gpt: { host:'api.openai.com', path:'/v1/chat/completions', envKey:'OPENAI_API_KEY',
 makeHeaders: k => ({ 'Content-Type':'application/json','Authorization':'Bearer '+k }),
-makeBody: t => JSON.stringify({ model:'gpt-5.4-mini', max_tokens:1200,
+makeBody: t => JSON.stringify({ model:'gpt-5.4-mini', max_tokens:tokens,
 messages:[{role:'system',content:system||''},{role:'user',content:t}] }),
 extract: d => d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content },
 grok: { host:'api.x.ai', path:'/v1/chat/completions', envKey:'XAI_API_KEY',
 makeHeaders: k => ({ 'Content-Type':'application/json','Authorization':'Bearer '+k }),
-makeBody: t => JSON.stringify({ model:'grok-4.3', max_tokens:1200,
+makeBody: t => JSON.stringify({ model:'grok-4.3', max_tokens:tokens,
 messages:[{role:'system',content:system||''},{role:'user',content:t}] }),
 extract: d => d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content },
 };
@@ -668,7 +671,7 @@ if (type === 'ddg_search') {
 }
 
 if (type === 'ai_query') {
-  aiProxy(msg.model||'claude', msg.text||'', msg.system||'', msg.apiKey||'', (err, response) => {
+  aiProxy(msg.model||'claude', msg.text||'', msg.system||'', msg.apiKey||'', msg.max_tokens, (err, response) => {
     ws.send(JSON.stringify({type:'ai_response', text:response, model:msg.model||'claude'}));
   }); return;
 }
