@@ -1,0 +1,208 @@
+name: OAUTH-API-GENERATOR
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**/*.py"
+      - "**/*.js"
+      - "requirements*.txt"
+      - ".github/workflows/oauth-api-generator.yml"
+      - "!docs/**"
+      - "!**/*.md"
+    tags: ["v*.*.*"]
+  pull_request:
+    branches: [main]
+    paths:
+      - "**/*.py"
+      - "**/*.js"
+      - "requirements*.txt"
+      - ".github/workflows/oauth-api-generator.yml"
+      - "!docs/**"
+      - "!**/*.md"
+  release:
+    types: [published]
+  workflow_dispatch:
+
+env:
+  PYTHONPATH: .:./backend
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oauth-api-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f .github/workflows/Requirements.txt ]; then pip install -r .github/workflows/Requirements.txt; fi
+          pip install flake8 pytest pytest-asyncio
+
+      - name: Lint
+        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --max-line-length=120
+
+      - name: Run Python tests
+        env:
+          PYTHONPATH: .:./backend
+        run: pytest --tb=short -q
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install Node dependencies
+        run: npm ci --ignore-scripts || npm install --ignore-scripts
+
+      - name: Node syntax check
+        run: |
+          node --check Unified_Server.js
+          python -m py_compile backend.py
+
+  build-sign:
+    needs: build-test
+    if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute lowercase image name
+        shell: bash
+        run: echo "REGISTRY_LC=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - name: Build Multi-Arch Image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.REGISTRY_LC }}:latest
+            ${{ env.REGISTRY_LC }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v4.1.2
+
+      - name: Sign Image (Keyless — Fulcio + Rekor)
+        run: |
+          cosign sign \
+            --yes \
+            --fulcio-url https://fulcio.sigstore.dev \
+            --rekor-url https://rekor.sigstore.dev \
+            ${{ env.REGISTRY_LC }}:${{ github.sha }}
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+
+  supply-chain:
+    needs: build-sign
+    if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute lowercase image name
+        shell: bash
+        run: echo "REGISTRY_LC=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate SBOM (CycloneDX)
+        uses: anchore/sbom-action@v0.24.0
+        with:
+          image: ${{ env.REGISTRY_LC }}:${{ github.sha }}
+          format: cyclonedx-json
+          artifact-name: sbom-sovereignty-ai.json
+          output-file: sbom-sovereignty-ai.json
+          registry-username: ${{ github.actor }}
+          registry-password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v4.1.2
+
+      - name: Cosign SBOM Attestation
+        run: |
+          cosign attest \
+            --predicate sbom-sovereignty-ai.json \
+            --type cyclonedx \
+            --yes \
+            ${{ env.REGISTRY_LC }}:${{ github.sha }}
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        continue-on-error: true
+
+  security-scan:
+    needs: build-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: 0
+
+      - name: OWASP dependency check
+        run: |
+          pip install pip-audit
+          pip-audit -r requirements.txt || true
+        continue-on-error: true
+
+      - name: Security headers reference
+        run: |
+          echo "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload"
+          echo "Content-Security-Policy: default-src 'self'; script-src 'self'"
+          echo "X-Content-Type-Options: nosniff"
+          echo "X-Frame-Options: DENY"
+          echo "X-XSS-Protection: 1; mode=block"
+          echo "Referrer-Policy: strict-origin-when-cross-origin"
+          echo "Permissions-Policy: camera=(), microphone=(), geolocation=()"

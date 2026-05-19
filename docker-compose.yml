@@ -1,6 +1,8 @@
 services:
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
     # Internal only — accessed via node-bridge proxy on 9899
     expose:
       - "9897"
@@ -10,9 +12,11 @@ services:
       - redis
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./supergrok-enterprise
+      dockerfile: Dockerfile
     ports:
-      - "9899:9899"
+      - "9899:80"
     environment:
       - API_URL=http://backend:9897
     depends_on:

@@ -8,10 +8,6 @@ on:
 permissions:
   contents: read
 
-defaults:
-  run:
-    working-directory: Sovereignty-AI-Studio-main
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -26,8 +22,6 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r backend/requirements.txt
           pip install pytest pytest-asyncio flake8
 
       - name: Lint
@@ -64,11 +58,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Verify deploy file layout
+        run: |
+          test -f Dockerfile.backend
+          test -f supergrok-enterprise/Dockerfile
+          test -f docker-compose.yml
+          test -f security_sentinel.py
+
       - name: Build backend Docker image
-        run: docker build -t sovereignty-backend ./backend
+        run: docker build -t sovereignty-backend -f Dockerfile.backend .
 
       - name: Build frontend Docker image
-        run: docker build -t sovereignty-frontend ./frontend
+        run: docker build -t sovereignty-frontend ./supergrok-enterprise
 
       - name: Verify Docker Compose config
         run: docker compose config --quiet
