@@ -118,7 +118,7 @@ async function callAI(model, system, messages) {
     const r = await apiPost(
       'https://api.anthropic.com/v1/messages',
       { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      { model: 'claude-sonnet-4-20250514', max_tokens: 1200, system, messages },
+      { model: 'claude-opus-4-6', max_tokens: 1200, system, messages },
     );
     if (r.body && r.body.content && r.body.content[0]) {
       return { text: r.body.content[0].text };
@@ -132,7 +132,7 @@ async function callAI(model, system, messages) {
     const r = await apiPost(
       'https://api.openai.com/v1/chat/completions',
       { Authorization: `Bearer ${key}` },
-      { model: 'gpt-4o', max_tokens: 1200, messages: [{ role: 'system', content: system }, ...messages] },
+      { model: 'gpt-5.4-mini', max_tokens: 1200, messages: [{ role: 'system', content: system }, ...messages] },
     );
     if (r.body && r.body.choices && r.body.choices[0]) {
       return { text: r.body.choices[0].message.content };
@@ -146,7 +146,7 @@ async function callAI(model, system, messages) {
     const r = await apiPost(
       'https://api.x.ai/v1/chat/completions',
       { Authorization: `Bearer ${key}` },
-      { model: 'grok-2-latest', max_tokens: 1200, messages: [{ role: 'system', content: system }, ...messages] },
+      { model: 'grok-4.3', max_tokens: 1200, messages: [{ role: 'system', content: system }, ...messages] },
     );
     if (r.body && r.body.choices && r.body.choices[0]) {
       return { text: r.body.choices[0].message.content };

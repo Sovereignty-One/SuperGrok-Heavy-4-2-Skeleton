@@ -3662,15 +3662,15 @@ window.runCopilotAgent = async function(){
   if(primary==='claude'){
     apiKey = localStorage.getItem('sg_ant_key')||'';
     apiUrl = 'https://api.anthropic.com/v1/messages';
-    apiModel = 'claude-opus-4-5';
+    apiModel = 'claude-opus-4-6';
   } else if(primary==='grok'){
     apiKey = localStorage.getItem('sg_xai_key')||'';
     apiUrl = 'https://api.x.ai/v1/chat/completions';
-    apiModel = 'grok-3-latest';
+    apiModel = 'grok-4.3';
   } else if(primary==='openai'){
     apiKey = localStorage.getItem('sg_oai_key')||'';
     apiUrl = 'https://api.openai.com/v1/chat/completions';
-    apiModel = 'gpt-4o';
+    apiModel = 'gpt-5.4-mini';
   }
 
   if(!apiKey){
@@ -3951,7 +3951,7 @@ try {
       'Voice: <b style="color:var(--tx)">Piper TTS (local, port 9897)</b><br>' +
       'Setup: <code style="color:var(--cy)">export PIPER_MODEL=/path/to/model.onnx && node node-bridge/server.js</code><br>' +
       'Models: <a href="https://github.com/rhasspy/piper/releases" style="color:var(--cy)" target="_blank">github.com/rhasspy/piper</a><br>' +
-      '<b style="color:var(--gn)">✓ Zero Meta · Zero Google · Zero LLaMA · Zero Ollama</b>' +
+      '<b style="color:var(--gn)">✓ Zero Meta · Zero Google · Zero third-party AI</b>' +
       '</div>' +
       '</div>';
   };
@@ -4913,18 +4913,18 @@ window.SGOrchestrator = (function(){
   }
 
   var AGENTS={};
-  AGENTS.claude=new Agent({id:'claude',name:'Claude Sonnet 4.6',icon:'🤖',color:'#cc785c',role:'Reasoning · Safety · Analysis · Code',
-    process:async function(msg,a){ return await bridge('claude','claude-sonnet-4-6',a.memory.slice(-10).concat([{role:'user',content:msg.content}]),1024); }});
-  AGENTS.gpt=new Agent({id:'gpt',name:'GPT-4o',icon:'🧠',color:'#10a37f',role:'General · Creative · Vision · Translate',
-    process:async function(msg,a){ return await bridge('gpt','gpt-4o',a.memory.slice(-10).concat([{role:'user',content:msg.content}]),1024); }});
-  AGENTS.grok=new Agent({id:'grok',name:'Grok 4.20 Judge',icon:'⚡',color:'#f59e0b',role:'Judge · Debate · Fact-Check · Real-Time',
+  AGENTS.claude=new Agent({id:'claude',name:'Claude Opus 4.6',icon:'🤖',color:'#cc785c',role:'Reasoning · Safety · Analysis · Code',
+    process:async function(msg,a){ return await bridge('claude','claude-opus-4-6',a.memory.slice(-10).concat([{role:'user',content:msg.content}]),1024); }});
+  AGENTS.gpt=new Agent({id:'gpt',name:'GPT-5.4 Mini',icon:'🧠',color:'#10a37f',role:'General · Creative · Vision · Translate',
+    process:async function(msg,a){ return await bridge('gpt','gpt-5.4-mini',a.memory.slice(-10).concat([{role:'user',content:msg.content}]),1024); }});
+  AGENTS.grok=new Agent({id:'grok',name:'Grok 4.3',icon:'⚡',color:'#f59e0b',role:'Judge · Debate · Fact-Check · Real-Time',
     process:async function(msg,a){
       var lock='MEMORY_LOCK: '+a.memory.length+' protected entries.';
       var msgs=[{role:'system',content:lock}].concat(a.memory.slice(-10)).concat([{role:'user',content:msg.content}]);
-      return await bridge('grok','grok-3',msgs,1024);
+      return await bridge('grok','grok-4.3',msgs,1024);
     }});
-  AGENTS.copilot=new Agent({id:'copilot',name:'GitHub Copilot',icon:'🐙',color:'#6366f1',role:'Code · Repo · PR · Review · Actions',
-    process:async function(msg,a){ return await bridge('copilot','gpt-4o',a.memory.slice(-8).concat([{role:'user',content:msg.content}]),1024); }});
+  AGENTS.copilot=new Agent({id:'copilot',name:'GPT-5.4 Codex',icon:'🐙',color:'#6366f1',role:'Code · Repo · PR · Review · Actions',
+    process:async function(msg,a){ return await bridge('copilot','gpt-5.4-codex',a.memory.slice(-8).concat([{role:'user',content:msg.content}]),1024); }});
   AGENTS.siri=new Agent({id:'siri',name:'Voice / Siri',icon:'🎙️',color:'#a855f7',role:'Voice Commands · Device Control · On-Device',
     process:async function(msg){
       var cmd=(msg.content||'').toLowerCase();
@@ -4947,7 +4947,7 @@ window.SGOrchestrator = (function(){
     if(!question) return;
     var responses={};
     await Promise.allSettled(['claude','gpt','grok'].map(function(id){
-      return bridge(id,id==='claude'?'claude-sonnet-4-6':id==='gpt'?'gpt-4o':'grok-3',[{role:'user',content:question}],256)
+      return bridge(id,id==='claude'?'claude-opus-4-6':id==='gpt'?'gpt-5.4-mini':'grok-4.3',[{role:'user',content:question}],256)
         .then(function(r){ responses[id]=r; });
     }));
     AGENTS.arbiter.send(question,{council:responses});
@@ -6794,7 +6794,7 @@ PANELS.council=function(){
     '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">'+
     [
       {name:'Claude Sonnet',icon:'\ud83e\udde0',color:'#7c4dff',id:'claude'},
-      {name:'GPT-4o',       icon:'\ud83d\udcac',color:'#10a37f',id:'gpt'},
+      {name:'GPT-5.4 Mini',       icon:'\ud83d\udcac',color:'#10a37f',id:'gpt'},
       {name:'Grok 4.20',    icon:'\u26a1',        color:'#b8ff00',id:'grok'},
     ].map(function(j){
       return '<div style="padding:12px;border-radius:var(--r);background:var(--bg2);border:1px solid '+j.color+'22;text-align:center">'+
@@ -8521,11 +8521,11 @@ web:'https://grok.com', desc:'Grok-3 · xAI · Real-time web access'},
 scheme:'twitter://', store:'https://apps.apple.com/app/x/id333903271',
 web:'https://x.com', desc:'X · Real-time · News feed'},
 
-{id:'copilot',   name:'GitHub Copilot',icon:'🐙',color:'#6366f1',
+{id:'copilot',   name:'GPT-5.4 Codex',icon:'🐙',color:'#6366f1',
  scheme:'github-copilot://', store:'https://apps.apple.com/app/github-copilot/id6472538445',
  web:'https://github.com/features/copilot', desc:'AI Pair Programmer · GitHub · Code completion'},
-{id:'gemini',    name:'Gemini (blocked)', icon:'🚫',color:'#888',
- scheme:null, store:null, web:null, desc:'Google AI — blocked by Sovereign Fortress', blocked:true},
+{id:'ai_blocked', name:'AI (blocked)', icon:'🚫',color:'#888',
+ scheme:null, store:null, web:null, desc:'Blocked by Sovereign Fortress', blocked:true},
 
 ];
 
@@ -13158,9 +13158,9 @@ h += '</div>';
 
 /* Category tables */
 var cats = [
-{label:'Google / Gemini / AI',color:'#4285F4',keys:['google','gstatic','firebase','gemini','googleapis']},
+{label:'Google / AI',color:'#4285F4',keys:['google','gstatic','firebase','gemini','googleapis']},
 {label:'Google Analytics / Tracking',color:'#fbbc04',keys:['analytics','tagmanager','tagservices','adservices','chromefeed','abuseevent','adexchange']},
-{label:'Meta / Facebook / LLaMA',color:'#1877F2',keys:['facebook','meta','fb.com','messenger','instagram','llama']},
+{label:'Meta / Facebook / AI',color:'#1877F2',keys:['facebook','meta','fb.com','messenger','instagram','llama']},
 {label:'TikTok',color:'#ff0050',keys:['tiktok']},
 ];
 cats.forEach(function(cat) {
@@ -13835,7 +13835,7 @@ if(ag==='claude'||ag==='arbiter'){
 endpoint='https://api.anthropic.com/v1/messages';
 headers={'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
 body=JSON.stringify({
-model:'claude-opus-4-5',
+model:'claude-opus-4-6',
 max_tokens:8192,
 system:'You are SuperGrok, a sovereign AI assistant. Be direct, accurate, never hallucinate.',
 messages: history.slice(-8).concat([{role:'user',content:msg}])
@@ -13843,14 +13843,14 @@ messages: history.slice(-8).concat([{role:'user',content:msg}])
 } else if(ag==='gpt'){
 endpoint='https://api.openai.com/v1/chat/completions';
 headers={'Content-Type':'application/json','Authorization':'Bearer '+key};
-body=JSON.stringify({model:'gpt-4o',max_tokens:8192,
+body=JSON.stringify({model:'gpt-5.4-mini',max_tokens:8192,
 messages:[{role:'system',content:'You are SuperGrok AI. Be direct and accurate.'}]
 .concat(history.slice(-8))
 .concat([{role:'user',content:msg}])});
 } else if(ag==='grok'){
 endpoint='https://api.x.ai/v1/chat/completions';
 headers={'Content-Type':'application/json','Authorization':'Bearer '+key};
-body=JSON.stringify({model:'grok-3-latest',max_tokens:8192,
+body=JSON.stringify({model:'grok-4.3',max_tokens:8192,
 messages:[{role:'system',content:'You are SuperGrok AI.'}]
 .concat(history.slice(-8))
 .concat([{role:'user',content:msg}])});
@@ -17360,7 +17360,7 @@ card && card.scrollIntoView({behavior:'smooth'});
   var v=document.getElementById('council-vote-'+j); if(v) v.textContent='\u23f3';
 });
 
-var judges = [{id:'claude',name:'Claude',icon:'\ud83e\udde0',color:'#7c4dff'},{id:'gpt',name:'GPT-4o',icon:'\ud83d\udcac',color:'#10a37f'},{id:'grok',name:'Grok 4.20',icon:'\u26a1',color:'#b8ff00'}];
+var judges = [{id:'claude',name:'Claude',icon:'\ud83e\udde0',color:'#7c4dff'},{id:'gpt',name:'GPT-5.4 Mini',icon:'\ud83d\udcac',color:'#10a37f'},{id:'grok',name:'Grok 4.20',icon:'\u26a1',color:'#b8ff00'}];
 var results = {};
 var done = 0;
 
@@ -21817,7 +21817,7 @@ card && card.scrollIntoView({behavior:'smooth'});
   var v=document.getElementById('council-vote-'+j); if(v) v.textContent='\u23f3';
 });
 
-var judges = [{id:'claude',name:'Claude',icon:'\ud83e\udde0',color:'#7c4dff'},{id:'gpt',name:'GPT-4o',icon:'\ud83d\udcac',color:'#10a37f'},{id:'grok',name:'Grok 4.20',icon:'\u26a1',color:'#b8ff00'}];
+var judges = [{id:'claude',name:'Claude',icon:'\ud83e\udde0',color:'#7c4dff'},{id:'gpt',name:'GPT-5.4 Mini',icon:'\ud83d\udcac',color:'#10a37f'},{id:'grok',name:'Grok 4.20',icon:'\u26a1',color:'#b8ff00'}];
 var results = {};
 var done = 0;
 
@@ -22744,9 +22744,9 @@ return '<button class="btn-s" style="font-size:8px;font-family:monospace;padding
 PANELS.quickkeys = function(){
 var st  = window.SG_VAULT ? SG_VAULT.status() : {};
 var providers = [
-{id:'claude', label:'Anthropic / Claude',       icon:'🟣', prefix:'sk-ant-',  model:'claude-opus-4-5'},
-{id:'gpt',    label:'OpenAI / GPT-4o',           icon:'🟢', prefix:'sk-',      model:'gpt-4o'},
-{id:'grok',   label:'xAI / Grok',                icon:'⚡', prefix:'xai-',     model:'grok-3-latest'},
+{id:'claude', label:'Anthropic / Claude Opus',       icon:'🟣', prefix:'sk-ant-',  model:'claude-opus-4-6'},
+{id:'gpt',    label:'OpenAI / GPT-5.4 Mini',           icon:'🟢', prefix:'sk-',      model:'gpt-5.4-mini'},
+{id:'grok',   label:'xAI / Grok 4.3',                icon:'⚡', prefix:'xai-',     model:'grok-4.3'},
 {id:'copilot',label:'GitHub Copilot (preview)',  icon:'🔵', prefix:'ghp_',     model:'copilot'},
 ];
 function masked(v){ return v?(v.slice(0,10)+'··········'+v.slice(-4)):''; }
@@ -23513,7 +23513,7 @@ registry: {
 claude:     {name:'Claude',      icon:'🟣', status:'device', app:'claude://',      web:'https://claude.ai',               store:'https://apps.apple.com/app/claude-ai-by-anthropic/id6473753684'},
 gpt:        {name:'ChatGPT',     icon:'🟢', status:'device', app:'chatgpt://',     web:'https://chatgpt.com',             store:'https://apps.apple.com/app/chatgpt/id6448311069'},
 grok:       {name:'Grok',        icon:'⚡', status:'device', app:'grok://',        web:'https://grok.com',                store:'https://apps.apple.com/app/grok/id6670324846'},
-copilot:    {name:'GitHub Copilot', icon:'🐙', status:'device', app:'github-copilot://', web:'https://github.com/features/copilot', store:'https://apps.apple.com/app/github-copilot/id6472538445'},
+copilot:    {name:'GPT-5.4 Codex', icon:'🐙', status:'device', app:'github-copilot://', web:'https://github.com/features/copilot', store:'https://apps.apple.com/app/github-copilot/id6472538445'},
 siri:       {name:'Siri',        icon:'🎤', status:'device', app:'siri://',        web:null,                              store:null}
 },
 
@@ -23600,7 +23600,7 @@ _queryDirect: function(agentId, message, history, cb){
         'anthropic-dangerous-direct-browser-access':'true'
       },
       body: JSON.stringify({
-        model:'claude-opus-4-5', max_tokens:8192,
+        model:'claude-opus-4-6', max_tokens:8192,
         system:'You are SuperGrok. Be direct, factual, verified.',
         messages:(history||[]).concat([{role:'user',content:message}])
       })
@@ -26016,7 +26016,7 @@ window.SG_DIRECT_AI = {
         'anthropic-dangerous-direct-browser-access':'true'
       },
       body:JSON.stringify({
-        model:'claude-opus-4-5', max_tokens:8192,
+        model:'claude-opus-4-6', max_tokens:8192,
         system:'You are SuperGrok sovereign AI. Be direct and accurate.',
         messages:messages
       })

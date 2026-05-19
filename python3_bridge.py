@@ -384,9 +384,9 @@ def post_json(url: str, headers: dict, body: dict):
 
 
 # ── Newest-first model chains with automatic fallback ──────────────────────
-_CLAUDE_MODELS  = ["claude-opus-4-6", "claude-opus-4-5", "claude-sonnet-4-6"]
-_OPENAI_MODELS  = ["gpt-5.4", "gpt-5.1-codex-max", "gpt-4o"]
-_CODEX_MODELS   = ["gpt-5.1-codex-max", "gpt-5.4", "gpt-4o"]
+_CLAUDE_MODELS  = ["claude-opus-4-6", "claude-sonnet-4-6", "claude-opus-4-5", "claude-sonnet-4-5"]
+_OPENAI_MODELS  = ["gpt-5.4-mini", "gpt-5.4-codex", "gpt-5.4", "gpt-5.1-codex-max", "gpt-4o"]
+_CODEX_MODELS   = ["gpt-5.4-codex", "gpt-5.4-mini", "gpt-5.4", "gpt-5.1-codex-max", "gpt-4o"]
 _GROK_MODELS    = ["grok-4.3", "grok-3-latest"]
 
 
@@ -425,7 +425,7 @@ def ai_claude(messages, model: str = "claude-opus-4-6"):
     return None, last_err
 
 
-def ai_openai(messages, model: str = "gpt-5.4"):
+def ai_openai(messages, model: str = "gpt-5.4-mini"):
     k = KEYS["openai"]
     if not k:
         return None, "OPENAI_API_KEY not set"
@@ -446,7 +446,7 @@ def ai_openai(messages, model: str = "gpt-5.4"):
     return None, last_err
 
 
-def ai_openai_codex(messages, model: str = "gpt-5.1-codex-max"):
+def ai_openai_codex(messages, model: str = "gpt-5.4-codex"):
     """Codex Max — OpenAI code-specialised model chain."""
     k = KEYS["openai"]
     if not k:
