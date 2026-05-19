@@ -27,65 +27,63 @@
 
 name: APIsec
 
+# Controls when the workflow will run
 on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  # Customize trigger events based on your DevSecOps processes.
   push:
     branches: ["main"]
   pull_request:
     branches: ["main"]
   schedule:
-    - cron: "37 16 * * 2"
+    - cron: '37 16 * * 2'
+
+  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+
 
 permissions:
   contents: read
 
 jobs:
+
   Trigger_APIsec_scan:
     permissions:
-      security-events: write
-      actions: read
+      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
+      actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
     runs-on: ubuntu-latest
 
     steps:
-      - name: Preflight APIsec configuration
+      - name: Check whether APIsec secrets are configured
+        id: apisec_config
         env:
           APISEC_USERNAME: ${{ secrets.apisec_username }}
           APISEC_PASSWORD: ${{ secrets.apisec_password }}
-          GITHUB_RUN_ID_VALUE: ${{ github.run_id }}
         run: |
-          missing=0
-
-          if [ -z "${APISEC_USERNAME}" ]; then
-            echo "::error::Missing required repository secret: apisec_username"
-            missing=1
+          if [ -z "${APISEC_USERNAME}" ] || [ -z "${APISEC_PASSWORD}" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "APIsec secrets are missing; skipping scan."
+            exit 0
           fi
 
-          if [ -z "${APISEC_PASSWORD}" ]; then
-            echo "::error::Missing required repository secret: apisec_password"
-            missing=1
-          fi
-
-          if [ -z "${GITHUB_RUN_ID_VALUE}" ]; then
-            echo "::error::GitHub run context is unavailable."
-            missing=1
-          fi
-
-          if [ "${missing}" -ne 0 ]; then
-            exit 1
-          fi
-
-          echo "Validated APIsec credentials for GitHub Actions run ${GITHUB_RUN_ID_VALUE}."
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+          echo "APIsec secrets are configured."
 
       - name: APIsec scan
+        if: ${{ steps.apisec_config.outputs.configured == 'true' }}
         uses: apisec-inc/apisec-run-scan@025432089674a28ba8fb55f8ab06c10215e772ea
         with:
+          # The APIsec username with which the scans will be executed
           apisec-username: ${{ secrets.apisec_username }}
+          # The Password of the APIsec user with which the scans will be executed
           apisec-password: ${{ secrets.apisec_password }}
+          # The name of the project for security scan
           apisec-project: "VAmPI"
+          # The name of the sarif format result file The file is written only if this property is provided.
           sarif-result-file: "apisec-results.sarif"
 
       - name: Import results
-        if: ${{ success() && hashFiles('apisec-results.sarif') != '' }}
+        if: ${{ steps.apisec_config.outputs.configured == 'true' && success() && hashFiles('apisec-results.sarif') != '' }}
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: ./apisec-results.sarif
