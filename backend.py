@@ -33,14 +33,23 @@ class AnalyzeRequest(BaseModel):
     mode: str = "fix"
 
 
+def _insert_before_html_close(code: str, snippet: str) -> str:
+    close_index = code.lower().rfind("</html>")
+    if close_index >= 0:
+        return code[:close_index] + snippet + code[close_index:]
+    return code + snippet
+
+
 def _local_fix(code: str) -> str:
     fixed = code.replace("<b>", "<strong>").replace("</b>", "</strong>")
-    fixed = re.sub(r"\sonclick=\"[^\"]*\"", "", fixed, flags=re.I)
-    fixed = fixed.replace("javascript:", "")
+    fixed = re.sub(r'\son[a-z0-9_-]*\s*=\s*"[^"]*"', "", fixed, flags=re.I)
+    fixed = re.sub(r"\son[a-z0-9_-]*\s*=\s*'[^']*'", "", fixed, flags=re.I)
+    fixed = re.sub(r"\son[a-z0-9_-]*\s*=\s*[^\s>]+", "", fixed, flags=re.I)
+    fixed = re.sub(r"javascript\s*:\s*", "", fixed, flags=re.I)
     if "<head>" in fixed and "</head>" not in fixed:
-        fixed += "</head>"
+        fixed = _insert_before_html_close(fixed, "</head>")
     if "<body>" in fixed and "</body>" not in fixed:
-        fixed += "</body>"
+        fixed = _insert_before_html_close(fixed, "</body>")
     return fixed
 
 
@@ -74,6 +83,9 @@ async def execute(req: ExecuteRequest):
 
 @app.post("/api/ai")
 async def ai(req: AnalyzeRequest):
+    if req.key:
+        raise HTTPException(status_code=400, detail="API keys must not be sent to /api/ai")
+
     code = _prompt_body(req.prompt or "")
     if req.mode.lower() == "fix":
         fixed = _local_fix(code)

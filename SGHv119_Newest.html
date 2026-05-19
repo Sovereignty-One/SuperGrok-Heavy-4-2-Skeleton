@@ -3586,127 +3586,7 @@ window.testCopilotAgent = function(){
 };
 
 window.runCopilotAgent = function(){
-  var prompt  = (document.getElementById('agentPrompt')||{}).value||'';
-  var code    = (document.getElementById('agentCode')||{}).value||'';
-  var primary = (document.getElementById('agentPrimary')||{}).value||'claude';
-  var mode    = (document.getElementById('agentMode')||{}).value||'code';
-  if(!prompt.trim()){ toast('Enter a task prompt first','err'); return; }
-
-  var outCard = document.getElementById('agentOutputCard');
-  var outEl   = document.getElementById('agentOutput');
-  var metaEl  = document.getElementById('agentOutputMeta');
-  var sigEl   = document.getElementById('agentSig');
-  if(outCard) outCard.style.display='';
-  if(outEl){ outEl.innerHTML='<span style="color:var(--cy)">⟳ Agent running ['+primary+' / '+mode+']...</span>'; }
-
-  // Select API key based on primary agent
-  var apiKey = '';
-  var apiUrl = '';
-  var apiModel = '';
-  if(primary==='claude'||primary==='copilot'){
-    apiKey = localStorage.getItem('sg_ant_key')||'';
-    apiUrl = 'https://api.anthropic.com/v1/messages';
-    apiModel = 'claude-opus-4-5';
-  } else if(primary==='grok'){
-    apiKey = localStorage.getItem('sg_xai_key')||'';
-    apiUrl = 'https://api.x.ai/v1/chat/completions';
-    apiModel = 'grok-3-latest';
-  } else if(primary==='openai'){
-    apiKey = localStorage.getItem('sg_oai_key')||'';
-    apiUrl = 'https://api.openai.com/v1/chat/completions';
-    apiModel = 'gpt-4o';
-  }
-
-  if(!apiKey){
-    if(outEl) outEl.innerHTML='<span style="color:#ef4444">⚠ No API key for '+primary+'. Go to → AI Providers panel to add your key.</span>';
-    toast('Add API key in AI Providers panel','err');
-    return;
-  }
-
-  var modeInstructions = {
-    code:'You are an expert coding agent. Write clean, production-ready, well-commented code.',
-    review:'You are a code reviewer. Identify bugs, security issues, and improvements. Be specific and actionable.',
-    debug:'You are a debugger. Find the bug, explain why it occurs, and provide the fix.',
-    explain:'You are a code explainer. Break down the code clearly, explaining each component.',
-    test:'You are a testing expert. Write comprehensive unit tests with edge cases.',
-    refactor:'You are a refactoring expert. Improve code quality, readability, and performance.',
-    docs:'You are a documentation writer. Write clear, complete technical documentation.',
-    security:'You are a security auditor. Find vulnerabilities, explain CVEs, and provide mitigations.'
-  };
-
-  var sysPrompt = modeInstructions[mode] || modeInstructions.code;
-  sysPrompt += '\n\nIMPORTANT: You are operating on an air-gapped device. All output stays on-device. Never suggest or use APIs from Google, Meta, or untrusted sources. Always prioritize safety, security, and production readiness.';
-
-  var userMsg = prompt;
-  var bt3=Array(4).join(String.fromCharCode(96));if(code.trim()) userMsg += '\n\n'+bt3+'\n' + code + '\n'+bt3;
-
-  var startTime = Date.now();
-  var headers = {'Content-Type':'application/json'};
-  var body;
-
-  if(primary==='claude'||primary==='copilot'){
-    headers['x-api-key'] = apiKey;
-    headers['anthropic-version'] = '2023-06-01';
-    body = JSON.stringify({model:apiModel,max_tokens:8192,system:sysPrompt,messages:[{role:'user',content:userMsg}]});
-  } else {
-    headers['Authorization'] = 'Bearer '+apiKey;
-    body = JSON.stringify({model:apiModel,max_tokens:8192,messages:[{role:'system',content:sysPrompt},{role:'user',content:userMsg}]});
-  }
-
-  fetch(apiUrl,{method:'POST',headers:headers,body:body})
-  .then(function(r){ return r.json(); }).catch(function(e){ console.warn("[b6]", e && e.message || e); })
-  .then(function(data){
-    var text = '';
-    if(data.content && data.content[0]) text = data.content[0].text || '';
-    else if(data.choices && data.choices[0]) text = data.choices[0].message.content || '';
-    else if(data.error) text = '⚠ API Error: ' + (data.error.message||JSON.stringify(data.error));
-
-    var elapsed = ((Date.now()-startTime)/1000).toFixed(1);
-    _sessions++;
-    var sessEl = document.getElementById('agentSessions');
-    if(sessEl) sessEl.textContent = _sessions;
-
-    // Display output
-    if(outEl) outEl.textContent = text;
-    if(metaEl) metaEl.textContent = '['+primary+'] ['+mode+'] ['+elapsed+'s] ['+new Date().toLocaleTimeString()+']';
-
-    // Cryptographic signature
-    var signed = document.getElementById('agentSignOutput');
-    if(signed && signed.checked && sigEl){
-      var hash = 0;
-      for(var i=0;i<text.length;i++) hash = ((hash<<5)-hash)+text.charCodeAt(i);
-      hash = Math.abs(hash).toString(16).padStart(8,'0');
-      sigEl.style.display = '';
-      sigEl.innerHTML = '✅ SIGNED · SHA-256-sim: 0x'+hash+' · Agent: '+primary+' · Mode: '+mode+' · Time: '+new Date().toISOString()+' · On-Device: YES';
-    }
-
-    // History entry
-    _history.unshift({time:new Date().toLocaleTimeString(),agent:primary,mode:mode,prompt:prompt.slice(0,60)+'...',elapsed:elapsed+'s'});
-    if(_history.length>20) _history=_history.slice(0,20);
-    var hEl = document.getElementById('agentHistory');
-    if(hEl){
-      hEl.innerHTML = _history.map(function(h){
-        return '<div style="padding:5px 0;border-bottom:1px solid #1a2540;display:flex;gap:8px;align-items:center">'+
-          '<span style="color:var(--cy)">'+h.time+'</span>'+
-          '<span style="color:var(--am)">['+h.agent+']</span>'+
-          '<span style="color:#8b9eb0">['+h.mode+']</span>'+
-          '<span style="color:var(--mu)">'+h.prompt+'</span>'+
-          '<span style="color:var(--gn);margin-left:auto">'+h.elapsed+'</span>'+
-          '</div>';
-      }).join('');
-    }
-
-    // Audit log
-    var auditChk = document.getElementById('agentAuditLog');
-    if(auditChk && auditChk.checked && typeof auditLog==='function'){
-      auditLog('AGENT_CALL','agent='+primary+' mode='+mode+' elapsed='+elapsed+'s prompt_len='+prompt.length+' output_len='+text.length);
-    }
-    toast('Agent completed in '+elapsed+'s','ok');
-  })
-  .catch(function(err){
-    if(outEl) outEl.innerHTML='<span style="color:#ef4444">⚠ Network error: '+err.message+'.\nNote: This device may be air-gapped. Ensure your API endpoint is reachable.</span>';
-    toast('Agent error — check console','err');
-  });
+  return null;
 };
 
 window.runCopilotAgent = async function(){
@@ -3726,9 +3606,34 @@ window.runCopilotAgent = async function(){
   var auditChk = document.getElementById('agentAuditLog');
   var sessions = window._sgAgentSessions || 0;
   var history = window._sgAgentHistory || [];
+  function renderAgentHistory(entries){
+    if(!hEl) return;
+    hEl.textContent = '';
+    var frag = document.createDocumentFragment();
+    entries.forEach(function(h){
+      var row = document.createElement('div');
+      row.style.cssText = 'padding:5px 0;border-bottom:1px solid #1a2540;display:flex;gap:8px;align-items:center';
+      var parts = [
+        {color:'var(--cy)', text:h.time},
+        {color:'var(--am)', text:'['+h.agent+']'},
+        {color:'#8b9eb0', text:'['+h.mode+']'},
+        {color:'var(--mu)', text:h.prompt},
+        {color:'var(--gn)', text:h.elapsed, marginLeft:'auto'}
+      ];
+      parts.forEach(function(part){
+        var span = document.createElement('span');
+        span.style.color = part.color;
+        if(part.marginLeft) span.style.marginLeft = part.marginLeft;
+        span.textContent = part.text;
+        row.appendChild(span);
+      });
+      frag.appendChild(row);
+    });
+    hEl.appendChild(frag);
+  }
 
   if(outCard) outCard.style.display='';
-  if(outEl){ outEl.innerHTML='<span style="color:var(--cy)">⟳ Agent running ['+primary+' / '+mode+']...</span>'; }
+  if(outEl){ outEl.textContent='⟳ Agent running ['+primary+' / '+mode+']...'; }
 
   var startTime = Date.now();
   var localOnly = onDevice || !sgExternalApisAllowed();
@@ -3743,17 +3648,7 @@ window.runCopilotAgent = async function(){
     if(sessEl) sessEl.textContent = sessions;
     history.unshift({time:new Date().toLocaleTimeString(),agent:primary,mode:mode,prompt:prompt.slice(0,60)+'...',elapsed:'local'});
     window._sgAgentHistory = history.slice(0,20);
-    if(hEl){
-      hEl.innerHTML = window._sgAgentHistory.map(function(h){
-        return '<div style="padding:5px 0;border-bottom:1px solid #1a2540;display:flex;gap:8px;align-items:center">'+
-          '<span style="color:var(--cy)">'+h.time+'</span>'+
-          '<span style="color:var(--am)">['+h.agent+']</span>'+
-          '<span style="color:#8b9eb0">['+h.mode+']</span>'+
-          '<span style="color:var(--mu)">'+h.prompt+'</span>'+
-          '<span style="color:var(--gn);margin-left:auto">'+h.elapsed+'</span>'+
-          '</div>';
-      }).join('');
-    }
+    renderAgentHistory(window._sgAgentHistory);
     if(auditChk && auditChk.checked && typeof auditLog==='function'){
       auditLog('AGENT_CALL','agent='+primary+' mode='+mode+' local=true prompt_len='+prompt.length+' output_len='+localText.length);
     }
@@ -3764,7 +3659,7 @@ window.runCopilotAgent = async function(){
   var apiKey = '';
   var apiUrl = '';
   var apiModel = '';
-  if(primary==='claude'||primary==='copilot'){
+  if(primary==='claude'){
     apiKey = localStorage.getItem('sg_ant_key')||'';
     apiUrl = 'https://api.anthropic.com/v1/messages';
     apiModel = 'claude-opus-4-5';
@@ -3779,7 +3674,7 @@ window.runCopilotAgent = async function(){
   }
 
   if(!apiKey){
-    if(outEl) outEl.innerHTML='<span style="color:#ef4444">⚠ No API key for '+primary+'. Running local fallback instead.</span>';
+    if(outEl) outEl.textContent='⚠ No API key for '+primary+'. Running local fallback instead.';
     return aiAnalyzeOrFix(code || prompt, wantsAnalysis ? 'analyze' : 'fix').then(function(fallback){
       if(outEl) outEl.textContent = fallback;
       if(metaEl) metaEl.textContent = '[local-fallback] ['+mode+'] ['+new Date().toLocaleTimeString()+']';
@@ -3799,7 +3694,7 @@ window.runCopilotAgent = async function(){
   };
 
   var sysPrompt = modeInstructions[mode] || modeInstructions.code;
-  sysPrompt += '\n\nIMPORTANT: You are operating on an air-gapped device. All output stays on-device. Never suggest or use APIs from Google, Meta, or untrusted sources. Always prioritize safety, security, and production readiness.';
+  sysPrompt += '\n\nIMPORTANT: This interface may call remote APIs when online. Never suggest or use APIs from Google. Always prioritize safety, security, and production readiness.';
 
   var userMsg = prompt;
   var bt3 = Array(4).join(String.fromCharCode(96));
@@ -3807,7 +3702,7 @@ window.runCopilotAgent = async function(){
 
   var headers = {'Content-Type':'application/json'};
   var body;
-  if(primary==='claude'||primary==='copilot'){
+  if(primary==='claude'){
     headers['x-api-key'] = apiKey;
     headers['anthropic-version'] = '2023-06-01';
     body = JSON.stringify({model:apiModel,max_tokens:8192,system:sysPrompt,messages:[{role:'user',content:userMsg}]});
@@ -3817,7 +3712,16 @@ window.runCopilotAgent = async function(){
   }
 
   return fetch(apiUrl,{method:'POST',headers:headers,body:body})
-  .then(function(r){ return r.json(); }).catch(function(e){ console.warn("[b6]", e && e.message || e); return {}; })
+  .then(function(r){
+    if(!r.ok){
+      return r.text().then(function(text){
+        throw new Error('HTTP '+r.status+(text ? ': '+text.slice(0,200) : ''));
+      }).catch(function(){
+        throw new Error('HTTP '+r.status);
+      });
+    }
+    return r.json();
+  })
   .then(function(data){
     var text = '';
     if(data.content && data.content[0]) text = data.content[0].text || '';
@@ -3837,22 +3741,12 @@ window.runCopilotAgent = async function(){
       for(var i=0;i<text.length;i++) hash = ((hash<<5)-hash)+text.charCodeAt(i);
       hash = Math.abs(hash).toString(16).padStart(8,'0');
       sigEl.style.display = '';
-      sigEl.innerHTML = '✅ SIGNED · SHA-256-sim: 0x'+hash+' · Agent: '+primary+' · Mode: '+mode+' · Time: '+new Date().toISOString()+' · On-Device: YES';
+      sigEl.textContent = 'Content checksum · 0x'+hash+' · Agent: '+primary+' · Mode: '+mode+' · Time: '+new Date().toISOString()+' · Execution: remote';
     }
 
     history.unshift({time:new Date().toLocaleTimeString(),agent:primary,mode:mode,prompt:prompt.slice(0,60)+'...',elapsed:elapsed+'s'});
     window._sgAgentHistory = history.slice(0,20);
-    if(hEl){
-      hEl.innerHTML = window._sgAgentHistory.map(function(h){
-        return '<div style="padding:5px 0;border-bottom:1px solid #1a2540;display:flex;gap:8px;align-items:center">'+
-          '<span style="color:var(--cy)">'+h.time+'</span>'+
-          '<span style="color:var(--am)">['+h.agent+']</span>'+
-          '<span style="color:#8b9eb0">['+h.mode+']</span>'+
-          '<span style="color:var(--mu)">'+h.prompt+'</span>'+
-          '<span style="color:var(--gn);margin-left:auto">'+h.elapsed+'</span>'+
-          '</div>';
-      }).join('');
-    }
+    renderAgentHistory(window._sgAgentHistory);
 
     if(auditChk && auditChk.checked && typeof auditLog==='function'){
       auditLog('AGENT_CALL','agent='+primary+' mode='+mode+' elapsed='+elapsed+'s prompt_len='+prompt.length+' output_len='+text.length);
@@ -3861,8 +3755,11 @@ window.runCopilotAgent = async function(){
     return text;
   })
   .catch(function(err){
-    if(outEl) outEl.innerHTML='<span style="color:#ef4444">⚠ Network error: '+err.message+'.\nNote: This device may be air-gapped. Ensure your API endpoint is reachable.</span>';
+    var msg = '⚠ Network error: '+(err && err.message ? err.message : err);
+    console.warn("[b6]", err && err.message || err);
+    if(outEl) outEl.textContent = msg;
     toast('Agent error — check console','err');
+    return msg;
   });
 };
 
@@ -26662,10 +26559,16 @@ window.sgExternalApisAllowed = window.sgExternalApisAllowed || function(){
 function _sgLocalFix(code){
   var fixed = String(code || '');
   fixed = fixed.replace(/<b>/gi, '<strong>').replace(/<\/b>/gi, '</strong>');
-  fixed = fixed.replace(/\sjavascript:/gi, '');
-  fixed = fixed.replace(/\sonclick\s*=\s*(["']).*?\1/gi, '');
-  if (fixed.indexOf('<head>') >= 0 && fixed.indexOf('</head>') < 0) fixed += '</head>';
-  if (fixed.indexOf('<body>') >= 0 && fixed.indexOf('</body>') < 0) fixed += '</body>';
+  fixed = fixed.replace(/\s+on[a-z0-9_-]*\s*=\s*(?:(["']).*?\1|[^\s>]+)/gi, '');
+  fixed = fixed.replace(/javascript\s*:\s*/gi, '');
+  if (fixed.indexOf('<head>') >= 0 && fixed.indexOf('</head>') < 0) {
+    fixed = fixed.replace(/<\/html>/i, '</head></html>');
+    if (fixed.indexOf('</head>') < 0) fixed += '</head>';
+  }
+  if (fixed.indexOf('<body>') >= 0 && fixed.indexOf('</body>') < 0) {
+    fixed = fixed.replace(/<\/html>/i, '</body></html>');
+    if (fixed.indexOf('</body>') < 0) fixed += '</body>';
+  }
   return fixed;
 }
 function _sgLocalAnalyze(code){
@@ -26681,7 +26584,6 @@ function _sgLocalAnalyze(code){
 async function aiAnalyzeOrFix(code, mode = 'fix') {
   var source = String(code || '');
   var task = mode === 'fix' ? 'fix' : 'analyze';
-  var grokKey = window.sgGetApiKey ? window.sgGetApiKey('grok') : '';
   var prompt = task === 'fix'
     ? 'Fix all HTML validation errors in this code. Close all unclosed tags, add missing alt attributes, remove javascript: onclick handlers, replace <b> with <strong>. Return ONLY the fixed HTML.\n\n' + source
     : 'Analyze this code for issues and suggest fixes.\n\n' + source;
@@ -26695,7 +26597,6 @@ async function aiAnalyzeOrFix(code, mode = 'fix') {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             provider: 'grok',
-            key: grokKey,
             prompt: prompt,
             mode: task
           })
