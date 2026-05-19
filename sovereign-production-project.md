@@ -1,0 +1,1 @@
+PLACEHOLDER - full sovereign project doc from chat
