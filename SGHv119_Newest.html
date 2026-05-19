@@ -24003,7 +24003,10 @@ var ph = thread.querySelector('[style*="Thread cleared"]') || thread.querySelect
 if(ph) thread.innerHTML = '';
 var ub = document.createElement('div');
 ub.style.cssText='display:flex;justify-content:flex-end;';
-ub.innerHTML='<div style="background:var(--acid)22;border:1px solid var(--acid)44;border-radius:10px 10px 2px 10px;padding:8px 12px;max-width:75%;font-family:var(--mono);font-size:10px;color:var(--t0)">'+msg+'</div>';
+var ubBox=document.createElement('div');
+ubBox.style.cssText='background:var(--acid)22;border:1px solid var(--acid)44;border-radius:10px 10px 2px 10px;padding:8px 12px;max-width:75%;font-family:var(--mono);font-size:10px;color:var(--t0)';
+ubBox.textContent=msg;
+ub.appendChild(ubBox);
 thread.appendChild(ub);
 thread.scrollTop = thread.scrollHeight;
 }
@@ -26560,10 +26563,9 @@ function _sgLocalFix(code){
   var fixed = String(code || '');
   fixed = fixed.replace(/<b>/gi, '<strong>').replace(/<\/b>/gi, '</strong>');
   try {
-    if (typeof document !== 'undefined' && document.createElement) {
-      var tpl = document.createElement('template');
-      tpl.innerHTML = fixed;
-      var nodes = tpl.content.querySelectorAll('*');
+    if (typeof DOMParser !== 'undefined') {
+      var doc = new DOMParser().parseFromString(fixed, 'text/html');
+      var nodes = doc.body.querySelectorAll('*');
       for (var i = 0; i < nodes.length; i++) {
         var el = nodes[i];
         for (var j = el.attributes.length - 1; j >= 0; j--) {
@@ -26577,7 +26579,7 @@ function _sgLocalFix(code){
           }
         }
       }
-      fixed = tpl.innerHTML;
+      fixed = doc.body.innerHTML;
     }
   } catch (_) {
   }
@@ -26808,7 +26810,10 @@ function _bc(){if(location.protocol==='file:'){_dot(false);return;}if(_ws&&_ws.r
     var tk=th.querySelector('._ath');if(tk)tk.remove();
     var b=document.createElement('div');b.style.cssText='margin-bottom:8px';
     var text=d.text||(d.payload&&d.payload.text)||d.response||'';
-    b.innerHTML='<span style="background:#152440;border:1px solid #254868;border-radius:8px;padding:7px 10px;display:inline-block;color:#eaf0ff;max-width:85%;white-space:pre-wrap;font:11px monospace">'+text.replace(/</g,'&lt;')+'</span>';
+    var span=document.createElement('span');
+    span.style.cssText='background:#152440;border:1px solid #254868;border-radius:8px;padding:7px 10px;display:inline-block;color:#eaf0ff;max-width:85%;white-space:pre-wrap;font:11px monospace';
+    span.textContent=text;
+    b.appendChild(span);
     th.appendChild(b);th.scrollTop=th.scrollHeight;
   }
 }
