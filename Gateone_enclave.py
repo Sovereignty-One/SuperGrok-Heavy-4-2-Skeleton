@@ -26,6 +26,8 @@ def _load_or_generate_signing_keys():
             if public_key and private_key:
                 return public_key, private_key
     except OSError:
+        # If persisted keys cannot be read (missing/corrupt/permission issue),
+        # intentionally fall back to generating a fresh keypair below.
         pass
 
     signer = oqs.Signature(SIG_ALG)
