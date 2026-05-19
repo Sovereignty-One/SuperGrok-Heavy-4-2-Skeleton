@@ -1,7 +1,7 @@
 /**
- * SuperGrok AI Platform — Frontend / Dashboard Server (Port 9898)
+ * SuperGrok AI Platform — KODER Frontend / Dashboard Server (Port 9898)
  *
- * Serves the SGHv119.html dashboard and provides the local backend for it:
+ * Serves the KODER frontend / SGHv119.html dashboard and provides the local backend for it:
  *   GET  /health                   – health check
  *   POST /api/ai/chat              – AI proxy (Claude / GPT-4o / Grok)
  *   POST /api/execute-command      – safe terminal command execution
@@ -17,7 +17,7 @@
  *
  * Port topology:
  *   9897  Python Bridge (python3_bridge.py)  — backend AI / brain / keys
- *   9898  Frontend / Dashboard (this file)   — HTML + WS + Coder UI
+ *   9898  KODER frontend (this file)         — HTML + WS + Coder UI
  *   9899  Node.js Unified_Server.js          — REST proxy / relay
  *
  * Environment variables (all optional – keys enable live AI):
@@ -108,17 +108,23 @@ function apiPost(url, headers, body) {
   });
 }
 
+function resolveMaxTokens(value, fallback) {
+  const n = Number.parseInt(value, 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
 // ---------------------------------------------------------------------------
 // AI proxy — calls Anthropic / OpenAI / xAI depending on model
 // ---------------------------------------------------------------------------
-async function callAI(model, system, messages) {
+async function callAI(model, system, messages, maxTokens) {
+  const tokens = resolveMaxTokens(maxTokens, 65536);
   if (model === 'claude') {
     const key = ANTHROPIC_KEY;
     if (!key) return { error: 'ANTHROPIC_API_KEY not set on bridge server' };
     const r = await apiPost(
       'https://api.anthropic.com/v1/messages',
       { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      { model: 'claude-sonnet-4-20250514', max_tokens: 1200, system, messages },
+      { model: 'claude-opus-4-7', max_tokens: tokens, system, messages },
     );
     if (r.body && r.body.content && r.body.content[0]) {
       return { text: r.body.content[0].text };
@@ -132,7 +138,7 @@ async function callAI(model, system, messages) {
     const r = await apiPost(
       'https://api.openai.com/v1/chat/completions',
       { Authorization: `Bearer ${key}` },
-      { model: 'gpt-4o', max_tokens: 1200, messages: [{ role: 'system', content: system }, ...messages] },
+      { model: 'gpt-5.4-mini', max_tokens: tokens, messages: [{ role: 'system', content: system }, ...messages] },
     );
     if (r.body && r.body.choices && r.body.choices[0]) {
       return { text: r.body.choices[0].message.content };
@@ -146,7 +152,7 @@ async function callAI(model, system, messages) {
     const r = await apiPost(
       'https://api.x.ai/v1/chat/completions',
       { Authorization: `Bearer ${key}` },
-      { model: 'grok-2-latest', max_tokens: 1200, messages: [{ role: 'system', content: system }, ...messages] },
+      { model: 'grok-4.3', max_tokens: tokens, messages: [{ role: 'system', content: system }, ...messages] },
     );
     if (r.body && r.body.choices && r.body.choices[0]) {
       return { text: r.body.choices[0].message.content };
@@ -286,9 +292,9 @@ async function handleRequest(req, res) {
   // POST /api/ai/chat
   if (method === 'POST' && urlPath === '/api/ai/chat') {
     const body = await readBody(req);
-    const { model = 'claude', system = '', messages = [], text } = body;
+    const { model = 'claude', system = '', messages = [], text, max_tokens } = body;
     const msgs = messages.length ? messages : [{ role: 'user', content: text || '' }];
-    const result = await callAI(model, system, msgs);
+    const result = await callAI(model, system, msgs, max_tokens);
     return respond(res, result.error ? 502 : 200, result);
   }
 

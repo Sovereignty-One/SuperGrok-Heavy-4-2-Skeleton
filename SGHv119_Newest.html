@@ -3662,15 +3662,15 @@ window.runCopilotAgent = async function(){
   if(primary==='claude'){
     apiKey = localStorage.getItem('sg_ant_key')||'';
     apiUrl = 'https://api.anthropic.com/v1/messages';
-    apiModel = 'claude-opus-4-5';
+    apiModel = 'claude-opus-4-7';
   } else if(primary==='grok'){
     apiKey = localStorage.getItem('sg_xai_key')||'';
     apiUrl = 'https://api.x.ai/v1/chat/completions';
-    apiModel = 'grok-3-latest';
+    apiModel = 'grok-4.3';
   } else if(primary==='openai'){
     apiKey = localStorage.getItem('sg_oai_key')||'';
     apiUrl = 'https://api.openai.com/v1/chat/completions';
-    apiModel = 'gpt-4o';
+    apiModel = 'gpt-5.4-mini';
   }
 
   if(!apiKey){
@@ -3705,10 +3705,10 @@ window.runCopilotAgent = async function(){
   if(primary==='claude'){
     headers['x-api-key'] = apiKey;
     headers['anthropic-version'] = '2023-06-01';
-    body = JSON.stringify({model:apiModel,max_tokens:8192,system:sysPrompt,messages:[{role:'user',content:userMsg}]});
+    body = JSON.stringify({model:apiModel,max_tokens:65536,system:sysPrompt,messages:[{role:'user',content:userMsg}]});
   } else {
     headers['Authorization'] = 'Bearer '+apiKey;
-    body = JSON.stringify({model:apiModel,max_tokens:8192,messages:[{role:'system',content:sysPrompt},{role:'user',content:userMsg}]});
+    body = JSON.stringify({model:apiModel,max_tokens:65536,messages:[{role:'system',content:sysPrompt},{role:'user',content:userMsg}]});
   }
 
   return fetch(apiUrl,{method:'POST',headers:headers,body:body})
@@ -3951,7 +3951,7 @@ try {
       'Voice: <b style="color:var(--tx)">Piper TTS (local, port 9897)</b><br>' +
       'Setup: <code style="color:var(--cy)">export PIPER_MODEL=/path/to/model.onnx && node node-bridge/server.js</code><br>' +
       'Models: <a href="https://github.com/rhasspy/piper/releases" style="color:var(--cy)" target="_blank">github.com/rhasspy/piper</a><br>' +
-      '<b style="color:var(--gn)">✓ Zero Meta · Zero Google · Zero LLaMA · Zero Ollama</b>' +
+      '<b style="color:var(--gn)">✓ Zero Meta · Zero Google · Zero third-party AI</b>' +
       '</div>' +
       '</div>';
   };
@@ -4903,7 +4903,7 @@ window.SGOrchestrator = (function(){
       var r=await fetch('http://127.0.0.1:9899/ai/'+id,{
         method:'POST', signal:ctrl.signal,
         headers:{'Content-Type':'application/json','X-SG-Agent':id},
-        body:JSON.stringify({model:model,messages:msgs,max_tokens:max||8192})
+        body:JSON.stringify({model:model,messages:msgs,max_tokens:max||65536})
       }); clearTimeout(t);
       if(!r.ok) throw new Error(r.status);
       var d=await r.json();
@@ -4913,18 +4913,18 @@ window.SGOrchestrator = (function(){
   }
 
   var AGENTS={};
-  AGENTS.claude=new Agent({id:'claude',name:'Claude Sonnet 4.6',icon:'🤖',color:'#cc785c',role:'Reasoning · Safety · Analysis · Code',
-    process:async function(msg,a){ return await bridge('claude','claude-sonnet-4-6',a.memory.slice(-10).concat([{role:'user',content:msg.content}]),1024); }});
-  AGENTS.gpt=new Agent({id:'gpt',name:'GPT-4o',icon:'🧠',color:'#10a37f',role:'General · Creative · Vision · Translate',
-    process:async function(msg,a){ return await bridge('gpt','gpt-4o',a.memory.slice(-10).concat([{role:'user',content:msg.content}]),1024); }});
-  AGENTS.grok=new Agent({id:'grok',name:'Grok 4.20 Judge',icon:'⚡',color:'#f59e0b',role:'Judge · Debate · Fact-Check · Real-Time',
+  AGENTS.claude=new Agent({id:'claude',name:'Claude Opus 4.6',icon:'🤖',color:'#cc785c',role:'Reasoning · Safety · Analysis · Code',
+    process:async function(msg,a){ return await bridge('claude','claude-opus-4-7',a.memory.slice(-10).concat([{role:'user',content:msg.content}]),65536); }});
+  AGENTS.gpt=new Agent({id:'gpt',name:'GPT-5.4 Mini',icon:'🧠',color:'#10a37f',role:'General · Creative · Vision · Translate',
+    process:async function(msg,a){ return await bridge('gpt','gpt-5.4-mini',a.memory.slice(-10).concat([{role:'user',content:msg.content}]),65536); }});
+  AGENTS.grok=new Agent({id:'grok',name:'Grok 4.3',icon:'⚡',color:'#f59e0b',role:'Judge · Debate · Fact-Check · Real-Time',
     process:async function(msg,a){
       var lock='MEMORY_LOCK: '+a.memory.length+' protected entries.';
       var msgs=[{role:'system',content:lock}].concat(a.memory.slice(-10)).concat([{role:'user',content:msg.content}]);
-      return await bridge('grok','grok-3',msgs,1024);
+      return await bridge('grok','grok-4.3',msgs,65536);
     }});
-  AGENTS.copilot=new Agent({id:'copilot',name:'GitHub Copilot',icon:'🐙',color:'#6366f1',role:'Code · Repo · PR · Review · Actions',
-    process:async function(msg,a){ return await bridge('copilot','gpt-4o',a.memory.slice(-8).concat([{role:'user',content:msg.content}]),1024); }});
+  AGENTS.copilot=new Agent({id:'copilot',name:'GPT-5.4 Codex',icon:'🐙',color:'#6366f1',role:'Code · Repo · PR · Review · Actions',
+    process:async function(msg,a){ return await bridge('copilot','gpt-5.4-codex',a.memory.slice(-8).concat([{role:'user',content:msg.content}]),65536); }});
   AGENTS.siri=new Agent({id:'siri',name:'Voice / Siri',icon:'🎙️',color:'#a855f7',role:'Voice Commands · Device Control · On-Device',
     process:async function(msg){
       var cmd=(msg.content||'').toLowerCase();
@@ -4932,7 +4932,7 @@ window.SGOrchestrator = (function(){
         audit:'audittrail',github:'github',browser:'browser',files:'fileai',agents:'agents',shield:'privacy'};
       for(var p in panelMap){ if(cmd.includes(p)){ if(window.loadPanel) window.loadPanel(panelMap[p]); return 'Opening '+p; } }
       if(cmd.includes('logout')||cmd.includes('sign out')){ if(window.doLogout) window.doLogout(); return 'Signed out.'; }
-      return await bridge('siri','claude-sonnet-4-6',[{role:'user',content:msg.content}],256);
+      return await bridge('siri','claude-sonnet-4-6',[{role:'user',content:msg.content}],65536);
     }});
   AGENTS.arbiter=new Agent({id:'arbiter',name:'Arbiter',icon:'⚖️',color:'#00d4ff',role:'Council · Conflict · Final Authority',
     process:async function(msg){
@@ -4940,14 +4940,14 @@ window.SGOrchestrator = (function(){
         var parts=Object.keys(msg.opts.council).map(function(k){ return k+': '+String(msg.opts.council[k]).slice(0,80); });
         return 'COUNCIL: '+parts.join(' | ');
       }
-      return await bridge('arbiter','claude-sonnet-4-6',[{role:'system',content:'You are an arbiter. Be concise.'},{role:'user',content:msg.content}],512);
+      return await bridge('arbiter','claude-sonnet-4-6',[{role:'system',content:'You are an arbiter. Be concise.'},{role:'user',content:msg.content}],65536);
     }});
 
   async function councilVote(question){
     if(!question) return;
     var responses={};
     await Promise.allSettled(['claude','gpt','grok'].map(function(id){
-      return bridge(id,id==='claude'?'claude-sonnet-4-6':id==='gpt'?'gpt-4o':'grok-3',[{role:'user',content:question}],256)
+      return bridge(id,id==='claude'?'claude-opus-4-7':id==='gpt'?'gpt-5.4-mini':'grok-4.3',[{role:'user',content:question}],65536)
         .then(function(r){ responses[id]=r; });
     }));
     AGENTS.arbiter.send(question,{council:responses});
@@ -6619,7 +6619,7 @@ PANELS.dashboard=function(){
     '<div class="card"><div class="card-title">🤖 Agent Status</div>'+
       sr('Claude Sonnet 4.6','IDLE','b-info')+
       sr('GPT-4o','IDLE','b-info')+
-      sr('Grok 4.20 Judge','IDLE','b-info')+
+      sr('Grok 4.3 Judge','IDLE','b-info')+
       sr('GitHub Copilot','IDLE','b-info')+sr('Keycloak SSO','CHECKING','b-warn')+sr('Zoho 2FA','STANDBY','b-dim')+
       sr('Voice / Siri','READY','b-ok')+
       sr('Arbiter','STANDBY','b-dim')+
@@ -6780,7 +6780,7 @@ PANELS.chat=function(){
 PANELS.council=function(){
   var votes=(function(){try{return JSON.parse(localStorage.getItem('sg_council_log')||'[]');}catch(e){return[];}})();
 
-  return hdr('\u2696\ufe0f Council Vote','Claude + GPT-4o + Grok 4.20 \u00b7 Simultaneous \u00b7 Arbiter Synthesis \u00b7 Cryptographic Verdict')+
+  return hdr('\u2696\ufe0f Council Vote','Claude + GPT-4o + Grok 4.3 \u00b7 Simultaneous \u00b7 Arbiter Synthesis \u00b7 Cryptographic Verdict')+
   '<div class="kgrid">'+
     kc(votes.length+'','Sessions','var(--acid)')+
     kc(votes.filter(function(v){return v.consensus;}).length+'','Consensus','#00e676')+
@@ -6794,8 +6794,8 @@ PANELS.council=function(){
     '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">'+
     [
       {name:'Claude Sonnet',icon:'\ud83e\udde0',color:'#7c4dff',id:'claude'},
-      {name:'GPT-4o',       icon:'\ud83d\udcac',color:'#10a37f',id:'gpt'},
-      {name:'Grok 4.20',    icon:'\u26a1',        color:'#b8ff00',id:'grok'},
+      {name:'GPT-5.4 Mini',       icon:'\ud83d\udcac',color:'#10a37f',id:'gpt'},
+      {name:'Grok 4.3',    icon:'\u26a1',        color:'#b8ff00',id:'grok'},
     ].map(function(j){
       return '<div style="padding:12px;border-radius:var(--r);background:var(--bg2);border:1px solid '+j.color+'22;text-align:center">'+
         '<div style="font-size:24px;margin-bottom:5px">'+j.icon+'</div>'+
@@ -8521,11 +8521,11 @@ web:'https://grok.com', desc:'Grok-3 · xAI · Real-time web access'},
 scheme:'twitter://', store:'https://apps.apple.com/app/x/id333903271',
 web:'https://x.com', desc:'X · Real-time · News feed'},
 
-{id:'copilot',   name:'GitHub Copilot',icon:'🐙',color:'#6366f1',
+{id:'copilot',   name:'GPT-5.4 Codex',icon:'🐙',color:'#6366f1',
  scheme:'github-copilot://', store:'https://apps.apple.com/app/github-copilot/id6472538445',
  web:'https://github.com/features/copilot', desc:'AI Pair Programmer · GitHub · Code completion'},
-{id:'gemini',    name:'Gemini (blocked)', icon:'🚫',color:'#888',
- scheme:null, store:null, web:null, desc:'Google AI — blocked by Sovereign Fortress', blocked:true},
+{id:'ai_blocked', name:'AI (blocked)', icon:'🚫',color:'#888',
+ scheme:null, store:null, web:null, desc:'Blocked by Sovereign Fortress', blocked:true},
 
 ];
 
@@ -12775,7 +12775,7 @@ sel+'._domainkey      3600  IN  TXT  "v=DKIM1; k=rsa; p='+dkimB64+'"',
 '@  3600  IN  NS  ns2.'+domain+'.',
 '',
 '; ── CAA RECORDS ─────────────────────────────────────────────',
-'@  3600  IN  CAA  0 issue "letsencrypt.org"',
+'@  3600  IN  CAA  0 issue "digicert.com"',
 ';   Allow ONLY LetsEncrypt to issue TLS certs.',
 '@  3600  IN  CAA  0 iodef "mailto:security@'+domain+'"',
 ';   Security contact for CA issue reports.',
@@ -12795,7 +12795,7 @@ sel+'._domainkey      3600  IN  TXT  "v=DKIM1; k=rsa; p='+dkimB64+'"',
 '; DKIM   ✅  Cryptographic signature on outgoing mail',
 '; DMARC  ✅  Policy enforcement + forensic reporting',
 '; MTA-STS ✅  TLS enforcement for inbound delivery',
-'; CAA    ✅  Restricts certificate issuance to Let\x27s Encrypt',
+'; CAA    ✅  Restricts certificate issuance to DigiCert',
 '; DNSSEC ⚠   Enable at registrar — requires registrar support',
 ].join('\n');
 
@@ -13158,9 +13158,9 @@ h += '</div>';
 
 /* Category tables */
 var cats = [
-{label:'Google / Gemini / AI',color:'#4285F4',keys:['google','gstatic','firebase','gemini','googleapis']},
+{label:'Google / AI',color:'#4285F4',keys:['google','gstatic','firebase','gemini','googleapis']},
 {label:'Google Analytics / Tracking',color:'#fbbc04',keys:['analytics','tagmanager','tagservices','adservices','chromefeed','abuseevent','adexchange']},
-{label:'Meta / Facebook / LLaMA',color:'#1877F2',keys:['facebook','meta','fb.com','messenger','instagram','llama']},
+{label:'Meta / Facebook / AI',color:'#1877F2',keys:['facebook','meta','fb.com','messenger','instagram','llama']},
 {label:'TikTok',color:'#ff0050',keys:['tiktok']},
 ];
 cats.forEach(function(cat) {
@@ -13835,22 +13835,22 @@ if(ag==='claude'||ag==='arbiter'){
 endpoint='https://api.anthropic.com/v1/messages';
 headers={'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
 body=JSON.stringify({
-model:'claude-opus-4-5',
-max_tokens:8192,
+model:'claude-opus-4-7',
+max_tokens:65536,
 system:'You are SuperGrok, a sovereign AI assistant. Be direct, accurate, never hallucinate.',
 messages: history.slice(-8).concat([{role:'user',content:msg}])
 });
 } else if(ag==='gpt'){
 endpoint='https://api.openai.com/v1/chat/completions';
 headers={'Content-Type':'application/json','Authorization':'Bearer '+key};
-body=JSON.stringify({model:'gpt-4o',max_tokens:8192,
+body=JSON.stringify({model:'gpt-5.4-mini',max_tokens:65536,
 messages:[{role:'system',content:'You are SuperGrok AI. Be direct and accurate.'}]
 .concat(history.slice(-8))
 .concat([{role:'user',content:msg}])});
 } else if(ag==='grok'){
 endpoint='https://api.x.ai/v1/chat/completions';
 headers={'Content-Type':'application/json','Authorization':'Bearer '+key};
-body=JSON.stringify({model:'grok-3-latest',max_tokens:8192,
+body=JSON.stringify({model:'grok-4.3',max_tokens:65536,
 messages:[{role:'system',content:'You are SuperGrok AI.'}]
 .concat(history.slice(-8))
 .concat([{role:'user',content:msg}])});
@@ -16110,7 +16110,7 @@ el.innerHTML = '<div style="padding:8px;color:var(--t3);font-family:var(--mono);
 return;
 }
 el.innerHTML = frames.map(function(f, i) {
-return '<div style="padding:4px 8px;border-bottom:1px solid var(--wire)11;font-family:var(--mono);font-size:9px;cursor:pointer" onclick="dbgJumpToLine(\x27 + (f.line||0) + \x27)">'
+return '<div style="padding:4px 8px;border-bottom:1px solid var(--wire)11;font-family:var(--mono);font-size:9px;cursor:pointer" onclick="dbgJumpToLine(' + (f.line||0) + ')">'
 + '<span style="color:var(--acid)">' + (f.fn || '(anonymous)') + '</span>'
 + '<span style="color:var(--t3);font-size:7px;margin-left:8px">' + (f.file||'') + (f.line?':'+f.line:'') + (f.col?':'+f.col:'') + '</span>'
 + '</div>';
@@ -17360,7 +17360,7 @@ card && card.scrollIntoView({behavior:'smooth'});
   var v=document.getElementById('council-vote-'+j); if(v) v.textContent='\u23f3';
 });
 
-var judges = [{id:'claude',name:'Claude',icon:'\ud83e\udde0',color:'#7c4dff'},{id:'gpt',name:'GPT-4o',icon:'\ud83d\udcac',color:'#10a37f'},{id:'grok',name:'Grok 4.20',icon:'\u26a1',color:'#b8ff00'}];
+var judges = [{id:'claude',name:'Claude',icon:'\ud83e\udde0',color:'#7c4dff'},{id:'gpt',name:'GPT-5.4 Mini',icon:'\ud83d\udcac',color:'#10a37f'},{id:'grok',name:'Grok 4.3',icon:'\u26a1',color:'#b8ff00'}];
 var results = {};
 var done = 0;
 
@@ -21817,7 +21817,7 @@ card && card.scrollIntoView({behavior:'smooth'});
   var v=document.getElementById('council-vote-'+j); if(v) v.textContent='\u23f3';
 });
 
-var judges = [{id:'claude',name:'Claude',icon:'\ud83e\udde0',color:'#7c4dff'},{id:'gpt',name:'GPT-4o',icon:'\ud83d\udcac',color:'#10a37f'},{id:'grok',name:'Grok 4.20',icon:'\u26a1',color:'#b8ff00'}];
+var judges = [{id:'claude',name:'Claude',icon:'\ud83e\udde0',color:'#7c4dff'},{id:'gpt',name:'GPT-5.4 Mini',icon:'\ud83d\udcac',color:'#10a37f'},{id:'grok',name:'Grok 4.3',icon:'\u26a1',color:'#b8ff00'}];
 var results = {};
 var done = 0;
 
@@ -22744,9 +22744,9 @@ return '<button class="btn-s" style="font-size:8px;font-family:monospace;padding
 PANELS.quickkeys = function(){
 var st  = window.SG_VAULT ? SG_VAULT.status() : {};
 var providers = [
-{id:'claude', label:'Anthropic / Claude',       icon:'🟣', prefix:'sk-ant-',  model:'claude-opus-4-5'},
-{id:'gpt',    label:'OpenAI / GPT-4o',           icon:'🟢', prefix:'sk-',      model:'gpt-4o'},
-{id:'grok',   label:'xAI / Grok',                icon:'⚡', prefix:'xai-',     model:'grok-3-latest'},
+{id:'claude', label:'Anthropic / Claude Opus',       icon:'🟣', prefix:'sk-ant-',  model:'claude-opus-4-7'},
+{id:'gpt',    label:'OpenAI / GPT-5.4 Mini',           icon:'🟢', prefix:'sk-',      model:'gpt-5.4-mini'},
+{id:'grok',   label:'xAI / Grok 4.3',                icon:'⚡', prefix:'xai-',     model:'grok-4.3'},
 {id:'copilot',label:'GitHub Copilot (preview)',  icon:'🔵', prefix:'ghp_',     model:'copilot'},
 ];
 function masked(v){ return v?(v.slice(0,10)+'··········'+v.slice(-4)):''; }
@@ -23513,7 +23513,7 @@ registry: {
 claude:     {name:'Claude',      icon:'🟣', status:'device', app:'claude://',      web:'https://claude.ai',               store:'https://apps.apple.com/app/claude-ai-by-anthropic/id6473753684'},
 gpt:        {name:'ChatGPT',     icon:'🟢', status:'device', app:'chatgpt://',     web:'https://chatgpt.com',             store:'https://apps.apple.com/app/chatgpt/id6448311069'},
 grok:       {name:'Grok',        icon:'⚡', status:'device', app:'grok://',        web:'https://grok.com',                store:'https://apps.apple.com/app/grok/id6670324846'},
-copilot:    {name:'GitHub Copilot', icon:'🐙', status:'device', app:'github-copilot://', web:'https://github.com/features/copilot', store:'https://apps.apple.com/app/github-copilot/id6472538445'},
+copilot:    {name:'GPT-5.4 Codex', icon:'🐙', status:'device', app:'github-copilot://', web:'https://github.com/features/copilot', store:'https://apps.apple.com/app/github-copilot/id6472538445'},
 siri:       {name:'Siri',        icon:'🎤', status:'device', app:'siri://',        web:null,                              store:null}
 },
 
@@ -23600,7 +23600,7 @@ _queryDirect: function(agentId, message, history, cb){
         'anthropic-dangerous-direct-browser-access':'true'
       },
       body: JSON.stringify({
-        model:'claude-opus-4-5', max_tokens:8192,
+        model:'claude-opus-4-7', max_tokens:65536,
         system:'You are SuperGrok. Be direct, factual, verified.',
         messages:(history||[]).concat([{role:'user',content:message}])
       })
@@ -24003,7 +24003,10 @@ var ph = thread.querySelector('[style*="Thread cleared"]') || thread.querySelect
 if(ph) thread.innerHTML = '';
 var ub = document.createElement('div');
 ub.style.cssText='display:flex;justify-content:flex-end;';
-ub.innerHTML='<div style="background:var(--acid)22;border:1px solid var(--acid)44;border-radius:10px 10px 2px 10px;padding:8px 12px;max-width:75%;font-family:var(--mono);font-size:10px;color:var(--t0)">'+msg+'</div>';
+var ubBox=document.createElement('div');
+ubBox.style.cssText='background:var(--acid)22;border:1px solid var(--acid)44;border-radius:10px 10px 2px 10px;padding:8px 12px;max-width:75%;font-family:var(--mono);font-size:10px;color:var(--t0)';
+ubBox.textContent=msg;
+ub.appendChild(ubBox);
 thread.appendChild(ub);
 thread.scrollTop = thread.scrollHeight;
 }
@@ -24557,7 +24560,7 @@ AAAA:  '::1',
 MX:    '10 mail.'+domain,
 TXT:   '"v=spf1 mx ~all"',
 CNAME: 'www IN CNAME '+domain+'.',
-CAA:   '0 issue "letsencrypt.org"',
+CAA:   '0 issue "digicert.com"',
 TLSA:  '3 1 1 '+hex.slice(0,64)
 },
 tls_cert: {
@@ -26016,7 +26019,7 @@ window.SG_DIRECT_AI = {
         'anthropic-dangerous-direct-browser-access':'true'
       },
       body:JSON.stringify({
-        model:'claude-opus-4-5', max_tokens:8192,
+        model:'claude-opus-4-7', max_tokens:65536,
         system:'You are SuperGrok sovereign AI. Be direct and accurate.',
         messages:messages
       })
@@ -26536,7 +26539,7 @@ setTimeout(boot, 100);
 <script>
 (function(){'use strict';
 function $(id){return document.getElementById(id);}
-function _k(){try{var a=JSON.parse(localStorage.getItem('sg_apikeys')||'{}');return a.claude||a.anthropic||localStorage.getItem('apikey-claude')||localStorage.getItem('sgh_key_claude')||'';}catch(_){return '';}}
+function _k(provider){try{return (window.sgGetApiKey&&window.sgGetApiKey(provider))||(function(){var a=JSON.parse(localStorage.getItem('sg_apikeys')||'{}');var p=String(provider||'claude').toLowerCase();if(p==='gpt'||p==='openai')return a.gpt||a.openai||localStorage.getItem('apikey-openai')||localStorage.getItem('sgh_key_openai')||'';if(p==='grok'||p==='xai')return a.grok||a.xai||localStorage.getItem('apikey-grok')||localStorage.getItem('sgh_key_grok')||localStorage.getItem('sg_xai_key')||'';if(p==='copilot')return a.copilot||localStorage.getItem('sg_copilot_token')||'';return a.claude||a.anthropic||localStorage.getItem('apikey-claude')||localStorage.getItem('sgh_key_claude')||'';})()}catch(_){return '';}}
 function _save(a,v){try{var k=JSON.parse(localStorage.getItem('sg_apikeys')||'{}');k[a]=v;k.anthropic=v;localStorage.setItem('sg_apikeys',JSON.stringify(k));localStorage.setItem('apikey-'+a,v);localStorage.setItem('sgh_key_'+a,v);}catch(_){}}
 window.getKey=_k;window.saveKey=_save;
 window.sgGetApiKey = window.sgGetApiKey || function(provider){
@@ -26560,10 +26563,9 @@ function _sgLocalFix(code){
   var fixed = String(code || '');
   fixed = fixed.replace(/<b>/gi, '<strong>').replace(/<\/b>/gi, '</strong>');
   try {
-    if (typeof document !== 'undefined' && document.createElement) {
-      var tpl = document.createElement('template');
-      tpl.innerHTML = fixed;
-      var nodes = tpl.content.querySelectorAll('*');
+    if (typeof DOMParser !== 'undefined') {
+      var doc = new DOMParser().parseFromString(fixed, 'text/html');
+      var nodes = doc.body.querySelectorAll('*');
       for (var i = 0; i < nodes.length; i++) {
         var el = nodes[i];
         for (var j = el.attributes.length - 1; j >= 0; j--) {
@@ -26577,7 +26579,7 @@ function _sgLocalFix(code){
           }
         }
       }
-      fixed = tpl.innerHTML;
+      fixed = doc.body.innerHTML;
     }
   } catch (_) {
   }
@@ -26682,107 +26684,124 @@ function _ai(){
     return;
   }
 
-  /* ── Get Claude key ── */
-  var key=_k();
-  if(!key){
-    var noKeyMsg='No Claude API key found.\n\nTap the 🔑 KEYS button (top-right) and paste your key.\n\nGet one at: console.anthropic.com';
-    if(out)out.textContent=noKeyMsg;
-    _t('No Claude key — tap 🔑 KEYS','err');
-    _keys();
-    return;
+  /* ── Local-only analysis/fix (no external API callout) ── */
+  var lint = null;
+  if (window.CM && typeof window.CM.runLint === 'function') {
+    try { lint = window.CM.runLint(); } catch(_) {}
+  }
+  var isMarkup = lang === 'html';
+  var localAnalysis = '';
+  var localFixed;
+  var changed = false;
+
+  if (isMarkup) {
+    localAnalysis = _sgLocalAnalyze(code);
+    localFixed = _sgLocalFix(code);
+    changed = localFixed !== code;
+  } else {
+    var fixableCount = (window._cmFixes || []).filter(function(f){ return f && f.fix; }).length;
+    localAnalysis = lint
+      ? (
+          'Lint results refreshed from the editor.\n' +
+          'Errors: ' + lint.errCount + '\n' +
+          'Warnings: ' + lint.warnCount + '\n' +
+          (fixableCount ? ('\nFixable items: ' + fixableCount + '\n') : '\n') +
+          'Review the console entries below for line-specific fixes.'
+        )
+      : 'Lint results are not available for ' + lang.toUpperCase() + '.';
+    changed = fixableCount > 0;
   }
 
-  /* ── Show status ── */
-  var keyMask=key.slice(0,16)+'…'+key.slice(-4);
-  if(out)out.textContent='⏳ Calling Claude claude-sonnet-4-5 (max 8192 tokens)…\nKey: '+keyMask+'\n';
+  if (out) {
+    out.textContent =
+      '✅ CodeMaster Local Analysis (' + lang.toUpperCase() + ')\n\n' +
+      (lint ? ('Errors: ' + lint.errCount + '\nWarnings: ' + lint.warnCount + '\n\n') : '') +
+      localAnalysis +
+      '\n\nNo external API call was used.';
+  }
 
-  /* ── Call Anthropic directly ── */
-  var prompt=
-    'You are a senior code reviewer. Review this '+lang+' code:\n'+
-    '1. List every bug with its exact line number\n'+
-    '2. Explain what is wrong and the correct fix\n'+
-    '3. Provide the COMPLETE corrected source in ONE fenced code block\n\n'+
-    '```'+lang+'\n'+code.slice(0,15000)+'\n```\n\n'+
-    'End your response with a fenced code block containing ONLY the fixed code, nothing after it.';
+  if (ap) {
+    ap.style.cssText='display:block;width:100%;padding:14px;margin-top:12px;background:#00ffc8;color:#000;border:none;border-radius:8px;font:700 14px monospace;cursor:pointer;letter-spacing:0.5px';
+    ap.textContent = changed ? '✅ APPLY LOCAL FIX' : '✅ RE-APPLY LOCAL FIX';
+    ap.onclick=function(){
+      if (!isMarkup && window.CM && typeof window.CM.runLint === 'function') {
+        try { window.CM.runLint(); } catch(_) {}
+      }
+      var next = ed.value || '';
+      if (isMarkup) next = _sgLocalFix(next);
+      var fixes = window._cmFixes || [];
+      fixes.forEach(function(f){ if(f && f.fix) next = f.fix(next) || next; });
+      ed.value = next;
+      ed.dispatchEvent(new Event('input',{bubbles:true}));
+      _run();
+      _t('Local fixes applied ✓','ok');
+    };
+  }
 
-  fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',
-    headers:{
-      'Content-Type':'application/json',
-      'x-api-key':key,
-      'anthropic-version':'2023-06-01',
-      'anthropic-dangerous-direct-browser-access':'true'
-    },
-    body:JSON.stringify({
-      model:'claude-sonnet-4-5',
-      max_tokens:8192,
-      messages:[{role:'user',content:prompt}]
-    })
-  })
-  .then(function(r){
-    if(!r.ok){
-      return r.json().then(function(d){
-        var errMsg=(d&&d.error&&d.error.message)||('HTTP '+r.status);
-        throw new Error(errMsg);
-      }).catch(function(e){throw e;});
-    }
-    return r.json();
-  })
-  .then(function(d){
-    var text=(d.content&&d.content[0]&&d.content[0].text)||'';
-    if(!text){throw new Error('Empty response from Claude');}
-    if(out)out.textContent=text;
-
-    /* ── Extract fixed code block (try multiple patterns) ── */
-    var fixed=null;
-    var patterns=[
-      new RegExp('```'+lang+'\\s*\\n([\\s\\S]*?)\\n```','i'),
-      new RegExp('```[a-zA-Z]*\\s*\\n([\\s\\S]*?)\\n```','i'),
-      new RegExp('```([\\s\\S]*?)```','i')
-    ];
-    for(var i=0;i<patterns.length;i++){
-      var m=patterns[i].exec(text);
-      if(m&&m[1]&&m[1].trim().length>10){fixed=m[1];break;}
-    }
-
-    if(fixed&&ap){
-      var fixedCode=fixed;
-      ap.style.cssText='display:block;width:100%;padding:14px;margin-top:12px;background:#00ffc8;color:#000;border:none;border-radius:8px;font:700 14px monospace;cursor:pointer;letter-spacing:0.5px';
-      ap.textContent='✅ APPLY FIX NOW';
-      ap.onclick=function(){
-        ed.value=fixedCode;
-        ed.dispatchEvent(new Event('input',{bubbles:true}));
-        _run();
-        ap.style.background='#00e676';
-        ap.textContent='✅ Fix Applied!';
-        _t('Fix applied to editor ✓','ok');
-        setTimeout(function(){
-          ap.style.background='#00ffc8';
-          ap.textContent='✅ APPLY FIX NOW';
-        },3000);
-      };
-      _t('✓ Analysis complete — tap APPLY FIX','ok');
-    } else {
-      if(out)out.textContent+='\n\n──\nNo code block found in response. The full analysis is above.';
-      _t('Analysis complete (no code block extracted)','');
-    }
-  })
-  .catch(function(e){
-    var errText='❌ Error: '+e.message+'\n\n';
-    if(e.message.indexOf('401')>=0||e.message.toLowerCase().indexOf('invalid')>=0){
-      errText+='Your API key was rejected. Check it at console.anthropic.com';
-    } else if(e.message.indexOf('429')>=0||e.message.toLowerCase().indexOf('rate')>=0){
-      errText+='Rate limited. Wait 30 seconds and try again.';
-    } else if(e.message.toLowerCase().indexOf('network')>=0||e.message.toLowerCase().indexOf('fetch')>=0){
-      errText+='Network error. Check your connection.';
-    } else {
-      errText+='Try again or check your API key.';
-    }
-    if(out)out.textContent=errText;
-    _t('AI Fix failed: '+e.message.slice(0,50),'err');
-  });
+  _t('Local analysis complete','ok');
 }
-function _keys(){var ex=$('_km');if(ex){ex.remove();return;}var m=document.createElement('div');m.id='_km';m.style.cssText='position:fixed;inset:0;z-index:2147483640;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center';m.onclick=function(e){if(e.target===m)m.remove();};var agents=[{i:'claude',l:'🟣 Claude',u:'https://console.anthropic.com/'},{i:'openai',l:'🟢 OpenAI',u:'https://platform.openai.com/api-keys'},{i:'xai',l:'⚡ xAI',u:'https://console.x.ai/'}];m.innerHTML='<div style="background:#0a1628;border:1px solid #1a3050;border-radius:14px;padding:20px;width:min(420px,94vw)"><div style="display:flex;align-items:center;margin-bottom:16px"><span style="font:700 14px monospace;color:#00ffc8;flex:1">⚙ API KEYS</span><button onclick="document.getElementById(\'_km\').remove()" style="background:none;border:none;color:#6a88ae;cursor:pointer;font-size:22px">✕</button></div>'+agents.map(function(a){var s=_k.call({},a.i)||localStorage.getItem('apikey-'+a.i)||'';var mask=s?s.slice(0,12)+'…'+s.slice(-4):'not set';return '<div style="margin-bottom:14px"><div style="font:700 10px monospace;color:#b5c8e4;margin-bottom:4px">'+a.l+' <span style="color:'+(s?'#00ffc8':'#ff6b6b')+'">'+mask+'</span> <a href="'+a.u+'" target="_blank" style="color:#6a88ae;font-size:9px">get key ↗</a></div><div style="display:flex;gap:6px"><input id="_ki_'+a.i+'" type="password" placeholder="paste key…" value="'+s+'" style="flex:1;background:#07101f;border:1px solid #1a2e50;color:#eaf0ff;border-radius:6px;padding:8px;font:10px monospace"><button onclick="(function(){var v=document.getElementById(\'_ki_'+a.i+'\').value.trim();if(!v)return;window.saveKey(\''+a.i+'\',v);window._sghToast(\''+a.l+' saved\',\'ok\');document.getElementById(\'_km\').remove();})()" style="background:#00ffc840;border:1px solid #00ffc8;color:#00ffc8;border-radius:6px;padding:8px 14px;cursor:pointer;font:700 10px monospace">SAVE</button></div></div>';}).join('')+'<div style="font:9px monospace;color:#3a5980;margin-top:8px">Stored locally · sent only to api.anthropic.com</div></div>';document.body.appendChild(m);}
+function _keys(){
+  var ex=$('_km');
+  if(ex){ex.remove();return;}
+  var m=document.createElement('div');
+  m.id='_km';
+  m.style.cssText='position:fixed;inset:0;z-index:2147483640;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center';
+  m.onclick=function(e){if(e.target===m)m.remove();};
+  var agents=[{i:'claude',l:'🟣 Claude',u:'https://console.anthropic.com/'},{i:'openai',l:'🟢 OpenAI',u:'https://platform.openai.com/api-keys'},{i:'xai',l:'⚡ xAI',u:'https://console.x.ai/'}];
+  var shell=document.createElement('div');
+  shell.style.cssText='background:#0a1628;border:1px solid #1a3050;border-radius:14px;padding:20px;width:min(420px,94vw)';
+  var head=document.createElement('div');
+  head.style.cssText='display:flex;align-items:center;margin-bottom:16px';
+  var title=document.createElement('span');
+  title.style.cssText='font:700 14px monospace;color:#00ffc8;flex:1';
+  title.textContent='⚙ API KEYS';
+  var close=document.createElement('button');
+  close.type='button';
+  close.style.cssText='background:none;border:none;color:#6a88ae;cursor:pointer;font-size:22px';
+  close.textContent='✕';
+  close.onclick=function(){m.remove();};
+  head.appendChild(title); head.appendChild(close); shell.appendChild(head);
+  agents.forEach(function(a){
+    var s=_k(a.i)||localStorage.getItem('apikey-'+a.i)||'';
+    var mask=s?s.slice(0,12)+'…'+s.slice(-4):'not set';
+    var row=document.createElement('div');
+    row.style.cssText='margin-bottom:14px';
+    var label=document.createElement('div');
+    label.style.cssText='font:700 10px monospace;color:#b5c8e4;margin-bottom:4px';
+    label.appendChild(document.createTextNode(a.l+' '));
+    var state=document.createElement('span');
+    state.style.color=s?'#00ffc8':'#ff6b6b';
+    state.textContent=mask;
+    label.appendChild(state);
+    label.appendChild(document.createTextNode(' '));
+    var link=document.createElement('a');
+    link.href=a.u; link.target='_blank'; link.rel='noopener noreferrer';
+    link.style.cssText='color:#6a88ae;font-size:9px';
+    link.textContent='get key ↗';
+    label.appendChild(link);
+    var form=document.createElement('div');
+    form.style.cssText='display:flex;gap:6px';
+    var input=document.createElement('input');
+    input.id='_ki_'+a.i;
+    input.type='password';
+    input.placeholder='paste key…';
+    input.value=s;
+    input.style.cssText='flex:1;background:#07101f;border:1px solid #1a2e50;color:#eaf0ff;border-radius:6px;padding:8px;font:10px monospace';
+    var save=document.createElement('button');
+    save.type='button';
+    save.style.cssText='background:#00ffc840;border:1px solid #00ffc8;color:#00ffc8;border-radius:6px;padding:8px 14px;cursor:pointer;font:700 10px monospace';
+    save.textContent='SAVE';
+    save.onclick=function(){var v=input.value.trim();if(!v)return;window.saveKey(a.i,v);window._sghToast(a.l+' saved','ok');m.remove();};
+    form.appendChild(input); form.appendChild(save);
+    row.appendChild(label); row.appendChild(form); shell.appendChild(row);
+  });
+  var foot=document.createElement('div');
+  foot.style.cssText='font:9px monospace;color:#3a5980;margin-top:8px';
+  foot.textContent='Stored locally · sent only to the configured provider or local bridge/backend, depending on the feature in use';
+  shell.appendChild(foot);
+  m.appendChild(shell);
+  document.body.appendChild(m);
+}
 window.showKeys=_keys;window.showKeyModal=_keys;
 var _ws=null,_ok=false,_at=0;
 function _bc(){if(location.protocol==='file:'){_dot(false);return;}if(_ws&&_ws.readyState<=1)return;_at++;var ws;try{ws=new WebSocket('ws://127.0.0.1:9897');}catch(e){_br();return;}_ws=ws;window.ws=ws;ws.onopen=function(){_ok=true;_at=0;_dot(true);try{ws.send(JSON.stringify({type:'handshake',client:'arbiter'}));}catch(_){}_t('⚡ Bridge :9897 connected','ok');};ws.onmessage=function(e){var d;try{d=JSON.parse(e.data);}catch(_){return;}try{document.dispatchEvent(new CustomEvent('sg:bridgeMsg',{detail:d}));}catch(_){}if(d.type==='agent_response'||d.type==='chat_response'){
@@ -26791,7 +26810,10 @@ function _bc(){if(location.protocol==='file:'){_dot(false);return;}if(_ws&&_ws.r
     var tk=th.querySelector('._ath');if(tk)tk.remove();
     var b=document.createElement('div');b.style.cssText='margin-bottom:8px';
     var text=d.text||(d.payload&&d.payload.text)||d.response||'';
-    b.innerHTML='<span style="background:#152440;border:1px solid #254868;border-radius:8px;padding:7px 10px;display:inline-block;color:#eaf0ff;max-width:85%;white-space:pre-wrap;font:11px monospace">'+text.replace(/</g,'&lt;')+'</span>';
+    var span=document.createElement('span');
+    span.style.cssText='background:#152440;border:1px solid #254868;border-radius:8px;padding:7px 10px;display:inline-block;color:#eaf0ff;max-width:85%;white-space:pre-wrap;font:11px monospace';
+    span.textContent=text;
+    b.appendChild(span);
     th.appendChild(b);th.scrollTop=th.scrollHeight;
   }
 }
@@ -26805,7 +26827,44 @@ if(d.type==='ai_code_review_result'||d.context==='codemaster'){var out=$('cm-ai-
 function _br(){clearTimeout(window._arbR);window._arbR=setTimeout(_bc,Math.min(2000*Math.pow(1.5,Math.min(_at,8)),20000)|0);}
 function _dot(on){window._SGH_BRIDGE_CONNECTED=on;var c=on?'#00ffc8':'#ff3d6e';['rs-bridge-dot','sgh-pill-dot','_ad'].forEach(function(id){var el=$(id);if(el)el.style.background=c;});['bridgeStatus','ftBridge'].forEach(function(id){var el=$(id);if(el){el.textContent=on?'LIVE':'OFFLINE';el.style.color=on?'#00e676':'#ff3d6e';}});try{document.dispatchEvent(new CustomEvent(on?'sg:bridgeConnected':'sg:bridgeDisconnected',{detail:{url:'ws://127.0.0.1:9897'}}));}catch(_){}}
 window.bridgeConnect=_bc;window.bridgeReconnect=_bc;window._SG_BRIDGE_STATUS={reconnect:_bc};window.SG_AGENT=window.SG_AGENT||{reconnectBridge:_bc};
-function _send(){var inp=$('ag-inp')||$('sgh-ag-inp');if(!inp||!inp.value.trim())return;var msg=inp.value.trim();inp.value='';var agent=($('ag-sel')||$('sgh-ag-sel')||{}).value||'claude';var th=$('ag-thread')||$('sgh-ag-thread');if(th){var um=document.createElement('div');um.style.cssText='text-align:right;margin-bottom:6px';um.innerHTML='<span style="background:#00ffc815;border:1px solid #00ffc840;border-radius:8px;padding:6px 10px;display:inline-block;color:#eaf0ff;font:11px monospace">'+msg.replace(/</g,'&lt;')+'</span>';th.appendChild(um);var tk=document.createElement('div');tk.className='_ath';tk.style.cssText='margin-bottom:6px;color:#6a88ae;font:italic 11px monospace';tk.textContent='⏳ '+agent+'…';th.appendChild(tk);th.scrollTop=th.scrollHeight;}if(_ws&&_ws.readyState===1){try{_ws.send(JSON.stringify({type:'chat',agent:agent,message:msg,context:'agents'}));return;}catch(_){}}fetch('http://127.0.0.1:9897/agents/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agent:agent,message:msg})}).then(function(r){return r.json();}).then(function(d){var t=th&&th.querySelector('._ath');if(t)t.remove();var text=(d&&(d.response||d.reply||d.text))||JSON.stringify(d);if(th){var b=document.createElement('div');b.style.cssText='margin-bottom:8px';b.innerHTML='<span style="background:#152440;border:1px solid #254868;border-radius:8px;padding:7px 10px;display:inline-block;color:#eaf0ff;max-width:85%;white-space:pre-wrap;font:11px monospace">'+text.replace(/</g,'&lt;')+'</span>';th.appendChild(b);th.scrollTop=th.scrollHeight;}}).catch(function(e){var t=th&&th.querySelector('._ath');if(t)t.textContent='✗ '+e.message+' (bridge offline?)';});}
+function _send(){
+  var inp=$('ag-inp')||$('sgh-ag-inp');
+  if(!inp||!inp.value.trim())return;
+  var msg=inp.value.trim();
+  inp.value='';
+  var agent=($('ag-sel')||$('sgh-ag-sel')||{}).value||'claude';
+  var th=$('ag-thread')||$('sgh-ag-thread');
+  if(th){
+    var um=document.createElement('div');
+    um.style.cssText='text-align:right;margin-bottom:6px';
+    var umSpan=document.createElement('span');
+    umSpan.style.cssText='background:#00ffc815;border:1px solid #00ffc840;border-radius:8px;padding:6px 10px;display:inline-block;color:#eaf0ff;font:11px monospace';
+    umSpan.textContent=msg;
+    um.appendChild(umSpan);
+    th.appendChild(um);
+    var tk=document.createElement('div');
+    tk.className='_ath';
+    tk.style.cssText='margin-bottom:6px;color:#6a88ae;font:italic 11px monospace';
+    tk.textContent='⏳ '+agent+'…';
+    th.appendChild(tk);
+    th.scrollTop=th.scrollHeight;
+  }
+  if(_ws&&_ws.readyState===1){try{_ws.send(JSON.stringify({type:'chat',agent:agent,message:msg,context:'agents'}));return;}catch(_){}}
+  fetch('http://127.0.0.1:9897/agents/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agent:agent,message:msg})}).then(function(r){return r.json();}).then(function(d){
+    var t=th&&th.querySelector('._ath');if(t)t.remove();
+    var text=(d&&(d.response||d.reply||d.text))||JSON.stringify(d);
+    if(th){
+      var b=document.createElement('div');
+      b.style.cssText='margin-bottom:8px';
+      var bSpan=document.createElement('span');
+      bSpan.style.cssText='background:#152440;border:1px solid #254868;border-radius:8px;padding:7px 10px;display:inline-block;color:#eaf0ff;max-width:85%;white-space:pre-wrap;font:11px monospace';
+      bSpan.textContent=text;
+      b.appendChild(bSpan);
+      th.appendChild(b);
+      th.scrollTop=th.scrollHeight;
+    }
+  }).catch(function(e){var t=th&&th.querySelector('._ath');if(t)t.textContent='✗ '+e.message+' (bridge offline?)';});
+}
 document.addEventListener('click',function(ev){var t=ev.target;for(var i=0;i<5;i++){if(!t||t===document.body)break;var id=t.id||'';var dp=t.getAttribute&&(t.getAttribute('data-panel')||t.getAttribute('data-p'));if(id==='cm-ai-fix'){ev.preventDefault();ev.stopImmediatePropagation();_ai();return;}if(id==='cm-run'){ev.preventDefault();ev.stopImmediatePropagation();_run();return;}if(id==='cm-copy-btn'){ev.preventDefault();ev.stopImmediatePropagation();var c=($('cm-editor')||{}).value||'';if(c)navigator.clipboard.writeText(c).then(function(){_t('Copied ✓','ok');});return;}if(id==='cm-clear-btn'){ev.preventDefault();ev.stopImmediatePropagation();var ed=$('cm-editor');if(ed)ed.value='';var fr=$('cm-preview-frame');if(fr)fr.srcdoc='';return;}if(id==='cm-save-file'){ev.preventDefault();ev.stopImmediatePropagation();var ed=$('cm-editor');if(!ed||!ed.value)return;var l=($('cm-lang')||{}).value||'html';var ext={html:'html',css:'css',js:'js',json:'json',python:'py',bash:'sh',sql:'sql',markdown:'md',swift:'swift',rust:'rs',go:'go',java:'java',cpp:'cpp'}[l]||'txt';var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([ed.value],{type:'text/plain'}));a.download='code.'+ext;a.click();URL.revokeObjectURL(a.href);return;}if(id==='cm-ai-close'){ev.preventDefault();ev.stopImmediatePropagation();var p=$('cm-ai-panel');if(p)p.style.display='none';return;}if(id==='cm-fix-all-q-btn'||id==='cm-blade-run'){ev.preventDefault();ev.stopImmediatePropagation();var ed=$('cm-editor');if(!ed)return;ed.value=ed.value.replace(/[\u2018\u2019\u201a\u201b]/g,"'").replace(/[\u201c\u201d\u201e\u201f\u00ab\u00bb\u2039\u203a]/g,'"');ed.dispatchEvent(new Event('input',{bubbles:true}));_run();_t('Quotes fixed ✓','ok');return;}if(id==='cm-preview-refresh'){ev.preventDefault();ev.stopImmediatePropagation();_run();return;}if(id==='ag-send-btn'||id==='sgh-ag-send'){ev.preventDefault();ev.stopImmediatePropagation();_send();return;}if(id==='sg-bridge-reconnect'||id==='connect-bridge-btn'){ev.preventDefault();ev.stopImmediatePropagation();_bc();return;}if(id==='sgh-keys-btn'){ev.preventDefault();ev.stopImmediatePropagation();_keys();return;}if(dp){ev.preventDefault();ev.stopImmediatePropagation();try{window.loadPanel&&window.loadPanel(dp);}catch(_){}var sb=$('sidebar');if(sb)sb.classList.remove('open');return;}t=t.parentElement;}},true);
 document.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){var id=e.target&&e.target.id;if(id==='ag-inp'||id==='sgh-ag-inp'){e.preventDefault();_send();}}if((e.metaKey||e.ctrlKey)&&e.shiftKey&&(e.key==='K'||e.key==='k')){e.preventDefault();_keys();}});
 function _pill(){if($('_apill'))return;var p=document.createElement('div');p.id='_apill';p.style.cssText='position:fixed;top:6px;right:10px;z-index:2147483647;display:flex;align-items:center;gap:5px';p.innerHTML='<div id="_ad" style="width:8px;height:8px;border-radius:50%;background:#ff3d6e;flex-shrink:0;transition:background .4s"></div><button onclick="bridgeConnect()" style="background:#0e1a2e;border:1px solid #254868;color:#00ffc8;font:700 9px monospace;padding:4px 9px;border-radius:6px;cursor:pointer">⚡ 9897</button><button onclick="showKeys()" style="background:#0e1a2e;border:1px solid #254868;color:#7ca3c8;font:700 9px monospace;padding:4px 9px;border-radius:6px;cursor:pointer">🔑 KEYS</button>';document.body.appendChild(p);}

@@ -3910,11 +3910,11 @@ window.runCopilotAgent = function(){
 
   // Newest-first model chains per provider (matches python3_bridge.py)
   var _MODEL_CHAINS = {
-    claude:  ['claude-opus-4-6','claude-opus-4-5','claude-sonnet-4-6'],
-    grok:    ['grok-4.3','grok-3-latest'],
-    openai:  ['gpt-5.4','gpt-5.1-codex-max','gpt-4o'],
-    codex:   ['gpt-5.1-codex-max','gpt-5.4','gpt-4o'],
-    copilot: ['claude-opus-4-6','claude-opus-4-5','claude-sonnet-4-6']
+    claude:  ['claude-opus-4-7','claude-opus-4-5','claude-sonnet-4-6'],
+    grok:    ['grok-4.3'],
+    openai:  ['gpt-5.4-mini','gpt-5.4-codex','gpt-5.4','gpt-5.1-codex-max','gpt-4o'],
+    codex:   ['gpt-5.4-codex','gpt-5.4-mini','gpt-5.4','gpt-5.1-codex-max','gpt-4o'],
+    copilot: ['claude-opus-4-7','claude-opus-4-5','claude-sonnet-4-6']
   };
 
   // Select API key + URL based on primary agent
@@ -4031,8 +4031,8 @@ window.runCopilotAgent = function(){
     var apiModel = _modelChain[_directIdx++];
     if(outEl && _directIdx > 1) outEl.innerHTML='<span style="color:var(--sun)">⟳ Trying fallback model: '+apiModel+'...</span>';
     var body = _isClaude
-      ? JSON.stringify({model:apiModel,max_tokens:2048,system:sysPrompt,messages:[{role:'user',content:userMsg}]})
-      : JSON.stringify({model:apiModel,max_tokens:2048,messages:[{role:'system',content:sysPrompt},{role:'user',content:userMsg}]});
+      ? JSON.stringify({model:apiModel,max_tokens:65536,system:sysPrompt,messages:[{role:'user',content:userMsg}]})
+      : JSON.stringify({model:apiModel,max_tokens:65536,messages:[{role:'system',content:sysPrompt},{role:'user',content:userMsg}]});
     fetch(apiUrl,{method:'POST',headers:headers,body:body})
     .then(function(r){ return r.json(); }).catch(function(e){ console.warn("[b6]", e && e.message || e); _tryDirectModel(); })
     .then(function(data){
@@ -5227,7 +5227,7 @@ window.SGOrchestrator = (function(){
       var r=await fetch('http://127.0.0.1:9897/ai/'+id,{
         method:'POST', signal:ctrl.signal,
         headers:{'Content-Type':'application/json','X-SG-Agent':id},
-        body:JSON.stringify({model:model,messages:msgs,max_tokens:max||1024})
+        body:JSON.stringify({model:model,messages:msgs,max_tokens:max||65536})
       }); clearTimeout(t);
       if(!r.ok) throw new Error(r.status);
       var d=await r.json();
@@ -5238,17 +5238,17 @@ window.SGOrchestrator = (function(){
 
   var AGENTS={};
   AGENTS.claude=new Agent({id:'claude',name:'Claude Opus 4.6',icon:'🤖',color:'#cc785c',role:'Reasoning · Safety · Analysis · Code',
-    process:async function(msg,a){ return await bridge('claude','claude-opus-4-6',a.memory.slice(-10).concat([{role:'user',content:msg.content}]),1024); }});
+    process:async function(msg,a){ return await bridge('claude','claude-opus-4-7',a.memory.slice(-10).concat([{role:'user',content:msg.content}]),65536); }});
   AGENTS.gpt=new Agent({id:'gpt',name:'GPT-5.4',icon:'🧠',color:'#10a37f',role:'General · Creative · Vision · Translate',
-    process:async function(msg,a){ return await bridge('gpt','gpt-5.4',a.memory.slice(-10).concat([{role:'user',content:msg.content}]),1024); }});
+    process:async function(msg,a){ return await bridge('gpt','gpt-5.4-mini',a.memory.slice(-10).concat([{role:'user',content:msg.content}]),65536); }});
   AGENTS.grok=new Agent({id:'grok',name:'Grok 4.3 Judge',icon:'⚡',color:'#f59e0b',role:'Judge · Debate · Fact-Check · Real-Time',
     process:async function(msg,a){
       var lock='MEMORY_LOCK: '+a.memory.length+' protected entries.';
       var msgs=[{role:'system',content:lock}].concat(a.memory.slice(-10)).concat([{role:'user',content:msg.content}]);
-      return await bridge('grok','grok-4.3',msgs,1024);
+      return await bridge('grok','grok-4.3',msgs,65536);
     }});
   AGENTS.copilot=new Agent({id:'copilot',name:'Codex Max',icon:'🐙',color:'#6366f1',role:'Code · Repo · PR · Review · Actions',
-    process:async function(msg,a){ return await bridge('codex','gpt-5.1-codex-max',a.memory.slice(-8).concat([{role:'user',content:msg.content}]),1024); }});
+    process:async function(msg,a){ return await bridge('codex','gpt-5.1-codex-max',a.memory.slice(-8).concat([{role:'user',content:msg.content}]),65536); }});
   AGENTS.siri=new Agent({id:'siri',name:'Voice / Siri',icon:'🎙️',color:'#a855f7',role:'Voice Commands · Device Control · On-Device',
     process:async function(msg){
       var cmd=(msg.content||'').toLowerCase();
@@ -5256,7 +5256,7 @@ window.SGOrchestrator = (function(){
         audit:'audittrail',github:'github',browser:'browser',files:'fileai',agents:'agents',shield:'privacy'};
       for(var p in panelMap){ if(cmd.includes(p)){ if(window.loadPanel) window.loadPanel(panelMap[p]); return 'Opening '+p; } }
       if(cmd.includes('logout')||cmd.includes('sign out')){ if(window.doLogout) window.doLogout(); return 'Signed out.'; }
-      return await bridge('siri','claude-opus-4-6',[{role:'user',content:msg.content}],256);
+      return await bridge('siri','claude-opus-4-7',[{role:'user',content:msg.content}],65536);
     }});
   AGENTS.arbiter=new Agent({id:'arbiter',name:'Arbiter',icon:'⚖️',color:'#00d4ff',role:'Council · Conflict · Final Authority',
     process:async function(msg){
@@ -5264,14 +5264,14 @@ window.SGOrchestrator = (function(){
         var parts=Object.keys(msg.opts.council).map(function(k){ return k+': '+String(msg.opts.council[k]).slice(0,80); });
         return 'COUNCIL: '+parts.join(' | ');
       }
-      return await bridge('arbiter','claude-opus-4-6',[{role:'system',content:'You are an arbiter. Be concise.'},{role:'user',content:msg.content}],512);
+      return await bridge('arbiter','claude-opus-4-7',[{role:'system',content:'You are an arbiter. Be concise.'},{role:'user',content:msg.content}],65536);
     }});
 
   async function councilVote(question){
     if(!question) return;
     var responses={};
     await Promise.allSettled(['claude','gpt','grok'].map(function(id){
-      return bridge(id,id==='claude'?'claude-opus-4-6':id==='gpt'?'gpt-5.4':'grok-4.3',[{role:'user',content:question}],256)
+      return bridge(id,id==='claude'?'claude-opus-4-7':id==='gpt'?'gpt-5.4-mini':'grok-4.3',[{role:'user',content:question}],65536)
         .then(function(r){ responses[id]=r; });
     }));
     AGENTS.arbiter.send(question,{council:responses});
@@ -6951,7 +6951,7 @@ PANELS.dashboard=function(){
     '<div class="card"><div class="card-title">🤖 Agent Status</div>'+
       sr('Claude Sonnet 4.6','IDLE','b-info')+
       sr('GPT-4o','IDLE','b-info')+
-      sr('Grok 4.20 Judge','IDLE','b-info')+
+      sr('Grok 4.3 Judge','IDLE','b-info')+
       sr('GitHub Copilot','IDLE','b-info')+sr('Keycloak SSO','CHECKING','b-warn')+sr('Zoho 2FA','STANDBY','b-dim')+
       sr('Voice / Siri','READY','b-ok')+
       sr('Arbiter','STANDBY','b-dim')+
@@ -7112,7 +7112,7 @@ PANELS.chat=function(){
 PANELS.council=function(){
   var votes=(function(){try{return JSON.parse(localStorage.getItem('sg_council_log')||'[]');}catch(e){return[];}})();
 
-  return hdr('\u2696\ufe0f Council Vote','Claude + GPT-4o + Grok 4.20 \u00b7 Simultaneous \u00b7 Arbiter Synthesis \u00b7 Cryptographic Verdict')+
+  return hdr('\u2696\ufe0f Council Vote','Claude + GPT-4o + Grok 4.3 \u00b7 Simultaneous \u00b7 Arbiter Synthesis \u00b7 Cryptographic Verdict')+
   '<div class="kgrid">'+
     kc(votes.length+'','Sessions','var(--acid)')+
     kc(votes.filter(function(v){return v.consensus;}).length+'','Consensus','#00e676')+
@@ -7127,7 +7127,7 @@ PANELS.council=function(){
     [
       {name:'Claude Sonnet',icon:'\ud83e\udde0',color:'#7c4dff',id:'claude'},
       {name:'GPT-4o',       icon:'\ud83d\udcac',color:'#10a37f',id:'gpt'},
-      {name:'Grok 4.20',    icon:'\u26a1',        color:'#b8ff00',id:'grok'},
+      {name:'Grok 4.3',    icon:'\u26a1',        color:'#b8ff00',id:'grok'},
     ].map(function(j){
       return '<div style="padding:12px;border-radius:var(--r);background:var(--bg2);border:1px solid '+j.color+'22;text-align:center">'+
         '<div style="font-size:24px;margin-bottom:5px">'+j.icon+'</div>'+
@@ -13096,7 +13096,7 @@ sel+'._domainkey      3600  IN  TXT  "v=DKIM1; k=rsa; p='+dkimB64+'"',
 '@  3600  IN  NS  ns2.'+domain+'.',
 '',
 '; ── CAA RECORDS ─────────────────────────────────────────────',
-'@  3600  IN  CAA  0 issue "letsencrypt.org"',
+'@  3600  IN  CAA  0 issue "digicert.com"',
 ';   Allow ONLY LetsEncrypt to issue TLS certs.',
 '@  3600  IN  CAA  0 iodef "mailto:security@'+domain+'"',
 ';   Security contact for CA issue reports.',
@@ -13116,7 +13116,7 @@ sel+'._domainkey      3600  IN  TXT  "v=DKIM1; k=rsa; p='+dkimB64+'"',
 '; DKIM   ✅  Cryptographic signature on outgoing mail',
 '; DMARC  ✅  Policy enforcement + forensic reporting',
 '; MTA-STS ✅  TLS enforcement for inbound delivery',
-'; CAA    ✅  Restricts certificate issuance to Let\x27s Encrypt',
+'; CAA    ✅  Restricts certificate issuance to DigiCert',
 '; DNSSEC ⚠   Enable at registrar — requires registrar support',
 ].join('\n');
 
@@ -14156,29 +14156,29 @@ if(ag==='claude'||ag==='arbiter'){
 endpoint='https://api.anthropic.com/v1/messages';
 headers={'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
 body=JSON.stringify({
-model:'claude-opus-4-6',
-max_tokens:1024,
+model:'claude-opus-4-7',
+max_tokens:65536,
 system:'You are SuperGrok, a sovereign AI assistant. Be direct, accurate, never hallucinate.',
 messages: history.slice(-8).concat([{role:'user',content:msg}])
 });
 } else if(ag==='gpt'){
 endpoint='https://api.openai.com/v1/chat/completions';
 headers={'Content-Type':'application/json','Authorization':'Bearer '+key};
-body=JSON.stringify({model:'gpt-5.4',max_tokens:1024,
+body=JSON.stringify({model:'gpt-5.4-mini',max_tokens:65536,
 messages:[{role:'system',content:'You are SuperGrok AI. Be direct and accurate.'}]
 .concat(history.slice(-8))
 .concat([{role:'user',content:msg}])});
 } else if(ag==='codex'){
 endpoint='https://api.openai.com/v1/chat/completions';
 headers={'Content-Type':'application/json','Authorization':'Bearer '+key};
-body=JSON.stringify({model:'gpt-5.1-codex-max',max_tokens:1024,
+body=JSON.stringify({model:'gpt-5.1-codex-max',max_tokens:65536,
 messages:[{role:'system',content:'You are a coding expert powered by Codex Max.'}]
 .concat(history.slice(-8))
 .concat([{role:'user',content:msg}])});
 } else if(ag==='grok'){
 endpoint='https://api.x.ai/v1/chat/completions';
 headers={'Content-Type':'application/json','Authorization':'Bearer '+key};
-body=JSON.stringify({model:'grok-4.3',max_tokens:1024,
+body=JSON.stringify({model:'grok-4.3',max_tokens:65536,
 messages:[{role:'system',content:'You are SuperGrok AI.'}]
 .concat(history.slice(-8))
 .concat([{role:'user',content:msg}])});
@@ -17689,7 +17689,7 @@ card && card.scrollIntoView({behavior:'smooth'});
   var v=document.getElementById('council-vote-'+j); if(v) v.textContent='\u23f3';
 });
 
-var judges = [{id:'claude',name:'Claude',icon:'\ud83e\udde0',color:'#7c4dff'},{id:'gpt',name:'GPT-4o',icon:'\ud83d\udcac',color:'#10a37f'},{id:'grok',name:'Grok 4.20',icon:'\u26a1',color:'#b8ff00'}];
+var judges = [{id:'claude',name:'Claude',icon:'\ud83e\udde0',color:'#7c4dff'},{id:'gpt',name:'GPT-4o',icon:'\ud83d\udcac',color:'#10a37f'},{id:'grok',name:'Grok 4.3',icon:'\u26a1',color:'#b8ff00'}];
 var results = {};
 var done = 0;
 
@@ -22147,7 +22147,7 @@ card && card.scrollIntoView({behavior:'smooth'});
   var v=document.getElementById('council-vote-'+j); if(v) v.textContent='\u23f3';
 });
 
-var judges = [{id:'claude',name:'Claude',icon:'\ud83e\udde0',color:'#7c4dff'},{id:'gpt',name:'GPT-4o',icon:'\ud83d\udcac',color:'#10a37f'},{id:'grok',name:'Grok 4.20',icon:'\u26a1',color:'#b8ff00'}];
+var judges = [{id:'claude',name:'Claude',icon:'\ud83e\udde0',color:'#7c4dff'},{id:'gpt',name:'GPT-4o',icon:'\ud83d\udcac',color:'#10a37f'},{id:'grok',name:'Grok 4.3',icon:'\u26a1',color:'#b8ff00'}];
 var results = {};
 var done = 0;
 
@@ -23074,8 +23074,8 @@ return '<button class="btn-s" style="font-size:8px;font-family:monospace;padding
 PANELS.quickkeys = function(){
 var st  = window.SG_VAULT ? SG_VAULT.status() : {};
 var providers = [
-{id:'claude', label:'Anthropic / Claude Opus 4.6',  icon:'🟣', prefix:'sk-ant-',  model:'claude-opus-4-6'},
-{id:'gpt',    label:'OpenAI / GPT-5.4',            icon:'🟢', prefix:'sk-',      model:'gpt-5.4'},
+{id:'claude', label:'Anthropic / Claude Opus 4.6',  icon:'🟣', prefix:'sk-ant-',  model:'claude-opus-4-7'},
+{id:'gpt',    label:'OpenAI / GPT-5.4 Mini',       icon:'🟢', prefix:'sk-',      model:'gpt-5.4-mini'},
 {id:'grok',   label:'xAI / Grok 4.3',              icon:'⚡', prefix:'xai-',     model:'grok-4.3'},
 {id:'codex',  label:'OpenAI / Codex Max',           icon:'🔵', prefix:'sk-',      model:'gpt-5.1-codex-max'},
 {id:'copilot',label:'GitHub Copilot (preview)',     icon:'🐙', prefix:'ghp_',     model:'copilot'},
@@ -23935,7 +23935,7 @@ _queryDirect: function(agentId, message, history, cb){
         'anthropic-dangerous-direct-browser-access':'true'
       },
       body: JSON.stringify({
-        model:'claude-opus-4-6', max_tokens:1024,
+        model:'claude-opus-4-7', max_tokens:65536,
         system:'You are SuperGrok. Be direct, factual, verified.',
         messages:(history||[]).concat([{role:'user',content:message}])
       })
@@ -24735,7 +24735,7 @@ AAAA:  '::1',
 MX:    '10 mail.'+domain,
 TXT:   '"v=spf1 mx ~all"',
 CNAME: 'www IN CNAME '+domain+'.',
-CAA:   '0 issue "letsencrypt.org"',
+CAA:   '0 issue "digicert.com"',
 TLSA:  '3 1 1 '+hex.slice(0,64)
 },
 tls_cert: {
@@ -25936,7 +25936,7 @@ window.SG_DIRECT_AI = {
         'anthropic-dangerous-direct-browser-access':'true'
       },
       body:JSON.stringify({
-        model:'claude-opus-4-6', max_tokens:1024,
+        model:'claude-opus-4-7', max_tokens:65536,
         system:'You are SuperGrok sovereign AI. Be direct and accurate.',
         messages:messages
       })
@@ -26600,7 +26600,7 @@ function _checkConflicts() {
     xhr.send();
   } catch(_e) {}
 }
-/* ── Frontend / Dashboard (port 9898) connectivity check ── */
+/* ── KODER frontend (port 9898) connectivity check ── */
 function _checkKoder() {
   try {
     var xhr2 = new XMLHttpRequest();
@@ -26608,8 +26608,8 @@ function _checkKoder() {
     xhr2.timeout = 2000;
     xhr2.onload = function() {
       window._koderOnline = true;
-      typeof addAudit === 'function' && addAudit('FRONTEND_ONLINE', 'Frontend / Dashboard detected on :9898');
-      typeof toast === 'function' && toast('\uD83D\uDCBB Frontend / Dashboard on :9898 ONLINE', 'ok');
+      typeof addAudit === 'function' && addAudit('FRONTEND_ONLINE', 'KODER frontend detected on :9898');
+      typeof toast === 'function' && toast('\uD83D\uDCBB KODER frontend on :9898 ONLINE', 'ok');
     };
     xhr2.onerror = function() { window._koderOnline = false; };
     xhr2.ontimeout = function() { window._koderOnline = false; };
