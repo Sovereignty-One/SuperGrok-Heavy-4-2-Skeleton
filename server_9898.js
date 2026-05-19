@@ -117,7 +117,7 @@ function resolveMaxTokens(value, fallback) {
 // AI proxy — calls Anthropic / OpenAI / xAI depending on model
 // ---------------------------------------------------------------------------
 async function callAI(model, system, messages, maxTokens) {
-  const tokens = resolveMaxTokens(maxTokens, 8192);
+  const tokens = resolveMaxTokens(maxTokens, 65536);
   if (model === 'claude') {
     const key = ANTHROPIC_KEY;
     if (!key) return { error: 'ANTHROPIC_API_KEY not set on bridge server' };

@@ -267,7 +267,7 @@ req.end();
 function aiProxy(model, text, system, apiKey, maxTokens, cb) {
 const tokens = Number.isFinite(Number.parseInt(maxTokens, 10)) && Number.parseInt(maxTokens, 10) > 0
   ? Number.parseInt(maxTokens, 10)
-  : 8192;
+  : 65536;
 const providers = {
 claude: { host:'api.anthropic.com', path:'/v1/messages', envKey:'ANTHROPIC_API_KEY',
 makeHeaders: k => ({ 'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01' }),

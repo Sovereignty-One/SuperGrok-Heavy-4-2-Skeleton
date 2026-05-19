@@ -3460,10 +3460,10 @@ window.runCopilotAgent = function(){
   if(primary==='claude'||primary==='copilot'){
     headers['x-api-key'] = apiKey;
     headers['anthropic-version'] = '2023-06-01';
-    body = JSON.stringify({model:apiModel,max_tokens:8192,system:sysPrompt,messages:[{role:'user',content:userMsg}]});
+    body = JSON.stringify({model:apiModel,max_tokens:65536,system:sysPrompt,messages:[{role:'user',content:userMsg}]});
   } else {
     headers['Authorization'] = 'Bearer '+apiKey;
-    body = JSON.stringify({model:apiModel,max_tokens:8192,messages:[{role:'system',content:sysPrompt},{role:'user',content:userMsg}]});
+    body = JSON.stringify({model:apiModel,max_tokens:65536,messages:[{role:'system',content:sysPrompt},{role:'user',content:userMsg}]});
   }
 
   fetch(apiUrl,{method:'POST',headers:headers,body:body})
@@ -4692,17 +4692,17 @@ window.SGOrchestrator = (function(){
 
   var AGENTS={};
   AGENTS.claude=new Agent({id:'claude',name:'Claude Opus 4.6',icon:'🤖',color:'#cc785c',role:'Reasoning · Safety · Analysis · Code',
-    process:async function(msg,a){ return await bridge('claude','claude-opus-4-7',a.memory.slice(-10).concat([{role:'user',content:msg.content}]),8192); }});
+    process:async function(msg,a){ return await bridge('claude','claude-opus-4-7',a.memory.slice(-10).concat([{role:'user',content:msg.content}]),65536); }});
   AGENTS.gpt=new Agent({id:'gpt',name:'GPT-5.4 Mini',icon:'🧠',color:'#10a37f',role:'General · Creative · Vision · Translate',
-    process:async function(msg,a){ return await bridge('gpt','gpt-5.4-mini',a.memory.slice(-10).concat([{role:'user',content:msg.content}]),8192); }});
+    process:async function(msg,a){ return await bridge('gpt','gpt-5.4-mini',a.memory.slice(-10).concat([{role:'user',content:msg.content}]),65536); }});
   AGENTS.grok=new Agent({id:'grok',name:'Grok 4.3',icon:'⚡',color:'#f59e0b',role:'Judge · Debate · Fact-Check · Real-Time',
     process:async function(msg,a){
       var lock='MEMORY_LOCK: '+a.memory.length+' protected entries.';
       var msgs=[{role:'system',content:lock}].concat(a.memory.slice(-10)).concat([{role:'user',content:msg.content}]);
-      return await bridge('grok','grok-4.3',msgs,8192);
+      return await bridge('grok','grok-4.3',msgs,65536);
     }});
   AGENTS.copilot=new Agent({id:'copilot',name:'GPT-5.4 Codex',icon:'🐙',color:'#6366f1',role:'Code · Repo · PR · Review · Actions',
-    process:async function(msg,a){ return await bridge('copilot','gpt-5.4-codex',a.memory.slice(-8).concat([{role:'user',content:msg.content}]),8192); }});
+    process:async function(msg,a){ return await bridge('copilot','gpt-5.4-codex',a.memory.slice(-8).concat([{role:'user',content:msg.content}]),65536); }});
   AGENTS.siri=new Agent({id:'siri',name:'Voice / Siri',icon:'🎙️',color:'#a855f7',role:'Voice Commands · Device Control · On-Device',
     process:async function(msg){
       var cmd=(msg.content||'').toLowerCase();
@@ -4710,7 +4710,7 @@ window.SGOrchestrator = (function(){
         audit:'audittrail',github:'github',browser:'browser',files:'fileai',agents:'agents',shield:'privacy'};
       for(var p in panelMap){ if(cmd.includes(p)){ if(window.loadPanel) window.loadPanel(panelMap[p]); return 'Opening '+p; } }
       if(cmd.includes('logout')||cmd.includes('sign out')){ if(window.doLogout) window.doLogout(); return 'Signed out.'; }
-      return await bridge('siri','claude-sonnet-4-6',[{role:'user',content:msg.content}],8192);
+      return await bridge('siri','claude-sonnet-4-6',[{role:'user',content:msg.content}],65536);
     }});
   AGENTS.arbiter=new Agent({id:'arbiter',name:'Arbiter',icon:'⚖️',color:'#00d4ff',role:'Council · Conflict · Final Authority',
     process:async function(msg){
@@ -4718,14 +4718,14 @@ window.SGOrchestrator = (function(){
         var parts=Object.keys(msg.opts.council).map(function(k){ return k+': '+String(msg.opts.council[k]).slice(0,80); });
         return 'COUNCIL: '+parts.join(' | ');
       }
-      return await bridge('arbiter','claude-sonnet-4-6',[{role:'system',content:'You are an arbiter. Be concise.'},{role:'user',content:msg.content}],8192);
+      return await bridge('arbiter','claude-sonnet-4-6',[{role:'system',content:'You are an arbiter. Be concise.'},{role:'user',content:msg.content}],65536);
     }});
 
   async function councilVote(question){
     if(!question) return;
     var responses={};
     await Promise.allSettled(['claude','gpt','grok'].map(function(id){
-      return bridge(id,id==='claude'?'claude-opus-4-7':id==='gpt'?'gpt-5.4-mini':'grok-4.3',[{role:'user',content:question}],8192)
+      return bridge(id,id==='claude'?'claude-opus-4-7':id==='gpt'?'gpt-5.4-mini':'grok-4.3',[{role:'user',content:question}],65536)
         .then(function(r){ responses[id]=r; });
     }));
     AGENTS.arbiter.send(question,{council:responses});
