@@ -26687,9 +26687,28 @@ function _ai(){
   if (window.CM && typeof window.CM.runLint === 'function') {
     try { lint = window.CM.runLint(); } catch(_) {}
   }
-  var localAnalysis = _sgLocalAnalyze(code);
-  var localFixed = _sgLocalFix(code);
-  var changed = localFixed !== code;
+  var isMarkup = lang === 'html';
+  var localAnalysis = '';
+  var localFixed = code;
+  var changed = false;
+
+  if (isMarkup) {
+    localAnalysis = _sgLocalAnalyze(code);
+    localFixed = _sgLocalFix(code);
+    changed = localFixed !== code;
+  } else {
+    var fixableCount = (window._cmFixes || []).filter(function(f){ return f && f.fix; }).length;
+    localAnalysis = lint
+      ? (
+          'Lint results refreshed from the editor.\n' +
+          'Errors: ' + lint.errCount + '\n' +
+          'Warnings: ' + lint.warnCount + '\n' +
+          (fixableCount ? ('\nFixable items: ' + fixableCount + '\n') : '\n') +
+          'Review the console entries below for line-specific fixes.'
+        )
+      : 'Lint results are not available for ' + lang.toUpperCase() + '.';
+    changed = fixableCount > 0;
+  }
 
   if (out) {
     out.textContent =
@@ -26703,7 +26722,11 @@ function _ai(){
     ap.style.cssText='display:block;width:100%;padding:14px;margin-top:12px;background:#00ffc8;color:#000;border:none;border-radius:8px;font:700 14px monospace;cursor:pointer;letter-spacing:0.5px';
     ap.textContent = changed ? '✅ APPLY LOCAL FIX' : '✅ RE-APPLY LOCAL FIX';
     ap.onclick=function(){
-      var next = _sgLocalFix(ed.value || '');
+      if (!isMarkup && window.CM && typeof window.CM.runLint === 'function') {
+        try { window.CM.runLint(); } catch(_) {}
+      }
+      var next = ed.value || '';
+      if (isMarkup) next = _sgLocalFix(next);
       var fixes = window._cmFixes || [];
       fixes.forEach(function(f){ if(f && f.fix) next = f.fix(next) || next; });
       ed.value = next;
@@ -26715,7 +26738,7 @@ function _ai(){
 
   _t('Local analysis complete','ok');
 }
-function _keys(){var ex=$('_km');if(ex){ex.remove();return;}var m=document.createElement('div');m.id='_km';m.style.cssText='position:fixed;inset:0;z-index:2147483640;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center';m.onclick=function(e){if(e.target===m)m.remove();};var agents=[{i:'claude',l:'🟣 Claude',u:'https://console.anthropic.com/'},{i:'openai',l:'🟢 OpenAI',u:'https://platform.openai.com/api-keys'},{i:'xai',l:'⚡ xAI',u:'https://console.x.ai/'}];m.innerHTML='<div style="background:#0a1628;border:1px solid #1a3050;border-radius:14px;padding:20px;width:min(420px,94vw)"><div style="display:flex;align-items:center;margin-bottom:16px"><span style="font:700 14px monospace;color:#00ffc8;flex:1">⚙ API KEYS</span><button onclick="document.getElementById(\'_km\').remove()" style="background:none;border:none;color:#6a88ae;cursor:pointer;font-size:22px">✕</button></div>'+agents.map(function(a){var s=_k.call({},a.i)||localStorage.getItem('apikey-'+a.i)||'';var mask=s?s.slice(0,12)+'…'+s.slice(-4):'not set';return '<div style="margin-bottom:14px"><div style="font:700 10px monospace;color:#b5c8e4;margin-bottom:4px">'+a.l+' <span style="color:'+(s?'#00ffc8':'#ff6b6b')+'">'+mask+'</span> <a href="'+a.u+'" target="_blank" style="color:#6a88ae;font-size:9px">get key ↗</a></div><div style="display:flex;gap:6px"><input id="_ki_'+a.i+'" type="password" placeholder="paste key…" value="'+s+'" style="flex:1;background:#07101f;border:1px solid #1a2e50;color:#eaf0ff;border-radius:6px;padding:8px;font:10px monospace"><button onclick="(function(){var v=document.getElementById(\'_ki_'+a.i+'\').value.trim();if(!v)return;window.saveKey(\''+a.i+'\',v);window._sghToast(\''+a.l+' saved\',\'ok\');document.getElementById(\'_km\').remove();})()" style="background:#00ffc840;border:1px solid #00ffc8;color:#00ffc8;border-radius:6px;padding:8px 14px;cursor:pointer;font:700 10px monospace">SAVE</button></div></div>';}).join('')+'<div style="font:9px monospace;color:#3a5980;margin-top:8px">Stored locally · sent only to api.anthropic.com</div></div>';document.body.appendChild(m);}
+function _keys(){var ex=$('_km');if(ex){ex.remove();return;}var m=document.createElement('div');m.id='_km';m.style.cssText='position:fixed;inset:0;z-index:2147483640;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center';m.onclick=function(e){if(e.target===m)m.remove();};var agents=[{i:'claude',l:'🟣 Claude',u:'https://console.anthropic.com/'},{i:'openai',l:'🟢 OpenAI',u:'https://platform.openai.com/api-keys'},{i:'xai',l:'⚡ xAI',u:'https://console.x.ai/'}];m.innerHTML='<div style="background:#0a1628;border:1px solid #1a3050;border-radius:14px;padding:20px;width:min(420px,94vw)"><div style="display:flex;align-items:center;margin-bottom:16px"><span style="font:700 14px monospace;color:#00ffc8;flex:1">⚙ API KEYS</span><button onclick="document.getElementById(\'_km\').remove()" style="background:none;border:none;color:#6a88ae;cursor:pointer;font-size:22px">✕</button></div>'+agents.map(function(a){var s=_k.call({},a.i)||localStorage.getItem('apikey-'+a.i)||'';var mask=s?s.slice(0,12)+'…'+s.slice(-4):'not set';return '<div style="margin-bottom:14px"><div style="font:700 10px monospace;color:#b5c8e4;margin-bottom:4px">'+a.l+' <span style="color:'+(s?'#00ffc8':'#ff6b6b')+'">'+mask+'</span> <a href="'+a.u+'" target="_blank" style="color:#6a88ae;font-size:9px">get key ↗</a></div><div style="display:flex;gap:6px"><input id="_ki_'+a.i+'" type="password" placeholder="paste key…" value="'+s+'" style="flex:1;background:#07101f;border:1px solid #1a2e50;color:#eaf0ff;border-radius:6px;padding:8px;font:10px monospace"><button onclick="(function(){var v=document.getElementById(\'_ki_'+a.i+'\').value.trim();if(!v)return;window.saveKey(\''+a.i+'\',v);window._sghToast(\''+a.l+' saved\',\'ok\');document.getElementById(\'_km\').remove();})()" style="background:#00ffc840;border:1px solid #00ffc8;color:#00ffc8;border-radius:6px;padding:8px 14px;cursor:pointer;font:700 10px monospace">SAVE</button></div></div>';}).join('')+'<div style="font:9px monospace;color:#3a5980;margin-top:8px">Stored locally · sent only to the configured provider or local bridge/backend, depending on the feature in use</div></div>';document.body.appendChild(m);}
 window.showKeys=_keys;window.showKeyModal=_keys;
 var _ws=null,_ok=false,_at=0;
 function _bc(){if(location.protocol==='file:'){_dot(false);return;}if(_ws&&_ws.readyState<=1)return;_at++;var ws;try{ws=new WebSocket('ws://127.0.0.1:9897');}catch(e){_br();return;}_ws=ws;window.ws=ws;ws.onopen=function(){_ok=true;_at=0;_dot(true);try{ws.send(JSON.stringify({type:'handshake',client:'arbiter'}));}catch(_){}_t('⚡ Bridge :9897 connected','ok');};ws.onmessage=function(e){var d;try{d=JSON.parse(e.data);}catch(_){return;}try{document.dispatchEvent(new CustomEvent('sg:bridgeMsg',{detail:d}));}catch(_){}if(d.type==='agent_response'||d.type==='chat_response'){
