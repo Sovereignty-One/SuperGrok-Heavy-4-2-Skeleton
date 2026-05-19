@@ -16110,7 +16110,7 @@ el.innerHTML = '<div style="padding:8px;color:var(--t3);font-family:var(--mono);
 return;
 }
 el.innerHTML = frames.map(function(f, i) {
-return '<div style="padding:4px 8px;border-bottom:1px solid var(--wire)11;font-family:var(--mono);font-size:9px;cursor:pointer" onclick="dbgJumpToLine(\x27 + (f.line||0) + \x27)">'
+return '<div style="padding:4px 8px;border-bottom:1px solid var(--wire)11;font-family:var(--mono);font-size:9px;cursor:pointer" onclick="dbgJumpToLine(' + (f.line||0) + ')">'
 + '<span style="color:var(--acid)">' + (f.fn || '(anonymous)') + '</span>'
 + '<span style="color:var(--t3);font-size:7px;margin-left:8px">' + (f.file||'') + (f.line?':'+f.line:'') + (f.col?':'+f.col:'') + '</span>'
 + '</div>';
@@ -26682,105 +26682,38 @@ function _ai(){
     return;
   }
 
-  /* ── Get Claude key ── */
-  var key=_k();
-  if(!key){
-    var noKeyMsg='No Claude API key found.\n\nTap the 🔑 KEYS button (top-right) and paste your key.\n\nGet one at: console.anthropic.com';
-    if(out)out.textContent=noKeyMsg;
-    _t('No Claude key — tap 🔑 KEYS','err');
-    _keys();
-    return;
+  /* ── Local-only analysis/fix (no external API callout) ── */
+  var lint = null;
+  if (window.CM && typeof window.CM.runLint === 'function') {
+    try { lint = window.CM.runLint(); } catch(_) {}
+  }
+  var localAnalysis = _sgLocalAnalyze(code);
+  var localFixed = _sgLocalFix(code);
+  var changed = localFixed !== code;
+
+  if (out) {
+    out.textContent =
+      '✅ CodeMaster Local Analysis (' + lang.toUpperCase() + ')\n\n' +
+      (lint ? ('Errors: ' + lint.errCount + '\nWarnings: ' + lint.warnCount + '\n\n') : '') +
+      localAnalysis +
+      '\n\nNo external API call was used.';
   }
 
-  /* ── Show status ── */
-  var keyMask=key.slice(0,16)+'…'+key.slice(-4);
-  if(out)out.textContent='⏳ Calling Claude claude-sonnet-4-5 (max 8192 tokens)…\nKey: '+keyMask+'\n';
+  if (ap) {
+    ap.style.cssText='display:block;width:100%;padding:14px;margin-top:12px;background:#00ffc8;color:#000;border:none;border-radius:8px;font:700 14px monospace;cursor:pointer;letter-spacing:0.5px';
+    ap.textContent = changed ? '✅ APPLY LOCAL FIX' : '✅ RE-APPLY LOCAL FIX';
+    ap.onclick=function(){
+      var next = _sgLocalFix(ed.value || '');
+      var fixes = window._cmFixes || [];
+      fixes.forEach(function(f){ if(f && f.fix) next = f.fix(next) || next; });
+      ed.value = next;
+      ed.dispatchEvent(new Event('input',{bubbles:true}));
+      _run();
+      _t('Local fixes applied ✓','ok');
+    };
+  }
 
-  /* ── Call Anthropic directly ── */
-  var prompt=
-    'You are a senior code reviewer. Review this '+lang+' code:\n'+
-    '1. List every bug with its exact line number\n'+
-    '2. Explain what is wrong and the correct fix\n'+
-    '3. Provide the COMPLETE corrected source in ONE fenced code block\n\n'+
-    '```'+lang+'\n'+code.slice(0,15000)+'\n```\n\n'+
-    'End your response with a fenced code block containing ONLY the fixed code, nothing after it.';
-
-  fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',
-    headers:{
-      'Content-Type':'application/json',
-      'x-api-key':key,
-      'anthropic-version':'2023-06-01',
-      'anthropic-dangerous-direct-browser-access':'true'
-    },
-    body:JSON.stringify({
-      model:'claude-sonnet-4-5',
-      max_tokens:8192,
-      messages:[{role:'user',content:prompt}]
-    })
-  })
-  .then(function(r){
-    if(!r.ok){
-      return r.json().then(function(d){
-        var errMsg=(d&&d.error&&d.error.message)||('HTTP '+r.status);
-        throw new Error(errMsg);
-      }).catch(function(e){throw e;});
-    }
-    return r.json();
-  })
-  .then(function(d){
-    var text=(d.content&&d.content[0]&&d.content[0].text)||'';
-    if(!text){throw new Error('Empty response from Claude');}
-    if(out)out.textContent=text;
-
-    /* ── Extract fixed code block (try multiple patterns) ── */
-    var fixed=null;
-    var patterns=[
-      new RegExp('```'+lang+'\\s*\\n([\\s\\S]*?)\\n```','i'),
-      new RegExp('```[a-zA-Z]*\\s*\\n([\\s\\S]*?)\\n```','i'),
-      new RegExp('```([\\s\\S]*?)```','i')
-    ];
-    for(var i=0;i<patterns.length;i++){
-      var m=patterns[i].exec(text);
-      if(m&&m[1]&&m[1].trim().length>10){fixed=m[1];break;}
-    }
-
-    if(fixed&&ap){
-      var fixedCode=fixed;
-      ap.style.cssText='display:block;width:100%;padding:14px;margin-top:12px;background:#00ffc8;color:#000;border:none;border-radius:8px;font:700 14px monospace;cursor:pointer;letter-spacing:0.5px';
-      ap.textContent='✅ APPLY FIX NOW';
-      ap.onclick=function(){
-        ed.value=fixedCode;
-        ed.dispatchEvent(new Event('input',{bubbles:true}));
-        _run();
-        ap.style.background='#00e676';
-        ap.textContent='✅ Fix Applied!';
-        _t('Fix applied to editor ✓','ok');
-        setTimeout(function(){
-          ap.style.background='#00ffc8';
-          ap.textContent='✅ APPLY FIX NOW';
-        },3000);
-      };
-      _t('✓ Analysis complete — tap APPLY FIX','ok');
-    } else {
-      if(out)out.textContent+='\n\n──\nNo code block found in response. The full analysis is above.';
-      _t('Analysis complete (no code block extracted)','');
-    }
-  })
-  .catch(function(e){
-    var errText='❌ Error: '+e.message+'\n\n';
-    if(e.message.indexOf('401')>=0||e.message.toLowerCase().indexOf('invalid')>=0){
-      errText+='Your API key was rejected. Check it at console.anthropic.com';
-    } else if(e.message.indexOf('429')>=0||e.message.toLowerCase().indexOf('rate')>=0){
-      errText+='Rate limited. Wait 30 seconds and try again.';
-    } else if(e.message.toLowerCase().indexOf('network')>=0||e.message.toLowerCase().indexOf('fetch')>=0){
-      errText+='Network error. Check your connection.';
-    } else {
-      errText+='Try again or check your API key.';
-    }
-    if(out)out.textContent=errText;
-    _t('AI Fix failed: '+e.message.slice(0,50),'err');
-  });
+  _t('Local analysis complete','ok');
 }
 function _keys(){var ex=$('_km');if(ex){ex.remove();return;}var m=document.createElement('div');m.id='_km';m.style.cssText='position:fixed;inset:0;z-index:2147483640;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center';m.onclick=function(e){if(e.target===m)m.remove();};var agents=[{i:'claude',l:'🟣 Claude',u:'https://console.anthropic.com/'},{i:'openai',l:'🟢 OpenAI',u:'https://platform.openai.com/api-keys'},{i:'xai',l:'⚡ xAI',u:'https://console.x.ai/'}];m.innerHTML='<div style="background:#0a1628;border:1px solid #1a3050;border-radius:14px;padding:20px;width:min(420px,94vw)"><div style="display:flex;align-items:center;margin-bottom:16px"><span style="font:700 14px monospace;color:#00ffc8;flex:1">⚙ API KEYS</span><button onclick="document.getElementById(\'_km\').remove()" style="background:none;border:none;color:#6a88ae;cursor:pointer;font-size:22px">✕</button></div>'+agents.map(function(a){var s=_k.call({},a.i)||localStorage.getItem('apikey-'+a.i)||'';var mask=s?s.slice(0,12)+'…'+s.slice(-4):'not set';return '<div style="margin-bottom:14px"><div style="font:700 10px monospace;color:#b5c8e4;margin-bottom:4px">'+a.l+' <span style="color:'+(s?'#00ffc8':'#ff6b6b')+'">'+mask+'</span> <a href="'+a.u+'" target="_blank" style="color:#6a88ae;font-size:9px">get key ↗</a></div><div style="display:flex;gap:6px"><input id="_ki_'+a.i+'" type="password" placeholder="paste key…" value="'+s+'" style="flex:1;background:#07101f;border:1px solid #1a2e50;color:#eaf0ff;border-radius:6px;padding:8px;font:10px monospace"><button onclick="(function(){var v=document.getElementById(\'_ki_'+a.i+'\').value.trim();if(!v)return;window.saveKey(\''+a.i+'\',v);window._sghToast(\''+a.l+' saved\',\'ok\');document.getElementById(\'_km\').remove();})()" style="background:#00ffc840;border:1px solid #00ffc8;color:#00ffc8;border-radius:6px;padding:8px 14px;cursor:pointer;font:700 10px monospace">SAVE</button></div></div>';}).join('')+'<div style="font:9px monospace;color:#3a5980;margin-top:8px">Stored locally · sent only to api.anthropic.com</div></div>';document.body.appendChild(m);}
 window.showKeys=_keys;window.showKeyModal=_keys;
