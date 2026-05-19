@@ -12,8 +12,9 @@
 //
 // Note: Requires NSMicrophoneUsageDescription and NSSpeechRecognitionUsageDescription in Info.plist.
 
-#if os(iOS) && canImport(Speech) && canImport(AVFoundation) && canImport(Accelerate)
 import Foundation
+
+#if os(iOS) && canImport(Speech) && canImport(AVFoundation) && canImport(Accelerate)
 import Speech
 import AVFoundation
 import Security
@@ -108,6 +109,8 @@ public final class VoiceCommandIntegrity: NSObject, SFSpeechRecognizerDelegate, 
         audioEngine.inputNode.removeTap(onBus: 0)
         recognitionRequest?.endAudio()
         recognitionTask?.cancel()
+        recognitionRequest = nil
+        recognitionTask = nil
         activationCount = 0
         isListeningForActivation = true
     }
@@ -215,5 +218,15 @@ public final class VoiceCommandIntegrity: NSObject, SFSpeechRecognizerDelegate, 
             stopListening()
         }
     }
+}
+#else
+public final class VoiceCommandIntegrity: @unchecked Sendable {
+    public static let shared = VoiceCommandIntegrity()
+
+    private init() {}
+
+    public func startListening() {}
+
+    public func stopListening() {}
 }
 #endif
