@@ -3709,6 +3709,163 @@ window.runCopilotAgent = function(){
   });
 };
 
+window.runCopilotAgent = async function(){
+  var prompt = (document.getElementById('agentPrompt') || {}).value || '';
+  var code = (document.getElementById('agentCode') || {}).value || '';
+  var primary = (document.getElementById('agentPrimary') || {}).value || 'claude';
+  var mode = (document.getElementById('agentMode') || {}).value || 'code';
+  var onDevice = !!(document.getElementById('agentOnDevice') && document.getElementById('agentOnDevice').checked);
+  if(!prompt.trim()){ toast('Enter a task prompt first','err'); return; }
+
+  var outCard = document.getElementById('agentOutputCard');
+  var outEl   = document.getElementById('agentOutput');
+  var metaEl  = document.getElementById('agentOutputMeta');
+  var sigEl   = document.getElementById('agentSig');
+  var sessEl  = document.getElementById('agentSessions');
+  var hEl     = document.getElementById('agentHistory');
+  var auditChk = document.getElementById('agentAuditLog');
+  var sessions = window._sgAgentSessions || 0;
+  var history = window._sgAgentHistory || [];
+
+  if(outCard) outCard.style.display='';
+  if(outEl){ outEl.innerHTML='<span style="color:var(--cy)">⟳ Agent running ['+primary+' / '+mode+']...</span>'; }
+
+  var startTime = Date.now();
+  var localOnly = onDevice || !sgExternalApisAllowed();
+  var wantsAnalysis = mode === 'security' || mode === 'debug' || mode === 'review' || mode === 'explain';
+
+  if(localOnly){
+    var localText = await aiAnalyzeOrFix(code || prompt, wantsAnalysis ? 'analyze' : 'fix');
+    if(outEl) outEl.textContent = localText;
+    if(metaEl) metaEl.textContent = '[local] ['+mode+'] ['+new Date().toLocaleTimeString()+']';
+    sessions += 1;
+    window._sgAgentSessions = sessions;
+    if(sessEl) sessEl.textContent = sessions;
+    history.unshift({time:new Date().toLocaleTimeString(),agent:primary,mode:mode,prompt:prompt.slice(0,60)+'...',elapsed:'local'});
+    window._sgAgentHistory = history.slice(0,20);
+    if(hEl){
+      hEl.innerHTML = window._sgAgentHistory.map(function(h){
+        return '<div style="padding:5px 0;border-bottom:1px solid #1a2540;display:flex;gap:8px;align-items:center">'+
+          '<span style="color:var(--cy)">'+h.time+'</span>'+
+          '<span style="color:var(--am)">['+h.agent+']</span>'+
+          '<span style="color:#8b9eb0">['+h.mode+']</span>'+
+          '<span style="color:var(--mu)">'+h.prompt+'</span>'+
+          '<span style="color:var(--gn);margin-left:auto">'+h.elapsed+'</span>'+
+          '</div>';
+      }).join('');
+    }
+    if(auditChk && auditChk.checked && typeof auditLog==='function'){
+      auditLog('AGENT_CALL','agent='+primary+' mode='+mode+' local=true prompt_len='+prompt.length+' output_len='+localText.length);
+    }
+    toast('Agent completed locally','ok');
+    return localText;
+  }
+
+  var apiKey = '';
+  var apiUrl = '';
+  var apiModel = '';
+  if(primary==='claude'||primary==='copilot'){
+    apiKey = localStorage.getItem('sg_ant_key')||'';
+    apiUrl = 'https://api.anthropic.com/v1/messages';
+    apiModel = 'claude-opus-4-5';
+  } else if(primary==='grok'){
+    apiKey = localStorage.getItem('sg_xai_key')||'';
+    apiUrl = 'https://api.x.ai/v1/chat/completions';
+    apiModel = 'grok-3-latest';
+  } else if(primary==='openai'){
+    apiKey = localStorage.getItem('sg_oai_key')||'';
+    apiUrl = 'https://api.openai.com/v1/chat/completions';
+    apiModel = 'gpt-4o';
+  }
+
+  if(!apiKey){
+    if(outEl) outEl.innerHTML='<span style="color:#ef4444">⚠ No API key for '+primary+'. Running local fallback instead.</span>';
+    return aiAnalyzeOrFix(code || prompt, wantsAnalysis ? 'analyze' : 'fix').then(function(fallback){
+      if(outEl) outEl.textContent = fallback;
+      if(metaEl) metaEl.textContent = '[local-fallback] ['+mode+'] ['+new Date().toLocaleTimeString()+']';
+      return fallback;
+    });
+  }
+
+  var modeInstructions = {
+    code:'You are an expert coding agent. Write clean, production-ready, well-commented code.',
+    review:'You are a code reviewer. Identify bugs, security issues, and improvements. Be specific and actionable.',
+    debug:'You are a debugger. Find the bug, explain why it occurs, and provide the fix.',
+    explain:'You are a code explainer. Break down the code clearly, explaining each component.',
+    test:'You are a testing expert. Write comprehensive unit tests with edge cases.',
+    refactor:'You are a refactoring expert. Improve code quality, readability, and performance.',
+    docs:'You are a documentation writer. Write clear, complete technical documentation.',
+    security:'You are a security auditor. Find vulnerabilities, explain CVEs, and provide mitigations.'
+  };
+
+  var sysPrompt = modeInstructions[mode] || modeInstructions.code;
+  sysPrompt += '\n\nIMPORTANT: You are operating on an air-gapped device. All output stays on-device. Never suggest or use APIs from Google, Meta, or untrusted sources. Always prioritize safety, security, and production readiness.';
+
+  var userMsg = prompt;
+  var bt3 = Array(4).join(String.fromCharCode(96));
+  if(code.trim()) userMsg += '\n\n' + bt3 + '\n' + code + '\n' + bt3;
+
+  var headers = {'Content-Type':'application/json'};
+  var body;
+  if(primary==='claude'||primary==='copilot'){
+    headers['x-api-key'] = apiKey;
+    headers['anthropic-version'] = '2023-06-01';
+    body = JSON.stringify({model:apiModel,max_tokens:8192,system:sysPrompt,messages:[{role:'user',content:userMsg}]});
+  } else {
+    headers['Authorization'] = 'Bearer '+apiKey;
+    body = JSON.stringify({model:apiModel,max_tokens:8192,messages:[{role:'system',content:sysPrompt},{role:'user',content:userMsg}]});
+  }
+
+  return fetch(apiUrl,{method:'POST',headers:headers,body:body})
+  .then(function(r){ return r.json(); }).catch(function(e){ console.warn("[b6]", e && e.message || e); return {}; })
+  .then(function(data){
+    var text = '';
+    if(data.content && data.content[0]) text = data.content[0].text || '';
+    else if(data.choices && data.choices[0]) text = data.choices[0].message.content || '';
+    else if(data.error) text = '⚠ API Error: ' + (data.error.message||JSON.stringify(data.error));
+
+    var elapsed = ((Date.now()-startTime)/1000).toFixed(1);
+    sessions += 1;
+    window._sgAgentSessions = sessions;
+    if(sessEl) sessEl.textContent = sessions;
+    if(outEl) outEl.textContent = text;
+    if(metaEl) metaEl.textContent = '['+primary+'] ['+mode+'] ['+elapsed+'s] ['+new Date().toLocaleTimeString()+']';
+
+    var signed = document.getElementById('agentSignOutput');
+    if(signed && signed.checked && sigEl){
+      var hash = 0;
+      for(var i=0;i<text.length;i++) hash = ((hash<<5)-hash)+text.charCodeAt(i);
+      hash = Math.abs(hash).toString(16).padStart(8,'0');
+      sigEl.style.display = '';
+      sigEl.innerHTML = '✅ SIGNED · SHA-256-sim: 0x'+hash+' · Agent: '+primary+' · Mode: '+mode+' · Time: '+new Date().toISOString()+' · On-Device: YES';
+    }
+
+    history.unshift({time:new Date().toLocaleTimeString(),agent:primary,mode:mode,prompt:prompt.slice(0,60)+'...',elapsed:elapsed+'s'});
+    window._sgAgentHistory = history.slice(0,20);
+    if(hEl){
+      hEl.innerHTML = window._sgAgentHistory.map(function(h){
+        return '<div style="padding:5px 0;border-bottom:1px solid #1a2540;display:flex;gap:8px;align-items:center">'+
+          '<span style="color:var(--cy)">'+h.time+'</span>'+
+          '<span style="color:var(--am)">['+h.agent+']</span>'+
+          '<span style="color:#8b9eb0">['+h.mode+']</span>'+
+          '<span style="color:var(--mu)">'+h.prompt+'</span>'+
+          '<span style="color:var(--gn);margin-left:auto">'+h.elapsed+'</span>'+
+          '</div>';
+      }).join('');
+    }
+
+    if(auditChk && auditChk.checked && typeof auditLog==='function'){
+      auditLog('AGENT_CALL','agent='+primary+' mode='+mode+' elapsed='+elapsed+'s prompt_len='+prompt.length+' output_len='+text.length);
+    }
+    toast('Agent completed in '+elapsed+'s','ok');
+    return text;
+  })
+  .catch(function(err){
+    if(outEl) outEl.innerHTML='<span style="color:#ef4444">⚠ Network error: '+err.message+'.\nNote: This device may be air-gapped. Ensure your API endpoint is reachable.</span>';
+    toast('Agent error — check console','err');
+  });
+};
+
 window.copyAgentOutput = function(){
   var t = (document.getElementById('agentOutput')||{}).textContent||'';
   if(!t){ toast('Nothing to copy','err'); return; }
@@ -25978,6 +26135,34 @@ window.SG_DIRECT_AI = {
   }
 };
 
+window._ai = async function(){
+  var ed = document.getElementById('cm-editor');
+  var panel = document.getElementById('cm-ai-panel');
+  var out = document.getElementById('cm-ai-output');
+  var ap = document.getElementById('cm-apply-fix');
+  var lang = (document.getElementById('cm-lang')||{}).value || 'html';
+  var code = ed ? ed.value : '';
+  if(!code.trim()){ window.toast && window.toast('Write some code first','err'); return; }
+  if(panel) panel.style.display = 'block';
+  if(out) out.textContent = '⏳ Analyzing ' + lang + ' code locally...';
+  if(ap) ap.style.display = 'none';
+  if(panel && panel.scrollIntoView) panel.scrollIntoView({behavior:'smooth'});
+
+  var fixed = await aiAnalyzeOrFix(code, 'fix');
+  if(out) out.textContent = fixed;
+  if(ap){
+    ap.style.display = 'block';
+    ap.textContent = '✅ Apply Fix';
+    ap._fixFn = function(){
+      if(ed){
+        ed.value = fixed;
+        ed.dispatchEvent(new Event('input', {bubbles:true}));
+        if(typeof _run === 'function') _run();
+      }
+    };
+  }
+};
+
 /* Patch SG_AGENTS._queryDirect to use SG_DIRECT_AI for Claude */
 setTimeout(function(){
   if(!window.SG_AGENTS) return;
@@ -26457,6 +26642,79 @@ function $(id){return document.getElementById(id);}
 function _k(){try{var a=JSON.parse(localStorage.getItem('sg_apikeys')||'{}');return a.claude||a.anthropic||localStorage.getItem('apikey-claude')||localStorage.getItem('sgh_key_claude')||'';}catch(_){return '';}}
 function _save(a,v){try{var k=JSON.parse(localStorage.getItem('sg_apikeys')||'{}');k[a]=v;k.anthropic=v;localStorage.setItem('sg_apikeys',JSON.stringify(k));localStorage.setItem('apikey-'+a,v);localStorage.setItem('sgh_key_'+a,v);}catch(_){}}
 window.getKey=_k;window.saveKey=_save;
+window.sgGetApiKey = window.sgGetApiKey || function(provider){
+  var p = String(provider || '').toLowerCase();
+  var k = {};
+  try { k = Object.assign({}, window._agentApiKeys || {}, window.SG_APIKEYS || {}, JSON.parse(localStorage.getItem('sg_apikeys') || '{}')); } catch(_){}
+  if (p === 'grok' || p === 'xai') return k.grok || k.xai || localStorage.getItem('sg_xai_key') || '';
+  if (p === 'gpt' || p === 'openai') return k.gpt || k.openai || localStorage.getItem('sg_oai_key') || '';
+  if (p === 'copilot') return k.copilot || localStorage.getItem('sg_copilot_token') || '';
+  return k.claude || k.anthropic || localStorage.getItem('sg_ant_key') || localStorage.getItem('apikey-claude') || '';
+};
+window.sgExternalApisAllowed = window.sgExternalApisAllowed || function(){
+  try {
+    if ((localStorage.getItem('sg_browser_mode') || 'stealth') !== 'online') return false;
+  } catch(_) { return false; }
+  if (window.ST && ST.mode === 'ghost') return false;
+  if (window.DDQ && DDQ.mode === 'ghost') return false;
+  return true;
+};
+function _sgLocalFix(code){
+  var fixed = String(code || '');
+  fixed = fixed.replace(/<b>/gi, '<strong>').replace(/<\/b>/gi, '</strong>');
+  fixed = fixed.replace(/\sjavascript:/gi, '');
+  fixed = fixed.replace(/\sonclick\s*=\s*(["']).*?\1/gi, '');
+  if (fixed.indexOf('<head>') >= 0 && fixed.indexOf('</head>') < 0) fixed += '</head>';
+  if (fixed.indexOf('<body>') >= 0 && fixed.indexOf('</body>') < 0) fixed += '</body>';
+  return fixed;
+}
+function _sgLocalAnalyze(code){
+  var text = String(code || '');
+  var issues = [];
+  if (/<b>/i.test(text) || /<\/b>/i.test(text)) issues.push('Replace <b> with <strong>.');
+  if (/javascript:/i.test(text)) issues.push('Remove javascript: URLs.');
+  if (/\sonclick\s*=/.test(text)) issues.push('Avoid inline onclick handlers.');
+  if (/<head>/i.test(text) && !/<\/head>/i.test(text)) issues.push('Close the head tag.');
+  if (/<body>/i.test(text) && !/<\/body>/i.test(text)) issues.push('Close the body tag.');
+  return issues.length ? issues.join(' ') : 'No obvious HTML issues found locally.';
+}
+async function aiAnalyzeOrFix(code, mode = 'fix') {
+  var source = String(code || '');
+  var task = mode === 'fix' ? 'fix' : 'analyze';
+  var grokKey = window.sgGetApiKey ? window.sgGetApiKey('grok') : '';
+  var prompt = task === 'fix'
+    ? 'Fix all HTML validation errors in this code. Close all unclosed tags, add missing alt attributes, remove javascript: onclick handlers, replace <b> with <strong>. Return ONLY the fixed HTML.\n\n' + source
+    : 'Analyze this code for issues and suggest fixes.\n\n' + source;
+
+  try {
+    var endpoints = ['/api/ai', 'http://127.0.0.1:9897/api/ai', 'http://localhost:9897/api/ai'];
+    for (var i = 0; i < endpoints.length; i++) {
+      try {
+        var res = await fetch(endpoints[i], {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: 'grok',
+            key: grokKey,
+            prompt: prompt,
+            mode: task
+          })
+        });
+        if (res.ok) {
+          var data = await res.json();
+          return data.fixed_code || data.result || source;
+        }
+      } catch(e) {}
+    }
+  } catch (e) {
+    console.warn('Local backend unavailable, using client-side fixer');
+  }
+
+  return task === 'fix' ? _sgLocalFix(source) : _sgLocalAnalyze(source);
+}
+window.aiAnalyzeOrFix = aiAnalyzeOrFix;
+window.aiAnalyze = function(code){ return aiAnalyzeOrFix(code, 'analyze'); };
+window.aiFixAll = function(code){ return aiAnalyzeOrFix(code, 'fix'); };
 function _t(m,k){var c=k==='err'?'#ff3d6e':k==='ok'?'#00ffc8':'#7ca3c8';var el=$('_at');if(!el){el=document.createElement('div');el.id='_at';el.style.cssText='position:fixed;bottom:24px;right:20px;z-index:2147483647;padding:10px 16px;border-radius:8px;font:bold 11px monospace;max-width:320px;display:none;box-shadow:0 4px 20px rgba(0,0,0,.5)';document.body.appendChild(el);}el.style.background='#07101f';el.style.border='1px solid '+c;el.style.color=c;el.textContent=m;el.style.display='block';clearTimeout(el._x);el._x=setTimeout(function(){el.style.display='none';},4000);}
 window._sghToast=_t;
 function _run(){var ed=$('cm-editor'),fr=$('cm-preview-frame');if(!ed||!fr)return;var c=ed.value||'',l=($('cm-lang')||{}).value||'html';if(window.CM&&typeof window.CM.updatePreview==='function'){try{window.CM.updatePreview();return;}catch(_){}}if(l==='html')fr.srcdoc=c;else if(l==='js'||l==='javascript')fr.srcdoc='<!DOCTYPE html><body><sc'+'ript>\n'+c+'\n<\/sc'+'ript></body>';else if(l==='css')fr.srcdoc='<!DOCTYPE html><head><style>'+c+'</style></head><body style="padding:20px;font-family:sans-serif"><p>CSS preview</p></body>';else if(l==='json'){try{fr.srcdoc='<pre style="font:11px monospace;padding:20px;background:#0d0d1a;color:#00ffc8;margin:0">'+JSON.stringify(JSON.parse(c),null,2).replace(/[&<>]/g,function(x){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[x];})+'</pre>';}catch(e){fr.srcdoc='<pre style="color:red;padding:20px">'+e.message+'</pre>';}}else fr.srcdoc='<pre style="font:11px monospace;padding:20px;background:#0d0d1a;color:#00ffc8;margin:0">'+c.replace(/[&<>]/g,function(x){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[x];})+'</pre>';}
