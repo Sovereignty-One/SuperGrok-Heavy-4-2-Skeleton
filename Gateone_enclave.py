@@ -38,7 +38,7 @@ def _load_or_generate_signing_keys():
     return public_key, private_key
 
 
-PUBLIC_KEY, PRIVATE_KEY = _load_or_generate_signing_keys()
+_, PRIVATE_KEY = _load_or_generate_signing_keys()
 
 class AttestationToken(BaseModel):
     attestation_token: str
