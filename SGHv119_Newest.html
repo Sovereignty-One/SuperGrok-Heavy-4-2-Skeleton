@@ -281,7 +281,7 @@ body.panic-wipe{animation:panicFlash .3s 3}
 .sg-in::placeholder{color:var(--t3)}
 .sg-ta{resize:vertical;min-height:80px}
 .sg-sel{background:var(--bg3);border:1px solid var(--wire);border-radius:var(--r);padding:10px 30px 10px 13px;color:var(--t0);font-family:var(--body);font-size:13px;outline:none;cursor:pointer;width:100%;-webkit-appearance:none;appearance:none;
-background-image:url(“data:image/svg+xml,%3Csvg xmlns=‘http://www.w3.org/2000/svg’ width=‘10’ height=‘6’%3E%3Cpath d=‘M0 0l5 6 5-6z’ fill=’%23334868’/%3E%3C/svg%3E”);background-repeat:no-repeat;background-position:right 12px center}
+background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23334868'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
 .tbl{width:100%;border-collapse:collapse;font-size:12px}
 .tbl th{font-family:var(--mono);font-size:8px;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase;padding:8px 10px;border-bottom:1px solid var(--wire);text-align:left}
 .tbl td{padding:9px 10px;border-bottom:1px solid rgba(26,46,80,.4);color:var(--t1)}
@@ -4005,7 +4005,7 @@ function bridgeConnect(){
             b.id = 'sg-insecure-banner';
             b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:linear-gradient(90deg,#7c4dff,#ff3d6e);color:#fff;padding:10px 16px;font-family:monospace;font-size:12px;display:flex;align-items:center;gap:10px';
             b.innerHTML = '<span style="font-size:18px">⚠️</span>' +
-              '<span><b>WebSocket blocked by browser security</b> &mdash; serve via Node server: ' +
+              '<span><strong>WebSocket blocked by browser security</strong> &mdash; serve via Node server: ' +
               '<a href="http://127.0.0.1:9898" style="color:#fff;font-weight:bold">http://127.0.0.1:9898</a>' +
               ' &nbsp;(run: <code>node Unified_Server.js</code>)</span>' +
               '<button onclick="this.parentNode.remove()" style="margin-left:auto;background:transparent;border:1px solid rgba(255,255,255,.5);color:#fff;padding:2px 8px;border-radius:4px;cursor:pointer">✕</button>';
@@ -8295,7 +8295,7 @@ if (meta)  meta.textContent  = entry.type + ' \u00b7 ' + fmtSize(entry.size) + '
 
 if (!frame) return;
 if (entry.isImage) {
-  frame.innerHTML = '<img src="'+entry.content+'" style="max-width:100%;max-height:280px;border-radius:5px">';
+  frame.innerHTML = '<img src="'+entry.content+'" alt="Preview image" style="max-width:100%;max-height:280px;border-radius:5px">';
 } else if (entry.content) {
   /* Syntax highlight */
   var hl = String(entry.content).slice(0, 50000)
@@ -12360,7 +12360,7 @@ var today = new Date().toISOString().slice(0,10);
 var gibsUrl = 'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/'+today+'/250m/4/4/4.jpg';
 out += '<div style="margin-bottom:8px">' +
 '<div style="font-size:10px;color:var(--t3);font-family:var(--mono);margin-bottom:6px">📡 NASA GIBS WMTS — VIIRS True Color tile ('+today+')</div>' +
-'<img src="'+gibsUrl+'" style="width:100%;max-height:300px;object-fit:cover;border-radius:8px;border:1px solid var(--wire)" ' +
+'<img src="'+gibsUrl+'" alt="NASA GIBS true color satellite tile" style="width:100%;max-height:300px;object-fit:cover;border-radius:8px;border:1px solid var(--wire)" ' +
 'onerror="this.style.display=\x27none\x27;this.nextSibling.style.display=\x27block\x27" />' +
 '<div style="display:none;padding:20px;background:var(--bg3);border-radius:8px;color:var(--t3);font-size:11px;text-align:center">GIBS tile unavailable (CDN may block direct img requests — use Worldview iframe above)</div>' +
 '</div>';
@@ -13766,7 +13766,7 @@ function _chatDirectAPI(ag, msg, history, ab, msgs){
 var key=window._agentApiKeys[ag]||window._agentApiKeys['claude']||'';
 if(!key){
 ab.innerHTML='⚠️ Bridge offline & no API key stored.<br>'+
-'<span style="font-size:9px;color:var(--t3)">Go to <b>Security → API Keys</b> panel and paste your key, or start bridge:<br>'+
+'<span style="font-size:9px;color:var(--t3)">Go to <strong>Security → API Keys</strong> panel and paste your key, or start bridge:<br>'+
 '<code style="color:var(--cy)">node Unified_Server.js</code></span>';
 ab.style.color='var(--am)';
 msgs.scrollTop=msgs.scrollHeight;
@@ -15286,21 +15286,21 @@ msg: function(m){ return '\u26a0\ufe0f Curly/smart quote: '+m[0]+' (U+'+m[0].cha
 fix: function(c){ return c.replace(/[\u201c\u201d\u201e\u201f\u00ab\u00bb]/g,'"').replace(/[\u2018\u2019\u201b]/g,"'"); },
 fixMsg: 'Replace all curly/smart quotes with plain ASCII' },
 
-    { re: /<([a-z][a-z0-9]*)\b[^>]*>(?![\s\S]*<\/\1>)/gi,
+    { re: /<(?!area\b|base\b|br\b|col\b|embed\b|hr\b|img\b|input\b|link\b|meta\b|param\b|source\b|track\b|wbr\b)([a-z][a-z0-9-]*)\b[^>]*>(?![^<]*<\/\1>)/gi,
       msg: function(m){ return 'Unclosed tag: <'+m[1]+'>'; },
       fix: function(code, m){ return code + '\n</' + m[1] + '>'; },
       fixMsg: 'Add closing tag' },
-    { re: /(<img[^>]*?)(?!\/)>/gi,
-      msg: function(){ return '<img> missing alt attribute'; },
-      fix: function(code, m){ return code.replace(m[0], m[1] + ' alt="">'); },
+    { re: /\x3Cimg\b(?![^>]*\balt=)[^>]*>/gi,
+      msg: function(){ return 'Image tag missing alt attribute'; },
+      fix: function(code, m){ return code.replace(m[0], m[0].replace(/\s*\/?>$/, ' alt=""$&')); },
       fixMsg: 'Add alt=""' },
-    { re: /style="[^"]*;(?=[^"]*")/g,
+    { re: /style\s*=\s*"[^"]*$|style\s*=\s*'[^']*$/gm,
       msg: function(){ return 'Possible inline style syntax issue'; },
       fix: null, fixMsg: null },
   ],
   warnings: [
-    { re: /<b>|<i>|<u>|<font/gi, msg: 'Deprecated HTML tag — use CSS instead', fix: null },
-    { re: /onclick="javascript:/gi, msg: 'Redundant javascript: in onclick', fix: function(c){ return c.replace(/onclick="javascript:/gi, 'onclick="'); }, fixMsg: 'Remove javascript:' },
+    { re: /<(?:b|i|u|font)\b/gi, msg: 'Deprecated HTML tag — use CSS instead', fix: null },
+    { re: /onclick\s*=\s*["']\s*javascript:/gi, msg: 'Redundant javascript: in onclick', fix: function(c){ return c.replace(/onclick\s*=\s*["']\s*javascript:/gi, 'onclick="'); }, fixMsg: 'Remove javascript:' },
   ]
 },
 js: {
@@ -20371,21 +20371,21 @@ updatePriceDisplay(d.tier || 25000);
 var CM_RULES = {
 html: {
 errors: [
-{ re: /<([a-z][a-z0-9]*)\b[^>]*>(?![\s\S]*<\/\1>)/gi,
+{ re: /<(?!area\b|base\b|br\b|col\b|embed\b|hr\b|img\b|input\b|link\b|meta\b|param\b|source\b|track\b|wbr\b)([a-z][a-z0-9-]*)\b[^>]*>(?![^<]*<\/\1>)/gi,
 msg: function(m){ return 'Unclosed tag: <'+m[1]+'>'; },
 fix: function(code, m){ return code + '\n</' + m[1] + '>'; },
 fixMsg: 'Add closing tag' },
-{ re: /(<img[^>]*?)(?!\/)>/gi,
-msg: function(){ return '<img> missing alt attribute'; },
-fix: function(code, m){ return code.replace(m[0], m[1] + ' alt="">'); },
+{ re: /\x3Cimg\b(?![^>]*\balt=)[^>]*>/gi,
+msg: function(){ return 'Image tag missing alt attribute'; },
+fix: function(code, m){ return code.replace(m[0], m[0].replace(/\s*\/?>$/, ' alt=""$&')); },
 fixMsg: 'Add alt=""' },
-{ re: /style="[^"]*;(?=[^"]*")/g,
+{ re: /style\s*=\s*"[^"]*$|style\s*=\s*'[^']*$/gm,
 msg: function(){ return 'Possible inline style syntax issue'; },
 fix: null, fixMsg: null },
 ],
 warnings: [
-{ re: /<b>|<i>|<u>|<font/gi, msg: 'Deprecated HTML tag — use CSS instead', fix: null },
-{ re: /onclick="javascript:/gi, msg: 'Redundant javascript: in onclick', fix: function(c){ return c.replace(/onclick="javascript:/gi, 'onclick="'); }, fixMsg: 'Remove javascript:' },
+{ re: /<(?:b|i|u|font)\b/gi, msg: 'Deprecated HTML tag — use CSS instead', fix: null },
+{ re: /onclick\s*=\s*["']\s*javascript:/gi, msg: 'Redundant javascript: in onclick', fix: function(c){ return c.replace(/onclick\s*=\s*["']\s*javascript:/gi, 'onclick="'); }, fixMsg: 'Remove javascript:' },
 ]
 },
 js: {
@@ -22306,7 +22306,7 @@ return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">'
 /* Session */
 '<div class="card" style="margin-bottom:10px">' +
 '<div class="card-title">👤 Session</div>' +
-'<div style="font-family:var(--mono);font-size:9px;color:var(--t1);margin-bottom:8px">Role: <b style="color:var(--acid)">'+(u.role||'—')+'</b> · User: <b>'+(u.name||'—')+'</b> · Level: '+(u.level||'—')+'</div>' +
+'<div style="font-family:var(--mono);font-size:9px;color:var(--t1);margin-bottom:8px">Role: <strong style="color:var(--acid)">'+(u.role||'—')+'</strong> · User: <strong>'+(u.name||'—')+'</strong> · Level: '+(u.level||'—')+'</div>' +
 '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
 '<button class="btn" style="font-size:9px" onclick="try{sessionStorage.removeItem(\'sg_s\');localStorage.removeItem(\'sg_s\');}catch(e){}show(\'roleScreen\');buildRoles();toast(\'Session cleared\',\'\')">🚪 Logout</button>' +
 '<button class="btn btn-s" style="font-size:9px;color:var(--pulse)" onclick="if(confirm(\'Clear ALL storage and reload?\')){localStorage.clear();sessionStorage.clear();location.reload();}">☢️ Full Reset</button>' +
@@ -23705,7 +23705,7 @@ return hdr('🧠 Memory Cards','Signed local store · cross-session') +
 '</div>' +
 '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
 Object.keys(types).map(function(t){
-return '<span style="font-family:var(--mono);font-size:8px;background:rgba(0,255,200,.08);border:1px solid rgba(0,255,200,.2);border-radius:4px;padding:2px 6px;color:var(--cy);cursor:pointer" onclick="sgMemSearch(\''+t+'\')">'+t+' <b>'+types[t]+'</b></span>';
+return '<span style="font-family:var(--mono);font-size:8px;background:rgba(0,255,200,.08);border:1px solid rgba(0,255,200,.2);border-radius:4px;padding:2px 6px;color:var(--cy);cursor:pointer" onclick="sgMemSearch(\''+t+'\')">'+t+' <strong>'+types[t]+'</strong></span>';
 }).join('') +
 '</div>' +
 '<div id="mem-list" style="display:grid;gap:6px;max-height:400px;overflow-y:auto">' +
