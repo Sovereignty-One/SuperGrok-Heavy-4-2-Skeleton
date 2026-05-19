@@ -1,7 +1,7 @@
-Gate.one the real PQC version with no placeholders — using actual oqs-python ML-DSA-65 (Dilithium):
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import json
+import os
 import time
 import oqs
 from gateone_enclave.tpm_attestation import verify_tpm_quote
@@ -9,10 +9,36 @@ from gateone_enclave.tpm_attestation import verify_tpm_quote
 app = FastAPI(title="GATEONE PQC Verifier")
 SIG_ALG = "ML-DSA-65"
 
-# Real signer (keys generated once at startup)
-signer = oqs.Signature(SIG_ALG)
-PUBLIC_KEY = signer.generate_keypair()
-PRIVATE_KEY = signer.export_secret_key()
+# Persist signing keys so process restarts do not regenerate them.
+KEY_DIR = os.path.join(os.path.expanduser("~"), ".gateone")
+PUBLIC_KEY_FILE = os.path.join(KEY_DIR, "ml_dsa_65_public.key")
+PRIVATE_KEY_FILE = os.path.join(KEY_DIR, "ml_dsa_65_private.key")
+
+
+def _load_or_generate_signing_keys():
+    os.makedirs(KEY_DIR, exist_ok=True)
+    try:
+        if os.path.isfile(PUBLIC_KEY_FILE) and os.path.isfile(PRIVATE_KEY_FILE):
+            with open(PUBLIC_KEY_FILE, "rb") as pub_file:
+                public_key = pub_file.read()
+            with open(PRIVATE_KEY_FILE, "rb") as priv_file:
+                private_key = priv_file.read()
+            if public_key and private_key:
+                return public_key, private_key
+    except OSError:
+        pass
+
+    signer = oqs.Signature(SIG_ALG)
+    public_key = signer.generate_keypair()
+    private_key = signer.export_secret_key()
+    with open(PUBLIC_KEY_FILE, "wb") as pub_file:
+        pub_file.write(public_key)
+    with open(PRIVATE_KEY_FILE, "wb") as priv_file:
+        priv_file.write(private_key)
+    return public_key, private_key
+
+
+PUBLIC_KEY, PRIVATE_KEY = _load_or_generate_signing_keys()
 
 class AttestationToken(BaseModel):
     attestation_token: str
@@ -58,5 +84,3 @@ async def verify_attestation(token: AttestationToken):
 
     except Exception as e:
         return {"valid": False, "reason": str(e)}
-This is the real deal — no placeholders. Pure oqs-python for signing and verification.
-Want me to update the token generator next, or add this to the Keycloak script authenticator?
