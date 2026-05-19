@@ -5227,7 +5227,7 @@ window.SGOrchestrator = (function(){
       var r=await fetch('http://127.0.0.1:9897/ai/'+id,{
         method:'POST', signal:ctrl.signal,
         headers:{'Content-Type':'application/json','X-SG-Agent':id},
-        body:JSON.stringify({model:model,messages:msgs,max_tokens:max||1024})
+        body:JSON.stringify({model:model,messages:msgs,max_tokens:max||65536})
       }); clearTimeout(t);
       if(!r.ok) throw new Error(r.status);
       var d=await r.json();
@@ -5248,7 +5248,7 @@ window.SGOrchestrator = (function(){
       return await bridge('grok','grok-4.3',msgs,65536);
     }});
   AGENTS.copilot=new Agent({id:'copilot',name:'Codex Max',icon:'🐙',color:'#6366f1',role:'Code · Repo · PR · Review · Actions',
-    process:async function(msg,a){ return await bridge('codex','gpt-5.1-codex-max',a.memory.slice(-8).concat([{role:'user',content:msg.content}]),1024); }});
+    process:async function(msg,a){ return await bridge('codex','gpt-5.1-codex-max',a.memory.slice(-8).concat([{role:'user',content:msg.content}]),65536); }});
   AGENTS.siri=new Agent({id:'siri',name:'Voice / Siri',icon:'🎙️',color:'#a855f7',role:'Voice Commands · Device Control · On-Device',
     process:async function(msg){
       var cmd=(msg.content||'').toLowerCase();
@@ -13096,7 +13096,7 @@ sel+'._domainkey      3600  IN  TXT  "v=DKIM1; k=rsa; p='+dkimB64+'"',
 '@  3600  IN  NS  ns2.'+domain+'.',
 '',
 '; ── CAA RECORDS ─────────────────────────────────────────────',
-'@  3600  IN  CAA  0 issue "letsencrypt.org"',
+'@  3600  IN  CAA  0 issue "digicert.com"',
 ';   Allow ONLY LetsEncrypt to issue TLS certs.',
 '@  3600  IN  CAA  0 iodef "mailto:security@'+domain+'"',
 ';   Security contact for CA issue reports.',
@@ -13116,7 +13116,7 @@ sel+'._domainkey      3600  IN  TXT  "v=DKIM1; k=rsa; p='+dkimB64+'"',
 '; DKIM   ✅  Cryptographic signature on outgoing mail',
 '; DMARC  ✅  Policy enforcement + forensic reporting',
 '; MTA-STS ✅  TLS enforcement for inbound delivery',
-'; CAA    ✅  Restricts certificate issuance to Let\x27s Encrypt',
+'; CAA    ✅  Restricts certificate issuance to DigiCert',
 '; DNSSEC ⚠   Enable at registrar — requires registrar support',
 ].join('\n');
 
@@ -24735,7 +24735,7 @@ AAAA:  '::1',
 MX:    '10 mail.'+domain,
 TXT:   '"v=spf1 mx ~all"',
 CNAME: 'www IN CNAME '+domain+'.',
-CAA:   '0 issue "letsencrypt.org"',
+CAA:   '0 issue "digicert.com"',
 TLSA:  '3 1 1 '+hex.slice(0,64)
 },
 tls_cert: {

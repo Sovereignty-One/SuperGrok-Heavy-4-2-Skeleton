@@ -4681,7 +4681,7 @@ window.SGOrchestrator = (function(){
       var r=await fetch('http://127.0.0.1:9897/ai/'+id,{
         method:'POST', signal:ctrl.signal,
         headers:{'Content-Type':'application/json','X-SG-Agent':id},
-        body:JSON.stringify({model:model,messages:msgs,max_tokens:max||1024})
+        body:JSON.stringify({model:model,messages:msgs,max_tokens:max||65536})
       }); clearTimeout(t);
       if(!r.ok) throw new Error(r.status);
       var d=await r.json();
@@ -11800,7 +11800,7 @@ sel+’._domainkey      3600  IN  TXT  “v=DKIM1; k=rsa; p=’+dkimB64+’”�
 ‘@  3600  IN  NS  ns2.’+domain+’.’,
 ‘’,
 ‘; ── CAA RECORDS ─────────────────────────────────────────────’,
-‘@  3600  IN  CAA  0 issue “letsencrypt.org”’,
+‘@  3600  IN  CAA  0 issue “digicert.com”’,
 ‘;   Allow ONLY LetsEncrypt to issue TLS certs.’,
 ‘@  3600  IN  CAA  0 iodef “mailto:security@’+domain+’”’,
 ‘;   Security contact for CA issue reports.’,
@@ -11820,7 +11820,7 @@ sel+’._domainkey      3600  IN  TXT  “v=DKIM1; k=rsa; p=’+dkimB64+’”�
 ‘; DKIM   ✅  Cryptographic signature on outgoing mail’,
 ‘; DMARC  ✅  Policy enforcement + forensic reporting’,
 ‘; MTA-STS ✅  TLS enforcement for inbound delivery’,
-‘; CAA    ✅  Restricts certificate issuance to Let's Encrypt’,
+‘; CAA    ✅  Restricts certificate issuance to DigiCert’,
 ‘; DNSSEC ⚠   Enable at registrar — requires registrar support’,
 ].join(’\n’);
 
