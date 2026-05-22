@@ -1,0 +1,9 @@
+[submodule "modules/familyguard"]
+    path = modules/familyguard
+    url = https://github.com/appel420/familyguard.git
+    branch = main
+
+[submodule "modules/every-cloud-for-everyone"]
+    path = modules/every-cloud-for-everyone
+    url = https://github.com/appel420/every-cloud-for-everyone.git
+    branch = main
