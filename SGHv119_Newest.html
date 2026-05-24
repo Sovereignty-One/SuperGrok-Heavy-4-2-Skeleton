@@ -10946,6 +10946,7 @@ kc('ON', 'Live Preview', '#00e676') +
       '<option value="bash">Bash / Shell</option>' +
       '<option value="sql">SQL</option>' +
       '<option value="markdown">Markdown</option>' +
+       '<option value="diff">Unified Diff</option>' +
       '<option value="swift">Swift</option>' +
       '<option value="kotlin">Kotlin</option>' +
       '<option value="rust">Rust</option>' +
@@ -11082,7 +11083,7 @@ kc('ON', 'Live Preview', '#00e676') +
 '<div class="card">' +
 '<div class="card-title">\ud83d\udcc1 Files</div>' +
 '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
-'<input type="file" id="cm-file-input" accept=".html,.css,.js,.json,.py,.sh,.sql,.md,.txt,.jsx,.ts,.tsx" style="font-family:var(--mono);font-size:10px;color:var(--t1)">' +
+'<input type="file" id="cm-file-input" accept=".html,.css,.js,.json,.py,.sh,.sql,.md,.diff,.patch,.txt,.jsx,.ts,.tsx" style="font-family:var(--mono);font-size:10px;color:var(--t1)">' +
 '<button class="btn btn-s" id="cm-save-file" style="font-size:9px">\u2193 Save File</button>' +
 '<button class="btn btn-s" id="cm-new-file" style="font-size:9px">+ New</button>' +
 '</div>' +
@@ -15527,6 +15528,23 @@ if (lang === 'json') {
     consoleAdd('error', 'JSON parse error: ' + e.message, null, null, null);
   }
 }
+if (lang === 'diff' || lang === 'patch') {
+  var diffLines = code.split('\n');
+  var hasHunk = false;
+  diffLines.forEach(function(line, idx) {
+    if (/^@@\s*-\d+(?:,\d+)?\s+\+\d+(?:,\d+)?\s*@@/.test(line)) hasHunk = true;
+    if (/^(?:\s*$|diff --git |index |--- |\+\+\+ |@@ |\\ No newline at end of file|new file mode |deleted file mode |rename from |rename to |similarity index |Binary files )/.test(line) || /^[ +\-]/.test(line)) {
+      return;
+    }
+    warnCount++;
+    consoleAdd('warn', 'Unexpected diff line prefix', idx + 1, null, null);
+  });
+  if ((/^[+-]/m.test(code) || /^@@/m.test(code)) && !hasHunk) {
+    errCount++;
+    consoleAdd('error', 'Missing unified diff hunk header', null, null, null);
+  }
+}
+
 
 /* Run error rules */
 (rules.errors || []).forEach(function(rule) {
@@ -15538,7 +15556,7 @@ if (lang === 'json') {
     errCount++;
     var msg = typeof rule.msg === 'function' ? rule.msg(m) : rule.msg;
     var lineNo = code.slice(0, m.index).split('\n').length;
-    var fixFn = rule.fix ? rule.fix.bind(null) : null;
+    var fixFn = rule.fix ? (function(fix, match){ return function(source) { return fix(source, match); }; })(rule.fix, m) : null;
     consoleAdd('error', msg, lineNo, fixFn, rule.fixMsg);
     fixes.push({fix: fixFn, msg: msg});
     if (re.lastIndex === m.index) { re.lastIndex++; }
@@ -15555,7 +15573,7 @@ if (lang === 'json') {
     warnCount++;
     var msg = typeof rule.msg === 'function' ? rule.msg(m) : rule.msg;
     var lineNo = code.slice(0, m.index).split('\n').length;
-    var fixFn = rule.fix ? rule.fix.bind(null) : null;
+    var fixFn = rule.fix ? (function(fix, match){ return function(source) { return fix(source, match); }; })(rule.fix, m) : null;
     consoleAdd('warn', msg, lineNo, fixFn, rule.fixMsg);
     if (re.lastIndex === m.index) { re.lastIndex++; }
   }
@@ -15636,6 +15654,21 @@ if (lang === 'html') {
   } catch(e) { frame.srcdoc = '<!DOCTYPE html><html><head>'+'<scr'+'ipt>'+'window.onerror=function(){return true;};'+'var _p=window.parent||window.top||window;'+'window.gi=function(id){return document.getElementById(id)||(_p.document&&_p.document.getElementById(id));};'+'window.toast=function(m,t){if(_p.toast)_p.toast(m,t);};'+'window.loadPanel=function(id){if(_p.loadPanel)_p.loadPanel(id);};'+'window.sg=function(fn){try{fn();}catch(e){if(_p.toast)_p.toast("\u26a0 "+e.message,"err");}};'+'window.sendChat=function(){if(_p.sendChat)_p.sendChat();};'+'window.sgAgentQuery=function(){if(_p.sgAgentQuery)_p.sgAgentQuery();};'+'window.bridgeReconnect=function(){if(_p.bridgeReconnect)_p.bridgeReconnect();};'+'window.sgSetApiKey=function(a,k){if(_p.sgSetApiKey)_p.sgSetApiKey(a,k);};'+'</'+'script>'+'<style>*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#fff;color:#000}</style>'+'</head><body>'
   + ((md_html)||'').replace(/<html[^>]*>/i,'').replace(/<\/html>/i,'').replace(/<head>[\s\S]*?<\/head>/i,'').replace(/<body[^>]*>/i,'').replace(/<\/body>/i,'')
   + '</body></html>'; }
+} else if (lang === 'diff' || lang === 'patch') {
+  frame.style.display = 'none';
+  txtDiv.style.display = 'block';
+  var diffHl = code
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^(diff --git .*)$/gm,'<span style="color:#569cd6">$1</span>')
+    .replace(/^(index .*)$/gm,'<span style="color:#b5cea8">$1</span>')
+    .replace(/^(--- .*)$/gm,'<span style="color:#c586c0">$1</span>')
+    .replace(/^(\+\+\+ .*)$/gm,'<span style="color:#c586c0">$1</span>')
+    .replace(/^(@@ .* @@)$/gm,'<span style="color:#4fc1ff;font-weight:700">$1</span>')
+    .replace(/^(\\ No newline at end of file)$/gm,'<span style="color:#ffb86b">$1</span>')
+    .replace(/^(\+.*)$/gm,'<span style="color:#4ec9b0">$1</span>')
+    .replace(/^(\-.*)$/gm,'<span style="color:#f44747">$1</span>')
+    .replace(/^( .*?)$/gm,'<span style="color:var(--t0)">$1</span>');
+  txtDiv.innerHTML = diffHl;
 } else {
   /* Non-renderable: show as syntax-highlighted text */
   frame.style.display = 'none';
@@ -16395,7 +16428,7 @@ document.addEventListener('change', function(e) {
 if (e.target.id === 'cm-file-input') {
 var file = e.target.files[0]; if (!file) return;
 var ext = file.name.split('.').pop().toLowerCase();
-var langMap = {html:'html',css:'css',js:'js',json:'json',py:'python',sh:'bash',sql:'sql',md:'markdown',jsx:'js',ts:'js',tsx:'js'};
+var langMap = {html:'html',css:'css',js:'js',json:'json',py:'python',sh:'bash',sql:'sql',md:'markdown',diff:'diff',patch:'diff',jsx:'js',ts:'js',tsx:'js'};
 var sel = document.getElementById('cm-lang');
 if (sel && langMap[ext]) sel.value = langMap[ext];
 var r = new FileReader();
@@ -20581,6 +20614,23 @@ if (lang === 'json') {
     consoleAdd('error', 'JSON parse error: ' + e.message, null, null, null);
   }
 }
+if (lang === 'diff' || lang === 'patch') {
+  var diffLines = code.split('\n');
+  var hasHunk = false;
+  diffLines.forEach(function(line, idx) {
+    if (/^@@\s*-\d+(?:,\d+)?\s+\+\d+(?:,\d+)?\s*@@/.test(line)) hasHunk = true;
+    if (/^(?:\s*$|diff --git |index |--- |\+\+\+ |@@ |\\ No newline at end of file|new file mode |deleted file mode |rename from |rename to |similarity index |Binary files )/.test(line) || /^[ +\-]/.test(line)) {
+      return;
+    }
+    warnCount++;
+    consoleAdd('warn', 'Unexpected diff line prefix', idx + 1, null, null);
+  });
+  if ((/^[+-]/m.test(code) || /^@@/m.test(code)) && !hasHunk) {
+    errCount++;
+    consoleAdd('error', 'Missing unified diff hunk header', null, null, null);
+  }
+}
+
 
 /* Run error rules */
 (rules.errors || []).forEach(function(rule) {
@@ -20592,7 +20642,7 @@ if (lang === 'json') {
     errCount++;
     var msg = typeof rule.msg === 'function' ? rule.msg(m) : rule.msg;
     var lineNo = code.slice(0, m.index).split('\n').length;
-    var fixFn = rule.fix ? rule.fix.bind(null) : null;
+    var fixFn = rule.fix ? (function(fix, match){ return function(source) { return fix(source, match); }; })(rule.fix, m) : null;
     consoleAdd('error', msg, lineNo, fixFn, rule.fixMsg);
     fixes.push({fix: fixFn, msg: msg});
     if (re.lastIndex === m.index) { re.lastIndex++; }
@@ -20609,7 +20659,7 @@ if (lang === 'json') {
     warnCount++;
     var msg = typeof rule.msg === 'function' ? rule.msg(m) : rule.msg;
     var lineNo = code.slice(0, m.index).split('\n').length;
-    var fixFn = rule.fix ? rule.fix.bind(null) : null;
+    var fixFn = rule.fix ? (function(fix, match){ return function(source) { return fix(source, match); }; })(rule.fix, m) : null;
     consoleAdd('warn', msg, lineNo, fixFn, rule.fixMsg);
     if (re.lastIndex === m.index) { re.lastIndex++; }
   }
@@ -20690,6 +20740,21 @@ if (lang === 'html') {
   } catch(e) { frame.srcdoc = '<!DOCTYPE html><html><head>'+'<scr'+'ipt>'+'window.onerror=function(){return true;};'+'var _p=window.parent||window.top||window;'+'window.gi=function(id){return document.getElementById(id)||(_p.document&&_p.document.getElementById(id));};'+'window.toast=function(m,t){if(_p.toast)_p.toast(m,t);};'+'window.loadPanel=function(id){if(_p.loadPanel)_p.loadPanel(id);};'+'window.sg=function(fn){try{fn();}catch(e){if(_p.toast)_p.toast("\u26a0 "+e.message,"err");}};'+'window.sendChat=function(){if(_p.sendChat)_p.sendChat();};'+'window.sgAgentQuery=function(){if(_p.sgAgentQuery)_p.sgAgentQuery();};'+'window.bridgeReconnect=function(){if(_p.bridgeReconnect)_p.bridgeReconnect();};'+'window.sgSetApiKey=function(a,k){if(_p.sgSetApiKey)_p.sgSetApiKey(a,k);};'+'</'+'script>'+'<style>*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#fff;color:#000}</style>'+'</head><body>'
   + ((md_html)||'').replace(/<html[^>]*>/i,'').replace(/<\/html>/i,'').replace(/<head>[\s\S]*?<\/head>/i,'').replace(/<body[^>]*>/i,'').replace(/<\/body>/i,'')
   + '</body></html>'; }
+} else if (lang === 'diff' || lang === 'patch') {
+  frame.style.display = 'none';
+  txtDiv.style.display = 'block';
+  var diffHl = code
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^(diff --git .*)$/gm,'<span style="color:#569cd6">$1</span>')
+    .replace(/^(index .*)$/gm,'<span style="color:#b5cea8">$1</span>')
+    .replace(/^(--- .*)$/gm,'<span style="color:#c586c0">$1</span>')
+    .replace(/^(\+\+\+ .*)$/gm,'<span style="color:#c586c0">$1</span>')
+    .replace(/^(@@ .* @@)$/gm,'<span style="color:#4fc1ff;font-weight:700">$1</span>')
+    .replace(/^(\\ No newline at end of file)$/gm,'<span style="color:#ffb86b">$1</span>')
+    .replace(/^(\+.*)$/gm,'<span style="color:#4ec9b0">$1</span>')
+    .replace(/^(\-.*)$/gm,'<span style="color:#f44747">$1</span>')
+    .replace(/^( .*?)$/gm,'<span style="color:var(--t0)">$1</span>');
+  txtDiv.innerHTML = diffHl;
 } else {
   /* Non-renderable: show as syntax-highlighted text */
   frame.style.display = 'none';
@@ -20874,7 +20939,7 @@ document.addEventListener('change', function(e) {
 if (e.target.id === 'cm-file-input') {
 var file = e.target.files[0]; if (!file) return;
 var ext = file.name.split('.').pop().toLowerCase();
-var langMap = {html:'html',css:'css',js:'js',json:'json',py:'python',sh:'bash',sql:'sql',md:'markdown',jsx:'js',ts:'js',tsx:'js'};
+var langMap = {html:'html',css:'css',js:'js',json:'json',py:'python',sh:'bash',sql:'sql',md:'markdown',diff:'diff',patch:'diff',jsx:'js',ts:'js',tsx:'js'};
 var sel = document.getElementById('cm-lang');
 if (sel && langMap[ext]) sel.value = langMap[ext];
 var r = new FileReader();
@@ -26865,7 +26930,7 @@ function _send(){
     }
   }).catch(function(e){var t=th&&th.querySelector('._ath');if(t)t.textContent='✗ '+e.message+' (bridge offline?)';});
 }
-document.addEventListener('click',function(ev){var t=ev.target;for(var i=0;i<5;i++){if(!t||t===document.body)break;var id=t.id||'';var dp=t.getAttribute&&(t.getAttribute('data-panel')||t.getAttribute('data-p'));if(id==='cm-ai-fix'){ev.preventDefault();ev.stopImmediatePropagation();_ai();return;}if(id==='cm-run'){ev.preventDefault();ev.stopImmediatePropagation();_run();return;}if(id==='cm-copy-btn'){ev.preventDefault();ev.stopImmediatePropagation();var c=($('cm-editor')||{}).value||'';if(c)navigator.clipboard.writeText(c).then(function(){_t('Copied ✓','ok');});return;}if(id==='cm-clear-btn'){ev.preventDefault();ev.stopImmediatePropagation();var ed=$('cm-editor');if(ed)ed.value='';var fr=$('cm-preview-frame');if(fr)fr.srcdoc='';return;}if(id==='cm-save-file'){ev.preventDefault();ev.stopImmediatePropagation();var ed=$('cm-editor');if(!ed||!ed.value)return;var l=($('cm-lang')||{}).value||'html';var ext={html:'html',css:'css',js:'js',json:'json',python:'py',bash:'sh',sql:'sql',markdown:'md',swift:'swift',rust:'rs',go:'go',java:'java',cpp:'cpp'}[l]||'txt';var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([ed.value],{type:'text/plain'}));a.download='code.'+ext;a.click();URL.revokeObjectURL(a.href);return;}if(id==='cm-ai-close'){ev.preventDefault();ev.stopImmediatePropagation();var p=$('cm-ai-panel');if(p)p.style.display='none';return;}if(id==='cm-fix-all-q-btn'||id==='cm-blade-run'){ev.preventDefault();ev.stopImmediatePropagation();var ed=$('cm-editor');if(!ed)return;ed.value=ed.value.replace(/[\u2018\u2019\u201a\u201b]/g,"'").replace(/[\u201c\u201d\u201e\u201f\u00ab\u00bb\u2039\u203a]/g,'"');ed.dispatchEvent(new Event('input',{bubbles:true}));_run();_t('Quotes fixed ✓','ok');return;}if(id==='cm-preview-refresh'){ev.preventDefault();ev.stopImmediatePropagation();_run();return;}if(id==='ag-send-btn'||id==='sgh-ag-send'){ev.preventDefault();ev.stopImmediatePropagation();_send();return;}if(id==='sg-bridge-reconnect'||id==='connect-bridge-btn'){ev.preventDefault();ev.stopImmediatePropagation();_bc();return;}if(id==='sgh-keys-btn'){ev.preventDefault();ev.stopImmediatePropagation();_keys();return;}if(dp){ev.preventDefault();ev.stopImmediatePropagation();try{window.loadPanel&&window.loadPanel(dp);}catch(_){}var sb=$('sidebar');if(sb)sb.classList.remove('open');return;}t=t.parentElement;}},true);
+document.addEventListener('click',function(ev){var t=ev.target;for(var i=0;i<5;i++){if(!t||t===document.body)break;var id=t.id||'';var dp=t.getAttribute&&(t.getAttribute('data-panel')||t.getAttribute('data-p'));if(id==='cm-ai-fix'){ev.preventDefault();ev.stopImmediatePropagation();_ai();return;}if(id==='cm-run'){ev.preventDefault();ev.stopImmediatePropagation();_run();return;}if(id==='cm-copy-btn'){ev.preventDefault();ev.stopImmediatePropagation();var c=($('cm-editor')||{}).value||'';if(c)navigator.clipboard.writeText(c).then(function(){_t('Copied ✓','ok');});return;}if(id==='cm-clear-btn'){ev.preventDefault();ev.stopImmediatePropagation();var ed=$('cm-editor');if(ed)ed.value='';var fr=$('cm-preview-frame');if(fr)fr.srcdoc='';return;}if(id==='cm-save-file'){ev.preventDefault();ev.stopImmediatePropagation();var ed=$('cm-editor');if(!ed||!ed.value)return;var l=($('cm-lang')||{}).value||'html';var ext={html:'html',css:'css',js:'js',json:'json',python:'py',bash:'sh',sql:'sql',markdown:'md',diff:'diff',swift:'swift',rust:'rs',go:'go',java:'java',cpp:'cpp'}[l]||'txt';var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([ed.value],{type:'text/plain'}));a.download='code.'+ext;a.click();URL.revokeObjectURL(a.href);return;}if(id==='cm-ai-close'){ev.preventDefault();ev.stopImmediatePropagation();var p=$('cm-ai-panel');if(p)p.style.display='none';return;}if(id==='cm-fix-all-q-btn'||id==='cm-blade-run'){ev.preventDefault();ev.stopImmediatePropagation();var ed=$('cm-editor');if(!ed)return;ed.value=ed.value.replace(/[\u2018\u2019\u201a\u201b]/g,"'").replace(/[\u201c\u201d\u201e\u201f\u00ab\u00bb\u2039\u203a]/g,'"');ed.dispatchEvent(new Event('input',{bubbles:true}));_run();_t('Quotes fixed ✓','ok');return;}if(id==='cm-preview-refresh'){ev.preventDefault();ev.stopImmediatePropagation();_run();return;}if(id==='ag-send-btn'||id==='sgh-ag-send'){ev.preventDefault();ev.stopImmediatePropagation();_send();return;}if(id==='sg-bridge-reconnect'||id==='connect-bridge-btn'){ev.preventDefault();ev.stopImmediatePropagation();_bc();return;}if(id==='sgh-keys-btn'){ev.preventDefault();ev.stopImmediatePropagation();_keys();return;}if(dp){ev.preventDefault();ev.stopImmediatePropagation();try{window.loadPanel&&window.loadPanel(dp);}catch(_){}var sb=$('sidebar');if(sb)sb.classList.remove('open');return;}t=t.parentElement;}},true);
 document.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){var id=e.target&&e.target.id;if(id==='ag-inp'||id==='sgh-ag-inp'){e.preventDefault();_send();}}if((e.metaKey||e.ctrlKey)&&e.shiftKey&&(e.key==='K'||e.key==='k')){e.preventDefault();_keys();}});
 function _pill(){if($('_apill'))return;var p=document.createElement('div');p.id='_apill';p.style.cssText='position:fixed;top:6px;right:10px;z-index:2147483647;display:flex;align-items:center;gap:5px';p.innerHTML='<div id="_ad" style="width:8px;height:8px;border-radius:50%;background:#ff3d6e;flex-shrink:0;transition:background .4s"></div><button onclick="bridgeConnect()" style="background:#0e1a2e;border:1px solid #254868;color:#00ffc8;font:700 9px monospace;padding:4px 9px;border-radius:6px;cursor:pointer">⚡ 9897</button><button onclick="showKeys()" style="background:#0e1a2e;border:1px solid #254868;color:#7ca3c8;font:700 9px monospace;padding:4px 9px;border-radius:6px;cursor:pointer">🔑 KEYS</button>';document.body.appendChild(p);}
 function _css(){if($('_acss'))return;var s=document.createElement('style');s.id='_acss';s.textContent='button,[data-panel],[data-p]{cursor:pointer!important}#pa{pointer-events:auto!important}.screen:not(.active){pointer-events:none!important}#cm-apply-fix{background:#00ffc8;color:#000;border:none;border-radius:8px;padding:12px 20px;font:700 13px monospace;cursor:pointer;margin-top:10px;width:100%;display:none}button{-webkit-tap-highlight-color:rgba(0,255,200,.2);touch-action:manipulation}';document.head.appendChild(s);}
