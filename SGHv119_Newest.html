@@ -15528,18 +15528,18 @@ if (lang === 'json') {
     consoleAdd('error', 'JSON parse error: ' + e.message, null, null, null);
   }
 }
-if (lang === 'diff' || lang === 'patch') {
+if (lang === 'diff') {
   var diffLines = code.split('\n');
   var hasHunk = false;
   diffLines.forEach(function(line, idx) {
     if (/^@@\s*-\d+(?:,\d+)?\s+\+\d+(?:,\d+)?\s*@@/.test(line)) hasHunk = true;
-    if (/^(?:\s*$|diff --git |index |--- |\+\+\+ |@@ |\\ No newline at end of file|new file mode |deleted file mode |rename from |rename to |similarity index |Binary files )/.test(line) || /^[ +\-]/.test(line)) {
+    if (/^(?:\s*$|diff --git |index |--- |\+\+\+ |@@ |\\ No newline at end of file|old mode |new mode |new file mode |deleted file mode |copy from |copy to |rename from |rename to |similarity index |dissimilarity index |Binary files |GIT binary patch |literal )/.test(line) || /^[ +\-]/.test(line)) {
       return;
     }
     warnCount++;
     consoleAdd('warn', 'Unexpected diff line prefix', idx + 1, null, null);
   });
-  if ((/^[+-]/m.test(code) || /^@@/m.test(code)) && !hasHunk) {
+  if ((/^[+-](?![+-])/m.test(code) || /^@@/m.test(code)) && !hasHunk) {
     errCount++;
     consoleAdd('error', 'Missing unified diff hunk header', null, null, null);
   }
@@ -15654,7 +15654,7 @@ if (lang === 'html') {
   } catch(e) { frame.srcdoc = '<!DOCTYPE html><html><head>'+'<scr'+'ipt>'+'window.onerror=function(){return true;};'+'var _p=window.parent||window.top||window;'+'window.gi=function(id){return document.getElementById(id)||(_p.document&&_p.document.getElementById(id));};'+'window.toast=function(m,t){if(_p.toast)_p.toast(m,t);};'+'window.loadPanel=function(id){if(_p.loadPanel)_p.loadPanel(id);};'+'window.sg=function(fn){try{fn();}catch(e){if(_p.toast)_p.toast("\u26a0 "+e.message,"err");}};'+'window.sendChat=function(){if(_p.sendChat)_p.sendChat();};'+'window.sgAgentQuery=function(){if(_p.sgAgentQuery)_p.sgAgentQuery();};'+'window.bridgeReconnect=function(){if(_p.bridgeReconnect)_p.bridgeReconnect();};'+'window.sgSetApiKey=function(a,k){if(_p.sgSetApiKey)_p.sgSetApiKey(a,k);};'+'</'+'script>'+'<style>*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#fff;color:#000}</style>'+'</head><body>'
   + ((md_html)||'').replace(/<html[^>]*>/i,'').replace(/<\/html>/i,'').replace(/<head>[\s\S]*?<\/head>/i,'').replace(/<body[^>]*>/i,'').replace(/<\/body>/i,'')
   + '</body></html>'; }
-} else if (lang === 'diff' || lang === 'patch') {
+} else if (lang === 'diff') {
   frame.style.display = 'none';
   txtDiv.style.display = 'block';
   var diffHl = code
@@ -20614,18 +20614,18 @@ if (lang === 'json') {
     consoleAdd('error', 'JSON parse error: ' + e.message, null, null, null);
   }
 }
-if (lang === 'diff' || lang === 'patch') {
+if (lang === 'diff') {
   var diffLines = code.split('\n');
   var hasHunk = false;
   diffLines.forEach(function(line, idx) {
     if (/^@@\s*-\d+(?:,\d+)?\s+\+\d+(?:,\d+)?\s*@@/.test(line)) hasHunk = true;
-    if (/^(?:\s*$|diff --git |index |--- |\+\+\+ |@@ |\\ No newline at end of file|new file mode |deleted file mode |rename from |rename to |similarity index |Binary files )/.test(line) || /^[ +\-]/.test(line)) {
+    if (/^(?:\s*$|diff --git |index |--- |\+\+\+ |@@ |\\ No newline at end of file|old mode |new mode |new file mode |deleted file mode |copy from |copy to |rename from |rename to |similarity index |dissimilarity index |Binary files |GIT binary patch |literal )/.test(line) || /^[ +\-]/.test(line)) {
       return;
     }
     warnCount++;
     consoleAdd('warn', 'Unexpected diff line prefix', idx + 1, null, null);
   });
-  if ((/^[+-]/m.test(code) || /^@@/m.test(code)) && !hasHunk) {
+  if ((/^[+-](?![+-])/m.test(code) || /^@@/m.test(code)) && !hasHunk) {
     errCount++;
     consoleAdd('error', 'Missing unified diff hunk header', null, null, null);
   }
@@ -20740,7 +20740,7 @@ if (lang === 'html') {
   } catch(e) { frame.srcdoc = '<!DOCTYPE html><html><head>'+'<scr'+'ipt>'+'window.onerror=function(){return true;};'+'var _p=window.parent||window.top||window;'+'window.gi=function(id){return document.getElementById(id)||(_p.document&&_p.document.getElementById(id));};'+'window.toast=function(m,t){if(_p.toast)_p.toast(m,t);};'+'window.loadPanel=function(id){if(_p.loadPanel)_p.loadPanel(id);};'+'window.sg=function(fn){try{fn();}catch(e){if(_p.toast)_p.toast("\u26a0 "+e.message,"err");}};'+'window.sendChat=function(){if(_p.sendChat)_p.sendChat();};'+'window.sgAgentQuery=function(){if(_p.sgAgentQuery)_p.sgAgentQuery();};'+'window.bridgeReconnect=function(){if(_p.bridgeReconnect)_p.bridgeReconnect();};'+'window.sgSetApiKey=function(a,k){if(_p.sgSetApiKey)_p.sgSetApiKey(a,k);};'+'</'+'script>'+'<style>*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#fff;color:#000}</style>'+'</head><body>'
   + ((md_html)||'').replace(/<html[^>]*>/i,'').replace(/<\/html>/i,'').replace(/<head>[\s\S]*?<\/head>/i,'').replace(/<body[^>]*>/i,'').replace(/<\/body>/i,'')
   + '</body></html>'; }
-} else if (lang === 'diff' || lang === 'patch') {
+} else if (lang === 'diff') {
   frame.style.display = 'none';
   txtDiv.style.display = 'block';
   var diffHl = code

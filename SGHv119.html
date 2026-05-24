@@ -15887,16 +15887,16 @@ if (lang === 'json') {
     consoleAdd('error', 'JSON parse error: ' + e.message, null, null, null);
   }
 }
-if (lang === 'diff' || lang === 'patch') {
+if (lang === 'diff') {
   var diffLines = code.split('\n');
   var hasHunk = false;
   diffLines.forEach(function(line, idx) {
     if (/^@@\s*-\d+(?:,\d+)?\s+\+\d+(?:,\d+)?\s*@@/.test(line)) hasHunk = true;
-    if (/^(?:\s*$|diff --git |index |--- |\+\+\+ |@@ |\\ No newline at end of file|new file mode |deleted file mode |rename from |rename to |similarity index |Binary files )/.test(line) || /^[ +\-]/.test(line)) return;
+    if (/^(?:\s*$|diff --git |index |--- |\+\+\+ |@@ |\\ No newline at end of file|old mode |new mode |new file mode |deleted file mode |copy from |copy to |rename from |rename to |similarity index |dissimilarity index |Binary files |GIT binary patch |literal )/.test(line) || /^[ +\-]/.test(line)) return;
     warnCount++;
     consoleAdd('warn', 'Unexpected diff line prefix', idx + 1, null, null);
   });
-  if ((/^[+-]/m.test(code) || /^@@/m.test(code)) && !hasHunk) {
+  if ((/^[+-](?![+-])/m.test(code) || /^@@/m.test(code)) && !hasHunk) {
     errCount++;
     consoleAdd('error', 'Missing unified diff hunk header', null, null, null);
   }
@@ -16008,7 +16008,7 @@ if (lang === 'html') {
   } catch(e) {
     frame.srcdoc = md_html;
   }
-} else if (lang === 'diff' || lang === 'patch') {
+} else if (lang === 'diff') {
   frame.style.display = 'none';
   txtDiv.style.display = 'block';
   var diffHl = code
