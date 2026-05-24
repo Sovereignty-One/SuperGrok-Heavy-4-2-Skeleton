@@ -11267,6 +11267,7 @@ kc('ON', 'Live Preview', '#00e676') +
       '<option value="bash">Bash / Shell</option>' +
       '<option value="sql">SQL</option>' +
       '<option value="markdown">Markdown</option>' +
+      '<option value="diff">Unified Diff</option>' +
       '<option value="swift">Swift</option>' +
       '<option value="kotlin">Kotlin</option>' +
       '<option value="rust">Rust</option>' +
@@ -11393,8 +11394,9 @@ kc('ON', 'Live Preview', '#00e676') +
 '<div class="card" id="cm-ai-panel" style="display:none;border-color:var(--volt)22">' +
 '<div class="card-title">\ud83e\udd16 AI Analysis</div>' +
 '<div id="cm-ai-output" style="font-family:var(--mono);font-size:10px;line-height:1.7;white-space:pre-wrap;color:var(--t1)"></div>' +
+'<div id="cm-ai-diff" style="display:none;margin-top:8px;padding:8px;border:1px solid var(--wire);border-radius:var(--r);background:var(--bg1);font-family:var(--mono);font-size:9px;line-height:1.6;white-space:pre-wrap;max-height:260px;overflow:auto"></div>' +
 '<div style="display:flex;gap:8px;margin-top:8px">' +
-'<button class="btn btn-p" id="cm-apply-fix" style="display:none;font-size:9px">\u2714 Apply Fix</button>' +
+'<button class="btn btn-p" id="cm-apply-fix" style="display:none;font-size:9px">\u2714 Apply Local Fix</button>' +
 '<button class="btn btn-s" id="cm-ai-close" style="font-size:9px">\u2715 Close</button>' +
 '</div>' +
 '</div>' +
@@ -11403,7 +11405,7 @@ kc('ON', 'Live Preview', '#00e676') +
 '<div class="card">' +
 '<div class="card-title">\ud83d\udcc1 Files</div>' +
 '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
-'<input type="file" id="cm-file-input" accept=".html,.css,.js,.json,.py,.sh,.sql,.md,.txt,.jsx,.ts,.tsx" style="font-family:var(--mono);font-size:10px;color:var(--t1)">' +
+'<input type="file" id="cm-file-input" accept=".html,.css,.js,.json,.py,.sh,.sql,.md,.diff,.patch,.txt,.jsx,.ts,.tsx" style="font-family:var(--mono);font-size:10px;color:var(--t1)">' +
 '<button class="btn btn-s" id="cm-save-file" style="font-size:9px">\u2193 Save File</button>' +
 '<button class="btn btn-s" id="cm-new-file" style="font-size:9px">+ New</button>' +
 '</div>' +
@@ -15785,6 +15787,50 @@ var ed = document.getElementById('cm-editor');
 if (ed) { ed.value = c; CM.runLint(); CM.updatePreview(); CM.updateLines(); }
 }
 
+function applyLocalFixes(source, fixes) {
+var code = source;
+(fixes || []).forEach(function(f) {
+  if (!f || typeof f.fix !== 'function') return;
+  var next = f.fix(code);
+  if (typeof next === 'string') code = next;
+});
+return code;
+}
+
+function makeUnifiedDiff(before, after) {
+var a = String(before || '').split('\n');
+var b = String(after || '').split('\n');
+var out = ['--- codemaster://before', '+++ codemaster://after'];
+var max = Math.max(a.length, b.length);
+var changed = false;
+for (var i = 0; i < max; i++) {
+  var oldLine = a[i];
+  var newLine = b[i];
+  if (oldLine === newLine) {
+    if (oldLine !== undefined) out.push(' ' + oldLine);
+    continue;
+  }
+  changed = true;
+  if (oldLine !== undefined) out.push('-' + oldLine);
+  if (newLine !== undefined) out.push('+' + newLine);
+}
+if (!changed) out.push(' No local changes');
+return out.join('\n');
+}
+
+function renderDiffPreview(target, diffText) {
+if (!target) return;
+target.innerHTML = '';
+String(diffText || '').split('\n').forEach(function(line) {
+  var row = document.createElement('div');
+  row.textContent = line;
+  row.style.whiteSpace = 'pre-wrap';
+  row.style.wordBreak = 'break-word';
+  row.style.color = /^\+/.test(line) ? '#4ec9b0' : /^-/.test(line) ? '#f44747' : /^@@/.test(line) ? '#4fc1ff' : /^(diff --git |index |--- |\+\+\+ )/.test(line) ? '#c586c0' : /^\\ No newline at end of file$/.test(line) ? '#ffb86b' : 'var(--t0)';
+  target.appendChild(row);
+});
+}
+
 /* ── CONSOLE HELPERS ──────────────────────────── */
 function consoleAdd(type, msg, lineNo, fixFn, fixMsg) {
 var con = document.getElementById('cm-console');
@@ -15841,6 +15887,20 @@ if (lang === 'json') {
     consoleAdd('error', 'JSON parse error: ' + e.message, null, null, null);
   }
 }
+if (lang === 'diff' || lang === 'patch') {
+  var diffLines = code.split('\n');
+  var hasHunk = false;
+  diffLines.forEach(function(line, idx) {
+    if (/^@@\s*-\d+(?:,\d+)?\s+\+\d+(?:,\d+)?\s*@@/.test(line)) hasHunk = true;
+    if (/^(?:\s*$|diff --git |index |--- |\+\+\+ |@@ |\\ No newline at end of file|new file mode |deleted file mode |rename from |rename to |similarity index |Binary files )/.test(line) || /^[ +\-]/.test(line)) return;
+    warnCount++;
+    consoleAdd('warn', 'Unexpected diff line prefix', idx + 1, null, null);
+  });
+  if ((/^[+-]/m.test(code) || /^@@/m.test(code)) && !hasHunk) {
+    errCount++;
+    consoleAdd('error', 'Missing unified diff hunk header', null, null, null);
+  }
+}
 
 /* Run error rules */
 (rules.errors || []).forEach(function(rule) {
@@ -15852,7 +15912,7 @@ if (lang === 'json') {
     errCount++;
     var msg = typeof rule.msg === 'function' ? rule.msg(m) : rule.msg;
     var lineNo = code.slice(0, m.index).split('\n').length;
-    var fixFn = rule.fix ? rule.fix.bind(null) : null;
+    var fixFn = rule.fix ? (function(fix, match){ return function(source){ return fix(source, match); }; })(rule.fix, m) : null;
     consoleAdd('error', msg, lineNo, fixFn, rule.fixMsg);
     fixes.push({fix: fixFn, msg: msg});
     if (re.lastIndex === m.index) { re.lastIndex++; }
@@ -15869,7 +15929,7 @@ if (lang === 'json') {
     warnCount++;
     var msg = typeof rule.msg === 'function' ? rule.msg(m) : rule.msg;
     var lineNo = code.slice(0, m.index).split('\n').length;
-    var fixFn = rule.fix ? rule.fix.bind(null) : null;
+    var fixFn = rule.fix ? (function(fix, match){ return function(source){ return fix(source, match); }; })(rule.fix, m) : null;
     consoleAdd('warn', msg, lineNo, fixFn, rule.fixMsg);
     if (re.lastIndex === m.index) { re.lastIndex++; }
   }
@@ -15950,6 +16010,36 @@ if (lang === 'html') {
   } catch(e) { frame.srcdoc = '<!DOCTYPE html><html><head>'+'<scr'+'ipt>'+'window.onerror=function(){return true;};'+'var _p=window.parent||window.top||window;'+'window.gi=function(id){return document.getElementById(id)||(_p.document&&_p.document.getElementById(id));};'+'window.toast=function(m,t){if(_p.toast)_p.toast(m,t);};'+'window.loadPanel=function(id){if(_p.loadPanel)_p.loadPanel(id);};'+'window.sg=function(fn){try{fn();}catch(e){if(_p.toast)_p.toast("\u26a0 "+e.message,"err");}};'+'window.sendChat=function(){if(_p.sendChat)_p.sendChat();};'+'window.sgAgentQuery=function(){if(_p.sgAgentQuery)_p.sgAgentQuery();};'+'window.bridgeReconnect=function(){if(_p.bridgeReconnect)_p.bridgeReconnect();};'+'window.sgSetApiKey=function(a,k){if(_p.sgSetApiKey)_p.sgSetApiKey(a,k);};'+'</'+'script>'+'<style>*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#fff;color:#000}</style>'+'</head><body>'
   + ((md_html)||'').replace(/<html[^>]*>/i,'').replace(/<\/html>/i,'').replace(/<head>[\s\S]*?<\/head>/i,'').replace(/<body[^>]*>/i,'').replace(/<\/body>/i,'')
   + '</body></html>'; }
+} else if (lang === 'diff' || lang === 'patch') {
+  frame.style.display = 'none';
+  txtDiv.style.display = 'block';
+  var diffHl = code
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^(diff --git .*)$/gm,'<span style="color:#569cd6">$1</span>')
+    .replace(/^(index .*)$/gm,'<span style="color:#b5cea8">$1</span>')
+    .replace(/^(--- .*)$/gm,'<span style="color:#c586c0">$1</span>')
+    .replace(/^(\+\+\+ .*)$/gm,'<span style="color:#c586c0">$1</span>')
+    .replace(/^(@@ .* @@)$/gm,'<span style="color:#4fc1ff;font-weight:700">$1</span>')
+    .replace(/^(\\ No newline at end of file)$/gm,'<span style="color:#ffb86b">$1</span>')
+    .replace(/^(\+.*)$/gm,'<span style="color:#4ec9b0">$1</span>')
+    .replace(/^(\-.*)$/gm,'<span style="color:#f44747">$1</span>')
+    .replace(/^( .*?)$/gm,'<span style="color:var(--t0)">$1</span>');
+  txtDiv.innerHTML = diffHl;
+} else if (lang === 'diff' || lang === 'patch') {
+  frame.style.display = 'none';
+  txtDiv.style.display = 'block';
+  var diffHl = code
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^(diff --git .*)$/gm,'<span style="color:#569cd6">$1</span>')
+    .replace(/^(index .*)$/gm,'<span style="color:#b5cea8">$1</span>')
+    .replace(/^(--- .*)$/gm,'<span style="color:#c586c0">$1</span>')
+    .replace(/^(\+\+\+ .*)$/gm,'<span style="color:#c586c0">$1</span>')
+    .replace(/^(@@ .* @@)$/gm,'<span style="color:#4fc1ff;font-weight:700">$1</span>')
+    .replace(/^(\\ No newline at end of file)$/gm,'<span style="color:#ffb86b">$1</span>')
+    .replace(/^(\+.*)$/gm,'<span style="color:#4ec9b0">$1</span>')
+    .replace(/^(\-.*)$/gm,'<span style="color:#f44747">$1</span>')
+    .replace(/^( .*?)$/gm,'<span style="color:var(--t0)">$1</span>');
+  txtDiv.innerHTML = diffHl;
 } else {
   /* Non-renderable: show as syntax-highlighted text */
   frame.style.display = 'none';
@@ -15962,74 +16052,6 @@ if (lang === 'html') {
     .replace(/\b(def|class|import|from|return|if|else|elif|for|while|try|except|with|as|and|or|not|in|is|None|True|False|var|let|const|function|=>|async|await|SELECT|FROM|WHERE|INSERT|UPDATE|DELETE|CREATE|DROP|TABLE|JOIN|ON|AND|OR|NULL)\b/g,'<span style="color:#569cd6">$1</span>')
     .replace(/\b(\d+\.?\d*)\b/g,'<span style="color:#b5cea8">$1</span>');
   txtDiv.innerHTML = hl;
-}
-
-}
-
-/* ── AI FIX ───────────────────────────────────── */
-function aiAnalyze() {
-var code = getCode();
-var lang = getLang();
-if (!code.trim()) { window.toast && window.toast('Write some code first','err'); return; }
-var panel = document.getElementById('cm-ai-panel');
-var output = document.getElementById('cm-ai-output');
-var applyBtn = document.getElementById('cm-apply-fix');
-if (panel) panel.style.display = 'block';
-if (output) output.textContent = '\u23f3 Analyzing ' + lang + ' code via bridge...';
-if (applyBtn) applyBtn.style.display = 'none';
-panel && panel.scrollIntoView({behavior:'smooth'});
-
-/* Use whichever bridge WebSocket is live: BRIDGE.ws (9897), PiperTTS.ws (9897), BRIDGE_NODE.ws (9899), or window.ws */
-var _bws = null;
-if (window.BRIDGE && window.BRIDGE.ws && window.BRIDGE.ws.readyState === 1) _bws = window.BRIDGE.ws;
-else if (typeof PiperTTS !== 'undefined' && PiperTTS.ws && PiperTTS.ws.readyState === 1) _bws = PiperTTS.ws;
-else if (typeof BRIDGE_NODE !== 'undefined' && BRIDGE_NODE.ws && BRIDGE_NODE.ws.readyState === 1) _bws = BRIDGE_NODE.ws;
-else if (window.ws && window.ws.readyState === 1) _bws = window.ws;
-if (_bws) {
-  try {
-    var _rid = 'cm_' + Date.now();
-    _bws.send(JSON.stringify({
-      type: 'ai_code_review',
-      request_id: _rid,
-      lang: lang,
-      code: code.slice(0, 4000),
-      prompt: 'Review this ' + lang + ' code. List errors with line numbers. For each error provide exact fix code. Be concise and precise.'
-    }));
-    /* sg:bridgeMsg is dispatched by all WS message handlers */
-    var _handler = function(ev) {
-      var d = ev && ev.detail;
-      if (!d || d.type !== 'ai_code_review_result') return;
-      document.removeEventListener('sg:bridgeMsg', _handler);
-      var out2 = document.getElementById('cm-ai-output');
-      var btn2 = document.getElementById('cm-apply-fix');
-      if (out2) out2.textContent = d.review || d.text || 'No response';
-      if (d.fixed_code && btn2) {
-        btn2.style.display = 'block';
-        btn2._fixFn = function() { setCode(d.fixed_code); };
-      }
-    };
-    document.addEventListener('sg:bridgeMsg', _handler);
-    setTimeout(function() { document.removeEventListener('sg:bridgeMsg', _handler); }, 30000);
-    return;
-  } catch(e) {}
-}
-/* Offline fallback: use local lint results as AI output */
-var results = runLint();
-if (output) {
-  output.textContent = '# CodeMaster Analysis (Offline)\n# Language: ' + lang.toUpperCase() + '\n\n' +
-    'Errors: ' + results.errCount + '\nWarnings: ' + results.warnCount + '\n\n' +
-    (results.fixes.filter(function(f){ return f.fix; }).map(function(f){ return '✓ Auto-fixable: ' + f.msg; }).join('\n') || 'No auto-fixes available.\n') +
-    '\n\n# Connect bridge (localhost:9897) for full AI code review.';
-  if (results.fixes.some(function(f){ return f.fix; })) {
-    if (applyBtn) {
-      applyBtn.style.display = 'block';
-      applyBtn._fixFn = function() {
-        var c = getCode();
-        results.fixes.forEach(function(f){ if(f.fix) c = f.fix(c) || c; });
-        setCode(c);
-      };
-    }
-  }
 }
 
 }
@@ -16697,7 +16719,7 @@ return;
 if (t.id === 'cm-save-file') {
 var blob = new Blob([getCode()], {type:'text/plain'});
 var lang = getLang();
-var ext = {html:'html',css:'css',js:'js',json:'json',python:'py',bash:'sh',sql:'sql',markdown:'md'}[lang]||'txt';
+var ext = {html:'html',css:'css',js:'js',json:'json',python:'py',bash:'sh',sql:'sql',markdown:'md',diff:'diff'}[lang]||'txt';
 var a = document.createElement('a');
 a.href = URL.createObjectURL(blob);
 a.download = 'code*' + Date.now() + '.' + ext;
@@ -16724,7 +16746,7 @@ document.addEventListener('change', function(e) {
 if (e.target.id === 'cm-file-input') {
 var file = e.target.files[0]; if (!file) return;
 var ext = file.name.split('.').pop().toLowerCase();
-var langMap = {html:'html',css:'css',js:'js',json:'json',py:'python',sh:'bash',sql:'sql',md:'markdown',jsx:'js',ts:'js',tsx:'js'};
+var langMap = {html:'html',css:'css',js:'js',json:'json',py:'python',sh:'bash',sql:'sql',md:'markdown',diff:'diff',patch:'diff',jsx:'js',ts:'js',tsx:'js'};
 var sel = document.getElementById('cm-lang');
 if (sel && langMap[ext]) sel.value = langMap[ext];
 var r = new FileReader();
@@ -20789,6 +20811,10 @@ warnings: [
 { re: /px\s*;/gi, msg: null },
 ]
 },
+diff: {
+errors: [],
+warnings: []
+},
 python: {
 errors: [
 { re: /\bprint\s+[^(]/g, msg: 'Python 2 print statement — use print()', fix: null, fixMsg: null },
@@ -21005,6 +21031,21 @@ if (lang === 'html') {
   } catch(e) { frame.srcdoc = '<!DOCTYPE html><html><head>'+'<scr'+'ipt>'+'window.onerror=function(){return true;};'+'var _p=window.parent||window.top||window;'+'window.gi=function(id){return document.getElementById(id)||(_p.document&&_p.document.getElementById(id));};'+'window.toast=function(m,t){if(_p.toast)_p.toast(m,t);};'+'window.loadPanel=function(id){if(_p.loadPanel)_p.loadPanel(id);};'+'window.sg=function(fn){try{fn();}catch(e){if(_p.toast)_p.toast("\u26a0 "+e.message,"err");}};'+'window.sendChat=function(){if(_p.sendChat)_p.sendChat();};'+'window.sgAgentQuery=function(){if(_p.sgAgentQuery)_p.sgAgentQuery();};'+'window.bridgeReconnect=function(){if(_p.bridgeReconnect)_p.bridgeReconnect();};'+'window.sgSetApiKey=function(a,k){if(_p.sgSetApiKey)_p.sgSetApiKey(a,k);};'+'</'+'script>'+'<style>*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#fff;color:#000}</style>'+'</head><body>'
   + ((md_html)||'').replace(/<html[^>]*>/i,'').replace(/<\/html>/i,'').replace(/<head>[\s\S]*?<\/head>/i,'').replace(/<body[^>]*>/i,'').replace(/<\/body>/i,'')
   + '</body></html>'; }
+} else if (lang === 'diff' || lang === 'patch') {
+  frame.style.display = 'none';
+  txtDiv.style.display = 'block';
+  var diffHl = code
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^(diff --git .*)$/gm,'<span style="color:#569cd6">$1</span>')
+    .replace(/^(index .*)$/gm,'<span style="color:#b5cea8">$1</span>')
+    .replace(/^(--- .*)$/gm,'<span style="color:#c586c0">$1</span>')
+    .replace(/^(\+\+\+ .*)$/gm,'<span style="color:#c586c0">$1</span>')
+    .replace(/^(@@ .* @@)$/gm,'<span style="color:#4fc1ff;font-weight:700">$1</span>')
+    .replace(/^(\\ No newline at end of file)$/gm,'<span style="color:#ffb86b">$1</span>')
+    .replace(/^(\+.*)$/gm,'<span style="color:#4ec9b0">$1</span>')
+    .replace(/^(\-.*)$/gm,'<span style="color:#f44747">$1</span>')
+    .replace(/^( .*?)$/gm,'<span style="color:var(--t0)">$1</span>');
+  txtDiv.innerHTML = diffHl;
 } else {
   /* Non-renderable: show as syntax-highlighted text */
   frame.style.display = 'none';
@@ -21028,65 +21069,33 @@ var lang = getLang();
 if (!code.trim()) { window.toast && window.toast('Write some code first','err'); return; }
 var panel = document.getElementById('cm-ai-panel');
 var output = document.getElementById('cm-ai-output');
+var diffEl = document.getElementById('cm-ai-diff');
 var applyBtn = document.getElementById('cm-apply-fix');
 if (panel) panel.style.display = 'block';
-if (output) output.textContent = '\u23f3 Analyzing ' + lang + ' code via bridge...';
+if (output) output.textContent = 'Local CodeMaster analysis · no network calls';
 if (applyBtn) applyBtn.style.display = 'none';
+if (diffEl) { diffEl.style.display = 'none'; diffEl.innerHTML = ''; }
 panel && panel.scrollIntoView({behavior:'smooth'});
 
-/* Use whichever bridge WebSocket is live: BRIDGE.ws (9897), PiperTTS.ws (9897), BRIDGE_NODE.ws (9899), or window.ws */
-var _bws = null;
-if (window.BRIDGE && window.BRIDGE.ws && window.BRIDGE.ws.readyState === 1) _bws = window.BRIDGE.ws;
-else if (typeof PiperTTS !== 'undefined' && PiperTTS.ws && PiperTTS.ws.readyState === 1) _bws = PiperTTS.ws;
-else if (typeof BRIDGE_NODE !== 'undefined' && BRIDGE_NODE.ws && BRIDGE_NODE.ws.readyState === 1) _bws = BRIDGE_NODE.ws;
-else if (window.ws && window.ws.readyState === 1) _bws = window.ws;
-if (_bws) {
-  try {
-    var _rid = 'cm_' + Date.now();
-    _bws.send(JSON.stringify({
-      type: 'ai_code_review',
-      request_id: _rid,
-      lang: lang,
-      code: code.slice(0, 4000),
-      prompt: 'Review this ' + lang + ' code. List errors with line numbers. For each error provide exact fix code. Be concise and precise.'
-    }));
-    /* sg:bridgeMsg is dispatched by all WS message handlers */
-    var _handler = function(ev) {
-      var d = ev && ev.detail;
-      if (!d || d.type !== 'ai_code_review_result') return;
-      document.removeEventListener('sg:bridgeMsg', _handler);
-      var out2 = document.getElementById('cm-ai-output');
-      var btn2 = document.getElementById('cm-apply-fix');
-      if (out2) out2.textContent = d.review || d.text || 'No response';
-      if (d.fixed_code && btn2) {
-        btn2.style.display = 'block';
-        btn2._fixFn = function() { setCode(d.fixed_code); };
-      }
-    };
-    document.addEventListener('sg:bridgeMsg', _handler);
-    setTimeout(function() { document.removeEventListener('sg:bridgeMsg', _handler); }, 30000);
-    return;
-  } catch(e) {}
-}
-/* Offline fallback: use local lint results as AI output */
 var results = runLint();
+var fixed = applyLocalFixes(code, results.fixes);
+var diff = makeUnifiedDiff(code, fixed);
 if (output) {
   output.textContent = '# CodeMaster Analysis (Offline)\n# Language: ' + lang.toUpperCase() + '\n\n' +
     'Errors: ' + results.errCount + '\nWarnings: ' + results.warnCount + '\n\n' +
-    (results.fixes.filter(function(f){ return f.fix; }).map(function(f){ return '✓ Auto-fixable: ' + f.msg; }).join('\n') || 'No auto-fixes available.\n') +
-    '\n\n# Connect bridge (localhost:9897) for full AI code review.';
-  if (results.fixes.some(function(f){ return f.fix; })) {
-    if (applyBtn) {
-      applyBtn.style.display = 'block';
-      applyBtn._fixFn = function() {
-        var c = getCode();
-        results.fixes.forEach(function(f){ if(f.fix) c = f.fix(c) || c; });
-        setCode(c);
-      };
-    }
-  }
+    (results.fixes.filter(function(f){ return f.fix; }).map(function(f){ return '✓ Auto-fixable: ' + f.msg; }).join('\n') || 'No auto-fixes available.');
 }
-
+if (diffEl) {
+  diffEl.style.display = 'block';
+  renderDiffPreview(diffEl, diff);
+}
+if (fixed !== code && applyBtn) {
+  applyBtn.style.display = 'block';
+  applyBtn._fixFn = function() { setCode(fixed); };
+} else if (applyBtn) {
+  applyBtn.style.display = 'none';
+  applyBtn._fixFn = null;
+}
 }
 
 /* Bridge compat: re-dispatch PiperTTS ai_code_review_result as sg:bridgeMsg */
@@ -21177,7 +21186,7 @@ return;
 if (t.id === 'cm-save-file') {
 var blob = new Blob([getCode()], {type:'text/plain'});
 var lang = getLang();
-var ext = {html:'html',css:'css',js:'js',json:'json',python:'py',bash:'sh',sql:'sql',markdown:'md'}[lang]||'txt';
+var ext = {html:'html',css:'css',js:'js',json:'json',python:'py',bash:'sh',sql:'sql',markdown:'md',diff:'diff'}[lang]||'txt';
 var a = document.createElement('a');
 a.href = URL.createObjectURL(blob);
 a.download = 'code*' + Date.now() + '.' + ext;
@@ -21204,7 +21213,7 @@ document.addEventListener('change', function(e) {
 if (e.target.id === 'cm-file-input') {
 var file = e.target.files[0]; if (!file) return;
 var ext = file.name.split('.').pop().toLowerCase();
-var langMap = {html:'html',css:'css',js:'js',json:'json',py:'python',sh:'bash',sql:'sql',md:'markdown',jsx:'js',ts:'js',tsx:'js'};
+var langMap = {html:'html',css:'css',js:'js',json:'json',py:'python',sh:'bash',sql:'sql',md:'markdown',diff:'diff',patch:'diff',jsx:'js',ts:'js',tsx:'js'};
 var sel = document.getElementById('cm-lang');
 if (sel && langMap[ext]) sel.value = langMap[ext];
 var r = new FileReader();
