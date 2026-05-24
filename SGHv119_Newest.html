@@ -26693,7 +26693,7 @@ function _sgCodeMasterDiff(before, after){
 
 function _sgRenderCodeMasterDiff(target, diffText){
   if (!target) return;
-  target.innerHTML = '';
+  while (target.firstChild) target.removeChild(target.firstChild);
   String(diffText || '').split('\n').forEach(function(line) {
     var row = document.createElement('div');
     row.textContent = line;
@@ -26844,7 +26844,7 @@ function _ai(){
       _sgRenderCodeMasterDiff(diff, _sgCodeMasterDiff(source, next));
     } else {
       diff.style.display='none';
-      diff.innerHTML='';
+      while (diff.firstChild) diff.removeChild(diff.firstChild);
     }
   }
 
