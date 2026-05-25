@@ -5,7 +5,7 @@
 **Private Sovereign AI Research and Development Platform**  
 **Core Model:** Super Grok Heavy 4.2  
 (xAI) – Locked, Sealed, Sovereign  
-**Last Updated:** April 23, 2026
+**Last Updated:** May 25, 2026
 
 ## 📋 Overview
 
@@ -42,6 +42,8 @@ sh start-dashboard.sh
 # 4. Open Safari → http://127.0.0.1:9897
 ```
 
+If you want the browser dashboard instead of the standalone bridge, run `node server_9898.js` and open `http://127.0.0.1:9898`.
+
 ### iSH First-Time Setup
 
 ```sh
@@ -55,7 +57,7 @@ cd ~/SuperGrok-Heavy-4-2-Skeleton
 sh start-dashboard.sh
 ```
 
-### API Routes (bridge.py)
+### API Routes (python3_bridge.py)
 
 | Endpoint | Method | Description |
 |---|---|---|
@@ -421,55 +423,36 @@ docker-compose up -d
 
 # Access the services
 # Python bridge (standalone):  http://localhost:9897
-# Node.js bridge (Docker):      http://localhost:9899
-# Backend API (via bridge):     http://localhost:9899/api/v1
-# WebSocket (Node bridge):      ws://localhost:9899/ws/alerts
+# KODER dashboard (browser UI):  http://localhost:9898
+# Node.js unified server:        http://localhost:9899
+# Backend API (via relay):       http://localhost:9899/api/v1
+# WebSocket (Node server):       ws://localhost:9899/ws/alerts
 # Keycloak admin console:       http://localhost:8080/admin/
 ```
 
 ### Option 2: Manual Installation
 
-#### Backend Setup
+#### Standalone bridge
 ```bash
-cd Sovereignty-AI-Studio-main/backend
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run database migrations
-alembic upgrade head
-
-# Start the backend server (internal - will be proxied via node-bridge)
-uvicorn app.main:app --reload --host 127.0.0.1 --port 9898
+sh start-dashboard.sh
 ```
 
-#### Frontend Setup
+#### Dashboard server
 ```bash
-cd Sovereignty-AI-Studio-main/frontend
+node server_9898.js
+```
 
-# Install dependencies
+#### Unified server
+```bash
+node Unified_Server.js
+```
+
+#### Enterprise frontend
+```bash
+cd supergrok-enterprise
+
 npm install
-
-# Start the development server
-npm start
-
-# Build for production
-npm run build
-```
-
-#### Core System Setup
-```bash
-cd Sovereignty-AI-Studio-main
-
-# Install core dependencies
-pip install -r requirements.txt
-
-# Run the main system
-python main.py
+npm run dev
 ```
 
 ## 🔧 Configuration
@@ -479,13 +462,15 @@ python main.py
 | Service | Port | Exposure | Notes |
 |---|---|---|---|
 | **Python bridge** (`python3_bridge.py`) | 9897 | External | Primary server — iSH / macOS / Linux |
-| **Node.js bridge** (`node-bridge`) | 9899 | External | Docker-based Node bridge |
+| **KODER frontend** (`server_9898.js`) | 9898 | External | Dashboard / browser UI |
+| **Node.js unified server** (`Unified_Server.js`) | 9899 | External | REST proxy / relay |
 | **Keycloak** (SSO) | 8080 (HTTP) / 8443 (HTTPS) | External | Admin console at `/admin/` |
-| **FastAPI backend** | 9898 | Internal only | Docker network only |
+| **FastAPI backend** | internal only | Internal only | Docker network only |
 | **Redis** | 6379 | Internal only | Bound to 127.0.0.1, protected mode |
 | **PostgreSQL** | 5432 | Internal only | Docker network only |
 
 - **Python bridge entry point**: `http://127.0.0.1:9897` / `ws://127.0.0.1:9897`
+- **Dashboard entry point**: `http://127.0.0.1:9898` / `ws://127.0.0.1:9898`
 - **Node.js bridge entry point**: `http://127.0.0.1:9899` / `ws://127.0.0.1:9899`
 - **Keycloak admin**: `http://localhost:8080/admin/`
 
@@ -496,7 +481,7 @@ See [PORT_ARCHITECTURE.md](PORT_ARCHITECTURE.md) for full details.
 ### FullDashboard Integration
 
 The **FullDashboard.html** is fully integrated and accessible at:
-- http://127.0.0.1:9897/
+- http://127.0.0.1:9898/
 - http://127.0.0.1:9899/dashboard
 
 See [DASHBOARD_SETUP.md](DASHBOARD_SETUP.md) for complete setup instructions.
