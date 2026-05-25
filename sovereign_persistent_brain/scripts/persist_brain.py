@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ._brain_store import load_brain, save_brain, signer
+from ._brain_store import load_brain, save_brain
 
 
 def persist_brain(state: dict[str, Any] | None, new_logs: list[dict[str, Any]] | None = None) -> dict:
