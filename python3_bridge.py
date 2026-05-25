@@ -36,14 +36,14 @@ NODE_PORT     = 9899   # Node.js external backend (Unified_Server.js — REST pr
 HOST = "127.0.0.1"
 MAX_CODE_REVIEW_LENGTH = 4000  # max chars of user code sent to AI for review
 # Max completion tokens requested from AI providers.
-def _parse_max_tokens(value: str, default: int = 65536) -> int:
+def _parse_max_tokens(value: str, default: int = 131072) -> int:
     try:
         return max(1, int(value))
     except (TypeError, ValueError):
         return default
 
 
-AI_MAX_TOKENS = _parse_max_tokens(os.environ.get("SG_MAX_TOKENS", "65536"))
+AI_MAX_TOKENS = _parse_max_tokens(os.environ.get("SG_MAX_TOKENS", "131072"))
 
 
 def _requested_max_tokens(value, default: int = AI_MAX_TOKENS) -> int:
