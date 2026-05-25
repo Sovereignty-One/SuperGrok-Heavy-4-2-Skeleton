@@ -56,7 +56,8 @@ def load_signing_key() -> bytes:
                 raw = bytes.fromhex(_SIGNING_KEY_FILE.read_text("utf-8").strip())
                 if raw:
                     return raw
-            except Exception:
+            except (ValueError, OSError):
+                # Invalid/corrupt key file or unreadable file; fall back to generating a new key below.
                 pass
         key = secrets.token_bytes(32)
         _SIGNING_KEY_FILE.write_text(key.hex(), "utf-8")
