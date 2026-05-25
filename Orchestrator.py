@@ -19,7 +19,7 @@ class SystemOrchestrator:
 
         # Initialize logger
         self.logger = ImmutableLogger(
-            log_file=self.config.get("scarfile", "scar_chain.log")
+            logfile=self.config.get("scarfile", "scar_chain.log")
         )
 
         # Assign a unique system ID
