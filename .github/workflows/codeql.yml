@@ -1,0 +1,88 @@
+name: "CodeQL Advanced"
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '39 1 * * 4'
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - language: actions
+          build-mode: none
+        - language: javascript-typescript
+          build-mode: none
+        - language: python
+          build-mode: none
+        - language: swift
+          build-mode: autobuild
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Detect default Code Scanning setup state
+      id: default-setup
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { owner, repo } = context.repo;
+          try {
+            const response = await github.request("GET /repos/{owner}/{repo}/code-scanning/default-setup", {
+              owner,
+              repo,
+            });
+            const state = String(response.data?.state || "").toLowerCase();
+            const enabled = state === "configured";
+            core.setOutput("enabled", enabled ? "true" : "false");
+            core.info(`Code scanning default setup state: ${response.data?.state || "unknown"}`);
+          } catch (error) {
+            core.warning(`Could not read code scanning default setup state: ${error.message}. Assuming default setup is enabled and skipping advanced CodeQL to avoid SARIF upload conflicts.`);
+            core.setOutput("enabled", "true");
+          }
+
+    - name: Skip advanced CodeQL because default setup is enabled
+      if: steps.default-setup.outputs.enabled == 'true'
+      shell: bash
+      run: |
+        echo "::warning::Default code scanning setup is enabled for this repository."
+        echo "::warning::Advanced CodeQL workflow is skipped to avoid SARIF upload conflicts."
+        echo "::warning::Disable default setup in Security > Code scanning to run this workflow."
+
+    - name: Initialize CodeQL
+      if: steps.default-setup.outputs.enabled != 'true'
+      uses: github/codeql-action/init@v4
+      with:
+        languages: ${{ matrix.language }}
+        build-mode: ${{ matrix.build-mode }}
+
+    - name: Run manual build steps
+      if: steps.default-setup.outputs.enabled != 'true' && matrix.build-mode == 'manual'
+      shell: bash
+      run: |
+        echo 'If you are using a "manual" build mode for one or more of the'
+          'languages you are analyzing, replace this with the commands to build'
+          'your code, for example:'
+        echo '  make bootstrap'
+        echo '  make release'
+        exit 1
+
+    - name: Perform CodeQL Analysis
+      if: steps.default-setup.outputs.enabled != 'true'
+      uses: github/codeql-action/analyze@v4
+      with:
+        category: "/language:${{matrix.language}}"
