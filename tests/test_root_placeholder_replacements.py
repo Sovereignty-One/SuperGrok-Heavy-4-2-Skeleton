@@ -95,3 +95,13 @@ def test_python_bridge_invalid_max_tokens_falls_back(monkeypatch):
     bridge = importlib.reload(python3_bridge)
 
     assert bridge.AI_MAX_TOKENS == 131072
+
+
+def test_python_bridge_valid_max_tokens_is_used(monkeypatch):
+    monkeypatch.setenv("SG_MAX_TOKENS", "2048")
+
+    import python3_bridge
+
+    bridge = importlib.reload(python3_bridge)
+
+    assert bridge.AI_MAX_TOKENS == 2048
