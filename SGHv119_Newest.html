@@ -26712,33 +26712,6 @@ function _sgExtractCodeFence(text){
 async function aiAnalyzeOrFix(code, mode = 'fix') {
   var source = String(code || '');
   var task = mode === 'fix' ? 'fix' : 'analyze';
-  var prompt = task === 'fix'
-    ? 'Fix all HTML validation errors in this code. Close all unclosed tags, add missing alt attributes, remove javascript: onclick handlers, replace <b> with <strong>. Return ONLY the fixed HTML.\n\n' + source
-    : 'Analyze this code for issues and suggest fixes.\n\n' + source;
-
-  try {
-    var endpoints = ['/api/ai', 'http://127.0.0.1:9897/api/ai', 'http://localhost:9897/api/ai'];
-    for (var i = 0; i < endpoints.length; i++) {
-      try {
-        var res = await fetch(endpoints[i], {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            provider: 'grok',
-            prompt: prompt,
-            mode: task
-          })
-        });
-        if (res.ok) {
-          var data = await res.json();
-          return data.fixed_code || data.result || source;
-        }
-      } catch(e) {}
-    }
-  } catch (e) {
-    console.warn('Local backend unavailable, using client-side fixer');
-  }
-
   return task === 'fix' ? _sgLocalFix(source) : _sgLocalAnalyze(source);
 }
 window.aiAnalyzeOrFix = aiAnalyzeOrFix;
@@ -26803,13 +26776,18 @@ function _ai(){
   var localAnalysis = '';
   var localFixed;
   var changed = false;
+  var autoFixes = [];
+  var manualFixes = [];
 
   if (isMarkup) {
     localAnalysis = _sgLocalAnalyze(code);
     localFixed = _sgLocalFix(source);
     changed = localFixed !== source;
+    if (changed) autoFixes.push('Applied local HTML cleanup.');
+    manualFixes.push(localAnalysis);
   } else {
-    var fixableCount = (window._cmFixes || []).filter(function(f){ return f && f.fix; }).length;
+    var fixableItems = (window._cmFixes || []).filter(function(f){ return f && f.fix; });
+    var fixableCount = fixableItems.length;
     localAnalysis = lint
       ? (
           'Lint results refreshed from the editor.\n' +
@@ -26820,14 +26798,18 @@ function _ai(){
         )
       : 'Lint results are not available for ' + lang.toUpperCase() + '.';
     changed = fixableCount > 0;
+    fixableItems.forEach(function(item) {
+      if (item && item.msg) autoFixes.push(item.msg);
+    });
+    manualFixes.push(localAnalysis);
   }
 
   if (out) {
     out.textContent =
       '✅ CodeMaster Local Analysis (' + lang.toUpperCase() + ')\n\n' +
-      (lint ? ('Errors: ' + lint.errCount + '\nWarnings: ' + lint.warnCount + '\n\n') : '') +
-      localAnalysis +
-      '\n\nNo external API call was used.';
+      'Auto-fix:\n' + (autoFixes.length ? autoFixes.join('\n') : 'None') + '\n\n' +
+      'Manual review:\n' + (manualFixes.length ? manualFixes.join('\n') : 'None') + '\n\n' +
+      'No external API call was used.';
   }
 
   var next = source;
