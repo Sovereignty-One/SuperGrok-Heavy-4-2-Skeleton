@@ -1630,7 +1630,7 @@ return h;
 // ── BRIDGE CONFIG ─────────────────────────────────────
 PANELS.bridge = function(){
 var h=ph(‘Bridge Configuration’,’// Port 9897 · API Keys · Piper + Coqui TTS · No Google/Meta’);
-h+=comp([‘Port 9897’,‘Piper TTS’,‘WebSocket’,‘Self-Cert’,‘Zero External Calls’]);
+h+=comp([‘Port 9897’,‘Piper TTS’,‘WebSocket’,‘CA-Chain’,‘Zero External Calls’]);
 h+=’<div class="g2">’;
 // AI Keys
 h+=’<div class="card"><div class="ct">🤖 AI Provider Keys</div>’;
@@ -1825,7 +1825,7 @@ return h;
 // ── UNIVERSAL FINANCE ────────────────────────────────
 PANELS.universal_finance = function(){
 var h=ph(‘Universal Finance’,’// Plaid · AML/BSA · Insurance · Any Provider · Your Keys’);
-h+=comp([‘Plaid Sandbox’,‘AML’,‘BSA’,‘FDIC’,‘Self-Cert’]);
+h+=comp([‘Plaid Sandbox’,‘AML’,‘BSA’,‘FDIC’,‘CA-Chain’]);
 h+=’<div class="banner-w">Connect any bank or insurance provider. Your Plaid credentials stay on-device. No lock-in.</div>’;
 h+=’<div class="g2">’;
 h+=’<div class="card"><div class="ct">🏦 Link Bank Account</div>’;
@@ -1981,18 +1981,18 @@ return h;
 
 // ── KEY MANAGEMENT ────────────────────────────────────
 PANELS.key_mgmt = function(){
-var h=ph(‘Key Management’,’// Self-Cert · API Keys · Dilithium3 · Auto-Rotate’);
-h+=comp([‘Self-Cert’,‘Dilithium3’,‘FIPS 140-3’,‘Auto-Rotate’,‘On-Device’]);
+var h=ph(‘Key Management’,’// CA-Issued Certs · API Keys · SHA-256 · Auto-Rotate’);
+h+=comp([‘CA-Chain’,‘SHA-256’,‘FIPS 140-3’,‘Auto-Rotate’,‘On-Device’]);
 h+=’<div class="g2">’;
 h+=’<div class="card"><div class="ct">🔑 Generate Customer API Key</div>’;
 h+=’<div class="fg"><label>CUSTOMER NAME / ID</label><input class="fi" id="keyCustomer" placeholder="customer-123"></div>’;
 h+=’<div class="fg"><label>TIER</label><select class="fi" id="keyTier"><option value="basic">Basic</option><option value="pro">Pro</option><option value="enterprise">Enterprise</option></select></div>’;
-h+=’<button class="btn bp btn-w" onclick="Keys.generate()" style="margin-top:4px">Generate Signed Key</button>’;
+h+=’<button class="btn bp btn-w" onclick="Keys.generate()" style="margin-top:4px">Generate Key + Integrity Tag</button>’;
 h+=’<div id="keyOutput" style="margin-top:10px;font-family:var(--mono);font-size:9px;word-break:break-all;color:var(--gn)"></div></div>’;
-h+=’<div class="card"><div class="ct">🏅 TLS Self-Certificate</div>’;
+h+=’<div class="card"><div class="ct">🏅 TLS CA Certificate Validation</div>’;
 h+=’<div class="fg"><label>DOMAIN / CN</label><input class="fi" id="certCN" placeholder="supergrok.local"></div>’;
-h+=’<div class="fg"><label>ORGANIZATION</label><input class="fi" id="certOrg" placeholder="Your Org"></div>’;
-h+=’<button class="btn bp btn-w" onclick="Keys.genCert()" style="margin-top:4px">Generate Self-Cert (Config)</button>’;
+h+=’<div class="fg"><label>CA BUNDLE PATH (optional)</label><input class="fi" id="certOrg" placeholder="/etc/ssl/certs/ca-certificates.crt"></div>’;
+h+=’<button class="btn bp btn-w" onclick="Keys.genCert()" style="margin-top:4px">Generate CA Validation Command</button>’;
 h+=’<div id="certOutput" style="margin-top:10px;font-family:var(--mono);font-size:9px;color:var(--cy);word-break:break-all"></div></div>’;
 h+=’</div>’;
 return h;
@@ -3094,7 +3094,7 @@ function exportSessionBill(){var b=new Blob([JSON.stringify({user:STATE.user?STA
 
 var Finance={savePlaid:function(){var c=el('plaidCid'),s=el('plaidSec');if(c)SS.set('sg_plaid_cid',c.value);if(s)SS.set('sg_plaid_sec',s.value);toast('Plaid saved','ok');},async linkBank(){toast('Plaid link — add SDK to go live','warn');addAudit('FINANCE','Bank link');},async fileClaim(){var p=el('insProvider'),pol=el('insPol'),dt=el('insDate'),amt=el('insAmt');if(!p||!p.value){toast('Enter provider','warn');return;}var claim={user:STATE.user?STATE.user.name:'',date:dt?dt.value:'',provider:p.value,policy:pol?pol.value:'',amount:parseInt(amt?amt.value:18000),ts:new Date().toISOString()};var b=new Blob([JSON.stringify(claim,null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='claim_'+Date.now()+'.json';a.click();toast('Claim exported','ok');addAudit('FINANCE','Claim: '+p.value);}};
 
-var Keys={generate:function(){var c=el('keyCustomer'),t=el('keyTier');var key='sg_'+(c?c.value:'cust')+'_'+(t?t.value:'basic')+'_'+Array.from(crypto.getRandomValues(new Uint8Array(20))).map(function(b){return b.toString(16).padStart(2,'0');}).join('');var signed={apiKey:key,tier:t?t.value:'basic',customer:c?c.value:'',issued:new Date().toISOString(),sig:'Dilithium3:'+sha256str(key)};var out=el('keyOutput');if(out)out.textContent=JSON.stringify(signed,null,2);toast('Key generated','ok');addAudit('KEY','Generated for '+(c?c.value:'?'));},genCert:function(){var cn=el('certCN'),org=el('certOrg');var config='openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/CN='+(cn?cn.value:'supergrok.local')+'/O='+(org?org.value:'YourOrg')+'/C=US"\n\nTLS_CERT=cert.pem TLS_KEY=key.pem node Unified_Server.js';var out=el('certOutput');if(out)out.textContent=config;toast('Cert config generated','ok');}};
+var Keys={generate:function(){var c=el('keyCustomer'),t=el('keyTier');var key='sg_'+(c?c.value:'cust')+'_'+(t?t.value:'basic')+'_'+Array.from(crypto.getRandomValues(new Uint8Array(20))).map(function(b){return b.toString(16).padStart(2,'0');}).join('');var signed={apiKey:key,tier:t?t.value:'basic',customer:c?c.value:'',issued:new Date().toISOString(),integrityTag:'SHA256:'+sha256str(key)};var out=el('keyOutput');if(out)out.textContent=JSON.stringify(signed,null,2);toast('Key generated','ok');addAudit('KEY','Generated for '+(c?c.value:'?'));},genCert:function(){var cn=el('certCN'),org=el('certOrg');var host=(cn&&cn.value?cn.value:'supergrok.local');var bundle=(org&&org.value?org.value:'/etc/ssl/certs/ca-certificates.crt');var config='openssl s_client -connect '+host+':443 -servername '+host+' -verify_return_error -CAfile '+bundle+'\nopenssl verify -CAfile '+bundle+' cert.pem';var out=el('certOutput');if(out)out.textContent=config;toast('CA validation command generated','ok');}};
 
 var RoleEd={newRole:function(){var id=prompt('Role ID:'),lbl=prompt('Name:'),icon=prompt('Icon:','📋'),lvl=parseInt(prompt('Level 1-6:','2')||2);if(!id||!lbl)return;if(!ROLES[id]){ROLES[id]={lbl:lbl,icon:icon,lvl:lvl,color:'#334155',cat:'tech',desc:'Custom',ranks:['Default'],nav:[{g:'General',i:[{id:'dashboard',ic:'📊',lb:'Dashboard'},{id:'ai_chat',ic:'🤖',lb:'AI Assistant'},{id:'audit_trail',ic:'🔐',lb:'Audit'},{id:'profile',ic:'👤',lb:'Profile'}]}]};toast('Created: '+lbl,'ok');D.load('role_editor');}else toast('ID exists','warn');},edit:function(k){var r=ROLES[k];if(!r)return;var l=prompt('Label:',r.lbl);if(l)r.lbl=l;var lv=prompt('Level:',r.lvl);if(lv)r.lvl=parseInt(lv)||r.lvl;toast('Updated','ok');D.load('role_editor');},del:function(k){if(k===STATE.roleKey){toast('Cannot delete current role','warn');return;}if(confirm('Delete '+ROLES[k].lbl+'?')){delete ROLES[k];toast('Deleted','ok');D.load('role_editor');}},exportAll:function(){var b=new Blob([JSON.stringify(ROLES,null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='roles_'+Date.now()+'.json';a.click();},importJSON:function(){var f=document.createElement('input');f.type='file';f.accept='.json';f.onchange=function(e){var file=e.target.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(ev){try{Object.assign(ROLES,JSON.parse(ev.target.result));toast('Imported','ok');D.load('role_editor');}catch(err){toast('Invalid JSON','err');}};reader.readAsText(file);};f.click();}};
 

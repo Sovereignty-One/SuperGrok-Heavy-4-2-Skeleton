@@ -1,7 +1,7 @@
 /**
- * Post-Quantum Cryptography Service
- * Enterprise-grade implementations of Falcon-512, ChaCha20-Poly1305, and Dilithium3
- * All operations use Web Crypto API for security
+ * Browser cryptography service.
+ * Uses Web Crypto primitives for hashing and authenticated encryption.
+ * PQC algorithm names are compatibility labels for existing payloads.
  */
 
 export class PostQuantumCrypto {
@@ -19,15 +19,12 @@ export class PostQuantumCrypto {
   }
 
   /**
-   * Falcon-512 signature generation
-   * NIST PQC Round 3 finalist - quantum-resistant
-   * @param {string} message - Message to sign
-   * @param {string} privateKey - Private key for signing
-   * @returns {Promise<Object>} Signature object with metadata
+   * Deterministic token generation tagged as Falcon-512 for compatibility.
    */
   static async falcon512_sign(message, privateKey) {
+    void privateKey;
     const encoder = new TextEncoder();
-    const data = encoder.encode(message + privateKey);
+    const data = encoder.encode(message);
     
     // Real SHA-512 for Falcon-512 base
     const hash = await crypto.subtle.digest('SHA-512', data);
@@ -37,8 +34,8 @@ export class PostQuantumCrypto {
     return {
       signature: `falcon512_${signature}`,
       algorithm: 'Falcon-512',
-      securityLevel: 512,
-      quantumResistant: true,
+      securityLevel: 'compatibility',
+      quantumResistant: false,
       timestamp: new Date().toISOString()
     };
   }
@@ -86,36 +83,24 @@ export class PostQuantumCrypto {
   }
 
   /**
-   * Dilithium3 signature generation
-   * NIST Level 3 security - quantum-resistant
-   * @param {string} message - Message to sign
-   * @returns {Promise<Object>} Signature object with verification hash
+   * Deterministic token generation tagged as Dilithium3 for compatibility.
    */
   static async dilithium3_sign(message) {
     const encoder = new TextEncoder();
     const data = encoder.encode(message);
-    
-    // Generate Dilithium3 signature (2420 bytes standard size)
-    const signatureData = new Uint8Array(2420);
-    crypto.getRandomValues(signatureData);
-    
-    // Hash for verification
+
     const hash = await crypto.subtle.digest('SHA-512', data);
     const hashArray = Array.from(new Uint8Array(hash));
-    
-    const signature = Array.from(signatureData)
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('')
-      .substring(0, 256);
     const verificationHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    const signature = verificationHash;
     
     return {
       signature: `dilithium3_${signature}`,
       verificationHash: verificationHash,
       algorithm: 'Dilithium3',
-      securityLevel: 'NIST Level 3',
-      signatureSize: 2420,
-      quantumResistant: true,
+      securityLevel: 'compatibility',
+      signatureSize: signature.length / 2,
+      quantumResistant: false,
       timestamp: new Date().toISOString()
     };
   }
@@ -156,28 +141,32 @@ export class PostQuantumCrypto {
       dilithium3: dilithium,
       timestamp: new Date().toISOString(),
       algorithms: ['Falcon-512', 'ChaCha20-Poly1305', 'Dilithium3'],
-      quantumResistant: true,
+      quantumResistant: false,
       tokens: Infinity,
       metadata: {
         version: '1.0.0',
-        securityLevel: 'Enterprise',
-        compliance: ['NIST PQC', 'FIPS 140-3']
+        securityLevel: 'Compatibility',
+        compliance: ['Web Crypto']
       }
     };
   }
 
   /**
-   * Verify a quantum-resistant signature
-   * @param {string} message - Original message
-   * @param {string} signature - Signature to verify
-   * @param {string} algorithm - Algorithm used (falcon512, dilithium3)
-   * @returns {Promise<boolean>} Verification result
+   * Verify compatibility tokens produced by this service.
    */
   static async verifySignature(message, signature, algorithm) {
     try {
-      const hash = await this.sha3_512(message);
-      // In production, implement full verification logic
-      return signature.includes(hash.substring(0, 32));
+      if (algorithm === 'dilithium3') {
+        const expectedHash = await this.sha3_512(message);
+        return signature === `dilithium3_${expectedHash}`;
+      }
+
+      if (algorithm === 'falcon512') {
+        const expectedHash = await this.sha3_512(message);
+        return signature === `falcon512_${expectedHash}`;
+      }
+
+      return false;
     } catch (error) {
       console.error('Signature verification failed:', error);
       return false;
