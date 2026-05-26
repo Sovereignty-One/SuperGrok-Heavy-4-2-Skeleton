@@ -10,7 +10,7 @@ import json
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from ..core.backup_manager import filelock
+from selffixerai.core.backup_manager import filelock
 from fixers.persist_brain import persist_brain
 
 class TamperHardLock:

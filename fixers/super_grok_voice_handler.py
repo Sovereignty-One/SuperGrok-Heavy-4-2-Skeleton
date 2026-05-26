@@ -1,3 +1,4 @@
+import os
 import time
 import asyncio
 import secrets
@@ -5,6 +6,9 @@ from fixers.persist_brain import persist_brain, hydrate_brain
 from fixers.handle_error import handle_error
 from fixers.rate_limiter import RateLimiter
 from fixers.memory_manager import MemoryManager
+
+VOICE_MAX_TOKENS = int(os.environ.get("VOICE_MAX_TOKENS", "131072"))
+VOICE_TOKEN_BUMP = int(os.environ.get("VOICE_TOKEN_BUMP", str(VOICE_MAX_TOKENS)))
 
 class SuperGrokVoiceHandler:
     def __init__(self, brain_state: dict = None, user_tier: str = "SUPERGROK"):
@@ -21,22 +25,20 @@ class SuperGrokVoiceHandler:
         self.last_rotation = time.time()
         self.key_rotation_count = 0
 
-        # More generous limits
-        if self.user_tier == "SUPERGROK":
-            self.base_limit = 32768
-            self.extend_by = 16384
-        elif self.user_tier == "HEAVY":
-            self.base_limit = 131072
-            self.extend_by = 65536
-        else:
-            self.base_limit = 8192
-            self.extend_by = 4096
+        # Maximize voice capacity for all tiers.
+        self.base_limit = VOICE_MAX_TOKENS
+        self.extend_by = VOICE_TOKEN_BUMP
 
         self.max_tokens = self.base_limit
         self.rate_limiter = RateLimiter(max_requests=120, window_seconds=60)
         self.memory_manager = MemoryManager(self.brain_state, max_logs=500)
 
-        self._rotation_task = asyncio.create_task(self._auto_audit_heartbeat())
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            self._rotation_task = None
+        else:
+            self._rotation_task = asyncio.create_task(self._auto_audit_heartbeat())
 
     async def start_session(self) -> dict:
         if self.session_id:
