@@ -121,9 +121,9 @@ a {
 👤 Owner
 <table>
 <tr><th>Attribute</th><th>Value</th></tr>
-<tr><td>Name</td><td>[Your Name]</td></tr>
-<tr><td>Email</td><td>[Your Email]</td></tr>
-<tr><td>Phone</td><td>[Your Phone Number]</td></tr>
+<tr><td>Name</td><td>Configured by deployment owner</td></tr>
+<tr><td>Email</td><td>Configured by deployment owner</td></tr>
+<tr><td>Phone</td><td>Configured by deployment owner</td></tr>
 <tr><td>🌎 Geo Location</td><td>41.2033, -73.9876 (US-East)</td></tr>
 <tr><td>📜 Chain of Custody</td><td>true</td></tr>
 <tr><td>🖥 Server Hardware Fingerprint</td><td>HWFP-AB12CD34EF56GH78</td></tr>
@@ -134,8 +134,8 @@ a {
 <summary>📝 **Custom Forbidden Words (Click to Expand)**</summary>
 <table>
 <tr><th>Custom Word</th><th>Added On</th></tr>
-<tr><td>[Your Word Here]</td><td>[Timestamp]</td></tr>
-<tr><td>[Another Word]</td><td>[Timestamp]</td></tr>
+<tr><td>example-forbidden-word</td><td>2026-01-01T00:00:00Z</td></tr>
+<tr><td>example-alert-token</td><td>2026-01-01T00:00:00Z</td></tr>
 </table>
 </details>
 
@@ -303,17 +303,17 @@ Audit Log Extract:
 ---
 
 📎 Appendix A – User Settings
-	⁃	Owner Name: [Your Name]  
-	⁃	Email: [Your Email]  
-	⁃	Phone: [Your Phone Number]  
+	⁃	Owner Name: Configured by deployment owner  
+	⁃	Email: Configured by deployment owner  
+	⁃	Phone: Configured by deployment owner  
 	⁃	Geo Location: 41.2033, -73.9876 (US-East)  
 	⁃	Chain of Custody: true  
 	⁃	Server Hardware Fingerprint: HWFP-AB12CD34EF56GH78  
 	⁃	TPM Attestation: ✅ verified  
 
 Custom Forbidden Words:
-	⁃	[Your Word Here] – [Timestamp]  
-	⁃	[Another Word] – [Timestamp]  
+	⁃	example-forbidden-word – 2026-01-01T00:00:00Z  
+	⁃	example-alert-token – 2026-01-01T00:00:00Z  
 
 ---
 
