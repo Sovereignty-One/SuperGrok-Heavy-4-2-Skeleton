@@ -452,81 +452,53 @@ if(location.protocol==='file:'){
   <span id="sg-bridge-toast-txt">Bridge connecting...</span>
 </div>
 <script>
-/* ══ WEBSOCKET SOVEREIGN PATCH ════════════════════════════════════════════════
-   Safari blocks ws:// (non-TLS WebSocket) when page is loaded from file://.
-   This monkey-patch intercepts ALL new WebSocket() calls.
-   On file:// origin: blocks the connection, shows a one-time "open via HTTP" banner.
-   On http:// origin: allows ws:// normally.
-   Also converts any wss://127.0.0.1 or wss://localhost → ws:// (no TLS on loopback).
-   ════════════════════════════════════════════════════════════════════════════ */
 (function() {
-  'use strict';
-  var _NativeWS = window.WebSocket;
-  var _bannerShown = false;
-  var _isFileOrigin = (location.protocol === 'file:');
+ 'use strict';
+ var _isFileOrigin = (location.protocol === 'file:');
+ var _bannerShown = false;
 
-function _showOpenBanner() {
-if (_bannerShown || document.getElementById('sg-open-banner')) return;
-_bannerShown = true;
-var banner = document.createElement('div');
-banner.id = 'sg-open-banner';
-banner.style.cssText = [
-'position:fixed','top:0','left:0','right:0','z-index:2147483647',
-'background:linear-gradient(90deg,#ff3d6e,#7c4dff)',
-'color:#fff','padding:12px 16px',
-'font:700 13px/1.4 monospace',
-'display:flex','align-items:center','gap:12px',
-'box-shadow:0 2px 20px rgba(0,0,0,.5)'
-].join(';');
-banner.innerHTML =
-'<span style="font-size:20px">🌐</span>' +
-'<span>Frontend :9898 — open via HTTP so ws://9897 (Python WS bridge) connects: ' +
-'<a href="http://127.0.0.1:9898" style="color:#fff;text-decoration:underline;font-size:14px" ' +
-'onclick="window.location.href=\\x27http://127.0.0.1:9898\\x27;document.getElementById(\\x27sg-open-banner\\x27).remove();">' +
-'http://127.0.0.1:9898' +
-'</a>' +
-'  <span style="font-weight:400;font-size:11px;opacity:.8">(start: node server.js &amp; python bridge.py &amp;)</span>' +
-'</span>' +
-'<button onclick="var el=document.getElementById(\\x27sg-open-banner\\x27);el&&el.parentNode&&el.parentNode.removeChild(el);" ' +
-'style="margin-left:auto;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);' +
-'color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px">✕ dismiss</button>';
-document.body
-? document.body.insertBefore(banner, document.body.firstChild)
-: document.addEventListener('DOMContentLoaded', function() {
-document.body.insertBefore(banner, document.body.firstChild);
-});
-}
+ function _showOpenBanner() {
+   if (_bannerShown || document.getElementById('sg-open-banner')) return;
+   _bannerShown = true;
+   var banner = document.createElement('div');
+   banner.id = 'sg-open-banner';
+   banner.style.cssText = [
+     'position:fixed','top:0','left:0','right:0','z-index:2147483647',
+     'background:linear-gradient(90deg,#ff3d6e,#7c4dff)',
+     'color:#fff','padding:12px 16px',
+     'font:700 13px/1.4 monospace',
+     'display:flex','align-items:center','gap:12px',
+     'box-shadow:0 2px 20px rgba(0,0,0,.5)'
+   ].join(';');
+   banner.innerHTML =
+     '<span style="font-size:20px">🌐</span>' +
+     '<span>Open via HTTP so the bridge can connect: ' +
+     '<a href="http://127.0.0.1:9898" style="color:#fff;text-decoration:underline;font-size:14px" ' +
+     'onclick="window.location.href=\\x27http://127.0.0.1:9898\\x27;document.getElementById(\\x27sg-open-banner\\x27).remove();">' +
+     'http://127.0.0.1:9898' +
+     '</a>' +
+     ' <span style="font-weight:400;font-size:11px;opacity:.8">(start: python3 python3_bridge.py)</span>' +
+     '</span>' +
+     '<button onclick="var el=document.getElementById(\\x27sg-open-banner\\x27);el&&el.parentNode&&el.parentNode.removeChild(el);" ' +
+     'style="margin-left:auto;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);' +
+     'color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px">✕ dismiss</button>';
+   document.body
+     ? document.body.insertBefore(banner, document.body.firstChild)
+     : document.addEventListener('DOMContentLoaded', function() {
+         document.body.insertBefore(banner, document.body.firstChild);
+       });
+ }
 
-window.WebSocket = function(url, protocols) {
-if (typeof url === 'string') {
-/* Convert wss://loopback → ws:// — no TLS on localhost bridge */
-url = url.replace(/^wss:(\/\/(?:127\.0\.0\.1|localhost|::1)[:/])/, 'ws:$1');
+ if (_isFileOrigin) {
+   window._sgBridgeInsecure = true;
+   _showOpenBanner();
+ }
 
-  /* On file:// origin, ws:// will throw SecurityError. Surface a real banner,
-     dispatch a real event, then let the native constructor run so callers get
-     a real error path — no silent fake socket. */
-  if (_isFileOrigin && /^ws:\/\//.test(url)) {
-    _showOpenBanner();
-    window._sgBridgeInsecure = true;
-    try { document.dispatchEvent(new CustomEvent('sg:bridgeBlocked', {detail:{url:url, reason:'file_origin'}})); } catch(_){}
-  }
-}
-return protocols ? new _NativeWS(url, protocols) : new _NativeWS(url);
-};
-
-/* Copy static properties */
-window.WebSocket.prototype = _NativeWS.prototype;
-window.WebSocket.CONNECTING = 0;
-window.WebSocket.OPEN       = 1;
-window.WebSocket.CLOSING    = 2;
-window.WebSocket.CLOSED     = 3;
-
-/* Expose for diagnostics */
-window._sgWsPatch = { active: true, fileOrigin: _isFileOrigin };
-console.log(
-'%c[SG_WS] Sovereign patch active' + (_isFileOrigin ? ' — file:// origin: bridge disabled, use http://127.0.0.1:9898' : ' — HTTP origin: ws:// allowed'),
-'color:#00ffc8;font-size:9px'
-);
+ window._sgWsPatch = { active: false, fileOrigin: _isFileOrigin };
+ console.log(
+   '%c[SG_WS] Native WebSocket retained' + (_isFileOrigin ? ' — file:// origin: open via HTTP on :9898' : ' — HTTP origin: ws:// allowed'),
+   'color:#00ffc8;font-size:9px'
+ );
 })();
 
 /* ═══ BRIDGE STATUS SINGLETON ════════════════════════════════════════════════
@@ -2054,7 +2026,7 @@ const BRIDGE = {
         /* Cap retries at 5 */
         if (self.wsRetries >= 5) {
           self.updateUI('PORT 9897 OFFLINE','var(--pulse)');
-          self.log('warn','Bridge retry cap reached — start Unified_Server.js then reconnect');
+          self.log('warn','Bridge retry cap reached — start python3_bridge.py then reconnect');
           return;
         }
         var delay = Math.min(2000 * (1 + self.wsRetries), 15000);
@@ -4061,7 +4033,7 @@ function bridgeConnect(){
             b.innerHTML = '<span style="font-size:18px">⚠️</span>' +
               '<span><strong>WebSocket blocked by browser security</strong> &mdash; serve via Node server: ' +
               '<a href="http://127.0.0.1:9898" style="color:#fff;font-weight:bold">http://127.0.0.1:9898</a>' +
-              ' &nbsp;(run: <code>node Unified_Server.js</code>)</span>' +
+              ' &nbsp;(run: <code>python3 python3_bridge.py</code>)</span>' +
               '<button onclick="this.parentNode.remove()" style="margin-left:auto;background:transparent;border:1px solid rgba(255,255,255,.5);color:#fff;padding:2px 8px;border-radius:4px;cursor:pointer">✕</button>';
             document.body.insertBefore(b, document.body.firstChild);
           }
@@ -8630,7 +8602,7 @@ renderSection('🛠 DEVELOPER TOOLS', devApps, '#f97316') +
 '<div class="card">' +
 '<div class="card-title">⚡ Quick Bridge Commands</div>' +
 '<div style="display:flex;flex-wrap:wrap;gap:5px">' +
-['python3 bridge.py','node Unified_Server.js','git status','git pull',
+['python3 python3_bridge.py','git status','git pull',
 'git push','ls -la','python3 --version','node --version'].map(function(cmd){
 return '<button class="cmd-btn btn-s" data-cmd="'+cmd+'" style="font-size:8px;font-family:monospace">'+cmd+'</button>';
 }).join('') +
@@ -12320,7 +12292,7 @@ out += '<div style="font-family:var(--mono);background:var(--bg3);padding:10px;b
 'export ANTHROPIC_API_KEY=sk-ant-...<br>'+
 'export OPENAI_API_KEY=sk-...<br>'+
 'export GROK_API_KEY=xai-...<br>'+
-'python3 bridge.py<br><br>'+
+'python3 python3_bridge.py<br><br>'+
 '# Bridge listens on:<br>'+
 'ws://127.0.0.1:9897   ← WebSocket (AI chat, voice, agent)<br>'+
 'http://127.0.0.1:9898 ← HTTP health + REST endpoints (unified)'+
@@ -12715,7 +12687,7 @@ var c = window._sgLastCert;
 var cfg = '# SuperGrok bridge.py TLS config\n# Generated: '+new Date().toISOString()+'\n\n'+
 'export CERT_B64="'+c.pubB64+'"\nexport KEY_B64="'+c.privB64+'"\n'+
 'export SG_TLS=1\nexport SG_PORT=9897\nexport SG_HOST=localhost\n\n'+
-'# Then run: python3 bridge.py --tls';
+'# Then run: python3 python3_bridge.py --tls';
 var a = document.createElement('a');
 a.href = URL.createObjectURL(new Blob([cfg],{type:'text/plain'}));
 a.download = 'bridge-tls-config.sh';
@@ -13823,7 +13795,7 @@ var key=window._agentApiKeys[ag]||window._agentApiKeys['claude']||'';
 if(!key){
 ab.innerHTML='⚠️ Bridge offline & no API key stored.<br>'+
 '<span style="font-size:9px;color:var(--t3)">Go to <strong>Security → API Keys</strong> panel and paste your key, or start bridge:<br>'+
-'<code style="color:var(--cy)">node Unified_Server.js</code></span>';
+'<code style="color:var(--cy)">python3 python3_bridge.py</code></span>';
 ab.style.color='var(--am)';
 msgs.scrollTop=msgs.scrollHeight;
 return;
@@ -18032,7 +18004,7 @@ kc('ZERO',     'Cloud',         'var(--pulse)') +
 
 '<div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:var(--r);padding:10px;font-family:var(--mono);font-size:9px;color:#22c55e;margin-bottom:12px;line-height:1.8">' +
 '\u26a1 BRIDGE PROTOCOL: SuperGrok connects to localhost:9897 via WebSocket. ' +
-'On iOS: run bridge.py inside iSH or a-Shell. On desktop: python3 bridge.py. ' +
+'On iOS: run python3 python3_bridge.py inside iSH or a-Shell. On desktop: python3 python3_bridge.py. ' +
 'Node.js commands exec via bridge. GitHub clone/pull/push routed through bridge.' +
 '</div>' +
 
@@ -18041,7 +18013,7 @@ kc('ZERO',     'Cloud',         'var(--pulse)') +
 '<div class="card-title">\u26a1 Quick Connect</div>' +
 '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:12px">' +
 [
-{label:'Start Bridge (Python)',  cmd:'python3 bridge.py',         color:'var(--acid)'},
+{label:'Start Bridge (Python)',  cmd:'python3 python3_bridge.py', color:'var(--acid)'},
 {label:'Start Bridge (Node)',    cmd:'node bridge.js',             color:'var(--volt)'},
 {label:'Check Python',           cmd:'python3 --version',          color:'#00b894'},
 {label:'Check Node.js',          cmd:'node --version',             color:'#fdcb6e'},
@@ -18077,8 +18049,8 @@ item.label +
 '<div id="bt-output" style="background:#000;padding:10px;min-height:200px;max-height:45vh;overflow-y:auto;font-family:var(--mono);font-size:10px;color:var(--t2);line-height:1.6">' +
 '<div style="color:var(--acid)">SuperGrok Terminal \u2014 localhost:9899</div>' +
 '<div style="color:var(--t3)">Run commands via bridge. Start bridge.py on device first.</div>' +
-'<div style="color:var(--t3)">iSH: copy bridge.py into /root, run: python3 bridge.py</div>' +
-'<div style="color:var(--t3)">a-Shell: python3 bridge.py in working dir</div>' +
+'<div style="color:var(--t3)">iSH: copy python3_bridge.py into /root, run: python3 python3_bridge.py</div>' +
+'<div style="color:var(--t3)">a-Shell: python3 python3_bridge.py in working dir</div>' +
 '</div>' +
 '</div>' +
 
@@ -22403,7 +22375,7 @@ return hdr('⚙️ Settings','API Keys · Bridge · Roles · Session · Display'
 '<button class="btn btn-p" style="font-size:9px" onclick="bridgeReconnect()">⚡ Reconnect Bridge</button>' +
 '<button class="btn" style="font-size:9px" onclick="window._bridgeGaveUp=false;window._bridgeRetryCount=0;initBridge();toast(\'Retrying...\',\'\')">🔄 Force Retry</button>' +
 '</div>' +
-'<div style="font-family:var(--mono);font-size:8px;color:var(--t3)">Bridge: ws://127.0.0.1:9897 · Run: <code>node Unified_Server.js</code></div>' +
+'<div style="font-family:var(--mono);font-size:8px;color:var(--t3)">Bridge: ws://127.0.0.1:9897 · Run: <code>python3 python3_bridge.py</code></div>' +
 '</div>' +
 
 /* API Keys */
@@ -22798,7 +22770,7 @@ return hdr('🔒 Secure Terminal','WebSSH · SSH Proxy · a-Shell · iSH · On-D
 '<div style="display:flex;flex-wrap:wrap;gap:5px">' +
 ['ls -la','pwd','whoami','python3 --version','node --version','git status',
 'git log --oneline -5','pip3 list','ps aux | head','df -h','free -h',
-'cat /etc/os-release','uname -a','python3 bridge.py','node Unified_Server.js',
+'cat /etc/os-release','uname -a','python3 python3_bridge.py',
 'git pull','npm install','pip3 install -r requirements.txt'].map(function(cmd){
 return '<button class="btn-s" style="font-size:8px;font-family:monospace;padding:3px 8px;border-radius:4px;background:#0d1117;border:1px solid #333;color:#8b949e;cursor:pointer" onclick="sg(function(){SG_SSH.quickCmd(\''+cmd+'\')})">'+cmd+'</button>';
 }).join('') +
@@ -23703,7 +23675,7 @@ _queryDirect: function(agentId, message, history, cb){
   }
 
   /* Bridge offline */
-  var bridgeHint = 'Bridge offline — run: python3 bridge.py  then open http://127.0.0.1:9898';
+  var bridgeHint = 'Bridge offline — run: python3 python3_bridge.py  then open http://127.0.0.1:9898';
   if(cb) cb({error:agentId+': '+bridgeHint, agent:agentId});
 },
 
@@ -23890,7 +23862,7 @@ html += '</div>';
 html += '<div id="ag-thread" style="background:var(--bg1);border:1px solid var(--wire);border-radius:8px;min-height:80px;max-height:300px;overflow-y:auto;padding:10px;font-family:var(--mono);font-size:10px;color:var(--t2)"><span style="color:var(--t4)">Messages appear here\u2026</span></div>';
 html += '</div>';
 }
-html += '<div style="font-family:var(--mono);font-size:8px;color:var(--t4);text-align:center;padding:10px 0">GPT & Grok: run python3 bridge.py \u00b7 open http://127.0.0.1:9898 \u00b7 add keys in \u2630 AI API Keys</div>';
+html += '<div style="font-family:var(--mono);font-size:8px;color:var(--t4);text-align:center;padding:10px 0">GPT & Grok: run python3 python3_bridge.py \u00b7 open http://127.0.0.1:9898 \u00b7 add keys in \u2630 AI API Keys</div>';
 return html;
 };
 
@@ -25149,7 +25121,7 @@ connectLocal: function(){
   _setStatus('connected','Local Shell','on-device');
   _prompt = '$ ';
   var p=document.getElementById('ssh-prompt');if(p)p.textContent='$ ';
-  _out('Local shell mode — commands execute via bridge.py\nStart bridge: python3 bridge.py', '#00ffc8');
+  _out('Local shell mode — commands execute via python3_bridge.py\nStart bridge: python3 python3_bridge.py', '#00ffc8');
 },
 
 connectISH: function(){
@@ -25165,7 +25137,7 @@ connectAShell: function(){
   _setStatus('connected','a-Shell','on-device');
   _prompt = 'a-Shell$ ';
   var p=document.getElementById('ssh-prompt');if(p)p.textContent='a-Shell$ ';
-  _out('a-Shell mode — execute commands via bridge.py\n  python3 bridge.py', '#00ffc8');
+  _out('a-Shell mode — execute commands via python3_bridge.py\n  python3 python3_bridge.py', '#00ffc8');
 },
 
 disconnect: function(){
@@ -26158,7 +26130,7 @@ setTimeout(function(){
       }, 30000);
       return;
     }
-    cb({error:agentId+' needs bridge. Claude works without it — run python3 bridge.py for GPT/Grok.'});
+    cb({error:agentId+' needs bridge. Claude works without it — run python3 python3_bridge.py for GPT/Grok.'});
   };
 }, 500);
 

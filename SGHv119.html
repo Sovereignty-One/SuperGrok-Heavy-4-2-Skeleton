@@ -464,97 +464,53 @@ if(location.protocol==='file:'){
   <span id="sg-bridge-toast-txt">Bridge connecting...</span>
 </div>
 <script>
-/* ══ WEBSOCKET SOVEREIGN PATCH ════════════════════════════════════════════════
-   Safari blocks ws:// (non-TLS WebSocket) when page is loaded from file://.
-   This monkey-patch intercepts ALL new WebSocket() calls.
-   On file:// origin: blocks the connection, shows a one-time "open via HTTP" banner.
-   On http:// origin: allows ws:// normally.
-   Also converts any wss://127.0.0.1 or wss://localhost → ws:// (no TLS on loopback).
-   ════════════════════════════════════════════════════════════════════════════ */
 (function() {
-  'use strict';
-  var _NativeWS = window.WebSocket;
-  var _bannerShown = false;
-  var _isFileOrigin = (location.protocol === 'file:');
+ 'use strict';
+ var _isFileOrigin = (location.protocol === 'file:');
+ var _bannerShown = false;
 
-function _showOpenBanner() {
-if (_bannerShown || document.getElementById('sg-open-banner')) return;
-_bannerShown = true;
-var banner = document.createElement('div');
-banner.id = 'sg-open-banner';
-banner.style.cssText = [
-'position:fixed','top:0','left:0','right:0','z-index:2147483647',
-'background:linear-gradient(90deg,#ff3d6e,#7c4dff)',
-'color:#fff','padding:12px 16px',
-'font:700 13px/1.4 monospace',
-'display:flex','align-items:center','gap:12px',
-'box-shadow:0 2px 20px rgba(0,0,0,.5)'
-].join(';');
-banner.innerHTML =
-'<span style="font-size:20px">🌐</span>' +
-'<span>File server :9897 — open via HTTP so ws://9897 bridge connects: ' +
-'<a href="http://127.0.0.1:9897" style="color:#fff;text-decoration:underline;font-size:14px" ' +
-'onclick="window.location.href=\\x27http://127.0.0.1:9897\\x27;document.getElementById(\\x27sg-open-banner\\x27).remove();">' +
-'http://127.0.0.1:9897' +
-'</a>' +
-'  <span style="font-weight:400;font-size:11px;opacity:.8">(start bridge first: python3 bridge.py)</span>' +
-'</span>' +
-'<button onclick="var el=document.getElementById(\\x27sg-open-banner\\x27);el&&el.parentNode&&el.parentNode.removeChild(el);" ' +
-'style="margin-left:auto;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);' +
-'color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px">✕ dismiss</button>';
-document.body
-? document.body.insertBefore(banner, document.body.firstChild)
-: document.addEventListener('DOMContentLoaded', function() {
-document.body.insertBefore(banner, document.body.firstChild);
-});
-}
+ function _showOpenBanner() {
+   if (_bannerShown || document.getElementById('sg-open-banner')) return;
+   _bannerShown = true;
+   var banner = document.createElement('div');
+   banner.id = 'sg-open-banner';
+   banner.style.cssText = [
+     'position:fixed','top:0','left:0','right:0','z-index:2147483647',
+     'background:linear-gradient(90deg,#ff3d6e,#7c4dff)',
+     'color:#fff','padding:12px 16px',
+     'font:700 13px/1.4 monospace',
+     'display:flex','align-items:center','gap:12px',
+     'box-shadow:0 2px 20px rgba(0,0,0,.5)'
+   ].join(';');
+   banner.innerHTML =
+     '<span style="font-size:20px">🌐</span>' +
+     '<span>Open via HTTP so the bridge can connect: ' +
+     '<a href="http://127.0.0.1:9897" style="color:#fff;text-decoration:underline;font-size:14px" ' +
+     'onclick="window.location.href=\\x27http://127.0.0.1:9897\\x27;document.getElementById(\\x27sg-open-banner\\x27).remove();">' +
+     'http://127.0.0.1:9897' +
+     '</a>' +
+     ' <span style="font-weight:400;font-size:11px;opacity:.8">(start: python3 python3_bridge.py)</span>' +
+     '</span>' +
+     '<button onclick="var el=document.getElementById(\\x27sg-open-banner\\x27);el&&el.parentNode&&el.parentNode.removeChild(el);" ' +
+     'style="margin-left:auto;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);' +
+     'color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px">✕ dismiss</button>';
+   document.body
+     ? document.body.insertBefore(banner, document.body.firstChild)
+     : document.addEventListener('DOMContentLoaded', function() {
+         document.body.insertBefore(banner, document.body.firstChild);
+       });
+ }
 
-window.WebSocket = function(url, protocols) {
-if (typeof url === 'string') {
-/* Convert wss://loopback → ws:// — no TLS on localhost bridge */
-url = url.replace(/^wss:(\/\/(?:127\.0\.0\.1|localhost|::1)[:/])/, 'ws:$1');
+ if (_isFileOrigin) {
+   window._sgBridgeInsecure = true;
+   _showOpenBanner();
+ }
 
-  /* Block ws:// from file:// — will always throw SecurityError */
-  if (_isFileOrigin && /^ws:\/\//.test(url)) {
-    _showOpenBanner();
-    window._sgBridgeInsecure = true;
-    /* Return a fake WebSocket that immediately closes cleanly */
-    var fake = Object.create(_NativeWS.prototype);
-    fake.readyState = 3; /* CLOSED */
-    fake.url = url;
-    fake.protocol = '';
-    fake.bufferedAmount = 0;
-    fake.extensions = '';
-    fake.binaryType = 'blob';
-    fake.send = function() {};
-    fake.close = function() {};
-    fake.onopen = fake.onclose = fake.onerror = fake.onmessage = null;
-    setTimeout(function() {
-      if (typeof fake.onclose === 'function') {
-        fake.onclose({code:4000,reason:'file_origin_blocked',wasClean:true});
-      }
-    }, 50);
-    return fake;
-  }
-}
-var ws = protocols ? new _NativeWS(url, protocols) : new _NativeWS(url);
-return ws;
-
-};
-
-/* Copy static properties */
-window.WebSocket.prototype = _NativeWS.prototype;
-window.WebSocket.CONNECTING = 0;
-window.WebSocket.OPEN       = 1;
-window.WebSocket.CLOSING    = 2;
-window.WebSocket.CLOSED     = 3;
-
-/* Expose for diagnostics */
-window._sgWsPatch = { active: true, fileOrigin: _isFileOrigin };
-console.log(
-'%c[SG_WS] Sovereign patch active' + (_isFileOrigin ? ' — file:// origin: bridge disabled, use http://127.0.0.1:9897' : ' — HTTP origin: ws:// allowed'),
-'color:#00ffc8;font-size:9px'
-);
+ window._sgWsPatch = { active: false, fileOrigin: _isFileOrigin };
+ console.log(
+   '%c[SG_WS] Native WebSocket retained' + (_isFileOrigin ? ' — file:// origin: open via HTTP on :9897' : ' — HTTP origin: ws:// allowed'),
+   'color:#00ffc8;font-size:9px'
+ );
 })();
 
 /* ═══ BRIDGE STATUS SINGLETON ════════════════════════════════════════════════
