@@ -15,7 +15,7 @@ ws.on('open', () => {
       instructions: AGENT_PROMPT, // see Agent Prompt tab
       turn_detection: { type: 'server_vad' },
       tools: [{ type: 'web_search' }, { type: 'x_search' }],
-      input_audio_transcription: { model: 'grok-2-audio' },
+      input_audio_transcription: { model: 'grok-4-3-audio' },
     },
   }));
 
