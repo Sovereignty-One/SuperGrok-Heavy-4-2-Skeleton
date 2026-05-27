@@ -26602,8 +26602,9 @@ function _sgLocalFix(code){
   fixed = fixed.replace(/<b>/gi, '<strong>').replace(/<\/b>/gi, '</strong>');
   try {
     if (typeof DOMParser !== 'undefined') {
+      var fullDoc = /<!doctype[\s\S]*?>|<html\b|<head\b|<body\b/i.test(fixed);
       var doc = new DOMParser().parseFromString(fixed, 'text/html');
-      var nodes = doc.body.querySelectorAll('*');
+      var nodes = doc.querySelectorAll('*');
       for (var i = 0; i < nodes.length; i++) {
         var el = nodes[i];
         for (var j = el.attributes.length - 1; j >= 0; j--) {
@@ -26617,17 +26618,19 @@ function _sgLocalFix(code){
           }
         }
       }
-      fixed = doc.body.innerHTML;
+      fixed = fullDoc ? ((doc.doctype ? '<!DOCTYPE html>\n' : '') + doc.documentElement.outerHTML) : (doc.body ? doc.body.innerHTML : fixed);
     }
   } catch (_) {
   }
-  if (fixed.indexOf('<head>') >= 0 && fixed.indexOf('</head>') < 0) {
-    fixed = fixed.replace(/<\/html>/i, '</head></html>');
-    if (fixed.indexOf('</head>') < 0) fixed += '</head>';
-  }
-  if (fixed.indexOf('<body>') >= 0 && fixed.indexOf('</body>') < 0) {
-    fixed = fixed.replace(/<\/html>/i, '</body></html>');
-    if (fixed.indexOf('</body>') < 0) fixed += '</body>';
+  if (/<html\b/i.test(fixed)) {
+    if (fixed.indexOf('<head>') >= 0 && fixed.indexOf('</head>') < 0) {
+      fixed = fixed.replace(/<\/html>/i, '</head></html>');
+      if (fixed.indexOf('</head>') < 0) fixed += '</head>';
+    }
+    if (fixed.indexOf('<body>') >= 0 && fixed.indexOf('</body>') < 0) {
+      fixed = fixed.replace(/<\/html>/i, '</body></html>');
+      if (fixed.indexOf('</body>') < 0) fixed += '</body>';
+    }
   }
   return fixed;
 }
