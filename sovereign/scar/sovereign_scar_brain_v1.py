@@ -1,1 +1,5 @@
-Full SovereignSCARBrain v1.1 code with Guardian, PQC, TPM PCR, Merkle verification
+"""SovereignSCARBrain v1.1 module placeholder.
+
+Guardian, PQC, TPM PCR, and Merkle verification functionality is intended to
+live here.
+"""
