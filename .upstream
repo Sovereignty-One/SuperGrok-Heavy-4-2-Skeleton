@@ -1,0 +1,9 @@
+{
+  "upstream_repo": "https://github.com/appel420/sovereignty-ai-studio.git",
+  "upstream_branch": "main",
+  "relationship": "skeleton-of",
+  "subtree_path": "Sovereignty-AI-Studio-main",
+  "subtree_prefix": "Sovereignty-AI-Studio-main/",
+  "sync_strategy": "subtree-merge",
+  "feature_branch": "claude/sovereignty-ai-studio-deps-9X2Rd"
+}
