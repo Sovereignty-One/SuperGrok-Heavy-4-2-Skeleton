@@ -25,11 +25,11 @@ _handlers: Dict[str, Callable] = {}
 
 
 async def _get_redis():
-    """Return an aioredis client, creating it on first call."""
+    """Return a redis.asyncio client, creating it on first call."""
     global _redis_client
     if _redis_client is None and _REDIS_URL:
         try:
-            import aioredis  # type: ignore
+            import redis.asyncio as aioredis  # redis>=4.2 ships redis.asyncio; drop the aioredis package
 
             _redis_client = await aioredis.from_url(_REDIS_URL)
             logger.info("Event bus connected to Redis at %s", _REDIS_URL)
