@@ -513,6 +513,15 @@ var _connected = false;
 var _retries   = 0;
 var _timer     = null;
 
+
+// ─── PROTOCOL-AWARE WS HELPER ───────────────────────────────────────────────
+// Returns 'wss://' on HTTPS origins (mixed-content would block ws://),
+// 'ws://' on HTTP/file origins. All WebSocket connects must use this.
+function _sgWsProto(){ return location.protocol==='https:' ? 'wss://' : 'ws://'; }
+function _sgWsUrl(host){ return _sgWsProto() + (host || '127.0.0.1:9897'); }
+// Guard: once the browser signals ws:// is insecure, stop all reconnect attempts
+function _sgWsBlocked(){ return !!window._sgBridgeInsecure; }
+// ────────────────────────────────────────────────────────────────────────────
 function setConnected(yes, msg) {
 _connected = yes;
 if (bar) bar.style.background = yes ? 'var(--acid,#00ffc8)' : '#ff3d6e';
@@ -1969,7 +1978,7 @@ const BRIDGE = {
     if(this.ws){ try{this.ws.close();}catch(e){} this.ws=null; }
     var self = this;
     try{
-      var wsUrl = 'ws://127.0.0.1:9897'; /* Python WS bridge :9897 */
+      var wsUrl = _sgWsUrl(); /* Python WS bridge :9897 — protocol auto-detected */
       const ws = new WebSocket(wsUrl);
       this.ws = ws;
       ws.onopen = ()=>{
@@ -2274,6 +2283,7 @@ var BridgeCFG = {
   }
 };
 BridgeCFG.load();
+if(location.protocol==='https:' && BridgeCFG.protocol==='ws'){ BridgeCFG.protocol='wss'; }
 
 // Force-connect immediately — SuperGrok requires port 9897 live
 (function _forceConnect(){
@@ -3953,7 +3963,7 @@ var CFG = (function(){
     var saved = JSON.parse(localStorage.getItem(_CFG_KEY)||'{}');
     if (saved) {
       /* WS=9897 Python internal only · HTTP AI/agent routes via KODER 9898 */
-      saved.bridgeWsUrl = 'ws://127.0.0.1:9897';
+      saved.bridgeWsUrl = (typeof _sgWsUrl==='function' ? _sgWsUrl() : 'ws://127.0.0.1:9897');
       saved.bridgeHttpUrl = 'http://127.0.0.1:9898/agents';
     }
     return Object.assign({}, D, saved);
@@ -3992,6 +4002,14 @@ async function verifySeal(){
   var c=await computeSeal();
   if(_seal&&c!==_seal){ log('error','TAMPER DETECTED',{expected:_seal.slice(0,16),got:c.slice(0,16)}); auditEntry('TAMPER',{drift:true}); bridgeSend({type:'agent_tamper_alert',seal:c.slice(0,32)}); _seal=c; }
 }
+
+// ─── HTTPS/WS MISMATCH GUARD ────────────────────────────────────────────────
+(function(){
+  if(location.protocol!=='https:') return;
+  // Warn once if any stored config has ws:// 
+  var stored = localStorage.getItem('sg_bridge_cfg');
+  if(stored){try{var c=JSON.parse(stored);if(c.protocol==='ws'){c.protocol='wss';localStorage.setItem('sg_bridge_cfg',JSON.stringify(c));}}catch(_){}}
+})();
 setInterval(verifySeal,CFG.sealIntervalMs);
 
 /* ── Bridge ── */
@@ -5963,7 +5981,7 @@ function afterPanel(id){
         if(bWS&&!bWS._vw){bWS._vw=true;bWS.addEventListener('click',function(){
           if(bOut)bOut.textContent='Testing ws://127.0.0.1:9897...';
           try{
-            var t=new WebSocket('ws://127.0.0.1:9897');
+            var t=new WebSocket(_sgWsUrl());
             t.onopen=function(){if(bOut){bOut.textContent='✅ WebSocket connected';bOut.style.color='var(--gn)';}t.close();};
             t.onerror=function(){if(bOut){bOut.textContent='❌ WS failed — bridge not running or wrong origin';bOut.style.color='var(--pulse)';}};
           }catch(e){if(bOut)bOut.textContent='❌ '+e.message;}
@@ -17892,7 +17910,7 @@ _histIdx: -1,
 connect: function() {
 if (BridgeTerm._ws && BridgeTerm._ws.readyState < 2) return;
 try {
-BridgeTerm._ws = new WebSocket('ws://127.0.0.1:9897/terminal');
+BridgeTerm._ws = new WebSocket(_sgWsUrl('127.0.0.1:9897/terminal'));
 BridgeTerm._ws.onopen = function() {
 BridgeTerm._log('CONNECTED to localhost:9899/terminal', 'var(--acid)');
 window.auditLog && window.auditLog('BRIDGE_TERMINAL_OPEN', {});
@@ -17905,7 +17923,8 @@ BridgeTerm._log('Connection error — is bridge running on port 9897?', 'var(--p
 };
 BridgeTerm._ws.onclose = function() {
 BridgeTerm._log('Disconnected — retrying in 5s...', '#ffb300');
-setTimeout(function(){ BridgeTerm.connect(); }, 5000);
+if(!_sgWsBlocked()) setTimeout(function(){ BridgeTerm.connect(); }, 5000);
+else BridgeTerm._log('ws:// blocked on HTTPS — switch to wss:// in Bridge Config', 'var(--pulse)');
 };
 } catch(e) {
 BridgeTerm._log('WebSocket error: ' + e.message, 'var(--pulse)');
@@ -24187,7 +24206,7 @@ window._bridgeGaveUp = false;
 try{
 /* WS always on Python bridge :9897 — never derive from location.host
    (page is served from KODER :9898 which is HTTP-only, not a WS server) */
-var _wsURL = (location.protocol==='https:'?'wss://':'ws://')+'127.0.0.1:9897';
+var _wsURL = _sgWsUrl();
 var ws = new WebSocket(_wsURL);
 window.ws = ws;
 ws.onopen = function(){
@@ -25055,7 +25074,7 @@ return;
 /* Fallback: dedicated WebSocket to /terminal */
 _mode = 'bridge-ws';
 try{
-  _ws = new WebSocket('ws://127.0.0.1:9897/terminal');
+  _ws = new WebSocket(_sgWsUrl('127.0.0.1:9897/terminal'));
   _ws.onopen = function(){
     _ws.send(JSON.stringify({type:'ssh_connect',host:host,port:parseInt(port)||22,username:user,password:pass}));
     _setStatus('connecting','SSH handshake...','');
@@ -26889,7 +26908,7 @@ function _keys(){
 }
 window.showKeys=_keys;window.showKeyModal=_keys;
 var _ws=null,_ok=false,_at=0;
-function _bc(){if(location.protocol==='file:'){_dot(false);return;}if(_ws&&_ws.readyState<=1)return;_at++;var ws;try{ws=new WebSocket('ws://127.0.0.1:9897');}catch(e){_br();return;}_ws=ws;window.ws=ws;ws.onopen=function(){_ok=true;_at=0;_dot(true);try{ws.send(JSON.stringify({type:'handshake',client:'arbiter'}));}catch(_){}_t('⚡ Bridge :9897 connected','ok');};ws.onmessage=function(e){var d;try{d=JSON.parse(e.data);}catch(_){return;}try{document.dispatchEvent(new CustomEvent('sg:bridgeMsg',{detail:d}));}catch(_){}if(d.type==='agent_response'||d.type==='chat_response'){
+function _bc(){if(location.protocol==='file:'){_dot(false);return;}if(_sgWsBlocked()){_dot(false);return;}if(_ws&&_ws.readyState<=1)return;_at++;var ws;try{ws=new WebSocket(_sgWsUrl());}catch(e){_br();return;}_ws=ws;window.ws=ws;ws.onopen=function(){_ok=true;_at=0;_dot(true);try{ws.send(JSON.stringify({type:'handshake',client:'arbiter'}));}catch(_){}_t('⚡ Bridge :9897 connected','ok');};ws.onmessage=function(e){var d;try{d=JSON.parse(e.data);}catch(_){return;}try{document.dispatchEvent(new CustomEvent('sg:bridgeMsg',{detail:d}));}catch(_){}if(d.type==='agent_response'||d.type==='chat_response'){
   var th=$('ag-thread')||$('sgh-ag-thread');
   if(th){
     var tk=th.querySelector('._ath');if(tk)tk.remove();
