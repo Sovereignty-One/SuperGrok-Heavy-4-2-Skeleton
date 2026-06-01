@@ -452,81 +452,53 @@ if(location.protocol==='file:'){
   <span id="sg-bridge-toast-txt">Bridge connecting...</span>
 </div>
 <script>
-/* ══ WEBSOCKET SOVEREIGN PATCH ════════════════════════════════════════════════
-   Safari blocks ws:// (non-TLS WebSocket) when page is loaded from file://.
-   This monkey-patch intercepts ALL new WebSocket() calls.
-   On file:// origin: blocks the connection, shows a one-time "open via HTTP" banner.
-   On http:// origin: allows ws:// normally.
-   Also converts any wss://127.0.0.1 or wss://localhost → ws:// (no TLS on loopback).
-   ════════════════════════════════════════════════════════════════════════════ */
 (function() {
-  'use strict';
-  var _NativeWS = window.WebSocket;
-  var _bannerShown = false;
-  var _isFileOrigin = (location.protocol === 'file:');
+ 'use strict';
+ var _isFileOrigin = (location.protocol === 'file:');
+ var _bannerShown = false;
 
-function _showOpenBanner() {
-if (_bannerShown || document.getElementById('sg-open-banner')) return;
-_bannerShown = true;
-var banner = document.createElement('div');
-banner.id = 'sg-open-banner';
-banner.style.cssText = [
-'position:fixed','top:0','left:0','right:0','z-index:2147483647',
-'background:linear-gradient(90deg,#ff3d6e,#7c4dff)',
-'color:#fff','padding:12px 16px',
-'font:700 13px/1.4 monospace',
-'display:flex','align-items:center','gap:12px',
-'box-shadow:0 2px 20px rgba(0,0,0,.5)'
-].join(';');
-banner.innerHTML =
-'<span style="font-size:20px">🌐</span>' +
-'<span>Frontend :9898 — open via HTTP so ws://9897 (Python WS bridge) connects: ' +
-'<a href="http://127.0.0.1:9898" style="color:#fff;text-decoration:underline;font-size:14px" ' +
-'onclick="window.location.href=\\x27http://127.0.0.1:9898\\x27;document.getElementById(\\x27sg-open-banner\\x27).remove();">' +
-'http://127.0.0.1:9898' +
-'</a>' +
-'  <span style="font-weight:400;font-size:11px;opacity:.8">(start: node server.js &amp; python bridge.py &amp;)</span>' +
-'</span>' +
-'<button onclick="var el=document.getElementById(\\x27sg-open-banner\\x27);el&&el.parentNode&&el.parentNode.removeChild(el);" ' +
-'style="margin-left:auto;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);' +
-'color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px">✕ dismiss</button>';
-document.body
-? document.body.insertBefore(banner, document.body.firstChild)
-: document.addEventListener('DOMContentLoaded', function() {
-document.body.insertBefore(banner, document.body.firstChild);
-});
-}
+ function _showOpenBanner() {
+   if (_bannerShown || document.getElementById('sg-open-banner')) return;
+   _bannerShown = true;
+   var banner = document.createElement('div');
+   banner.id = 'sg-open-banner';
+   banner.style.cssText = [
+     'position:fixed','top:0','left:0','right:0','z-index:2147483647',
+     'background:linear-gradient(90deg,#ff3d6e,#7c4dff)',
+     'color:#fff','padding:12px 16px',
+     'font:700 13px/1.4 monospace',
+     'display:flex','align-items:center','gap:12px',
+     'box-shadow:0 2px 20px rgba(0,0,0,.5)'
+   ].join(';');
+   banner.innerHTML =
+     '<span style="font-size:20px">🌐</span>' +
+     '<span>Open via HTTP so the bridge can connect: ' +
+     '<a href="http://127.0.0.1:9898" style="color:#fff;text-decoration:underline;font-size:14px" ' +
+     'onclick="window.location.href=\\x27http://127.0.0.1:9898\\x27;document.getElementById(\\x27sg-open-banner\\x27).remove();">' +
+     'http://127.0.0.1:9898' +
+     '</a>' +
+     ' <span style="font-weight:400;font-size:11px;opacity:.8">(start: python3 python3_bridge.py)</span>' +
+     '</span>' +
+     '<button onclick="var el=document.getElementById(\\x27sg-open-banner\\x27);el&&el.parentNode&&el.parentNode.removeChild(el);" ' +
+     'style="margin-left:auto;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);' +
+     'color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px">✕ dismiss</button>';
+   document.body
+     ? document.body.insertBefore(banner, document.body.firstChild)
+     : document.addEventListener('DOMContentLoaded', function() {
+         document.body.insertBefore(banner, document.body.firstChild);
+       });
+ }
 
-window.WebSocket = function(url, protocols) {
-if (typeof url === 'string') {
-/* Convert wss://loopback → ws:// — no TLS on localhost bridge */
-url = url.replace(/^wss:(\/\/(?:127\.0\.0\.1|localhost|::1)[:/])/, 'ws:$1');
+ if (_isFileOrigin) {
+   window._sgBridgeInsecure = true;
+   _showOpenBanner();
+ }
 
-  /* On file:// origin, ws:// will throw SecurityError. Surface a real banner,
-     dispatch a real event, then let the native constructor run so callers get
-     a real error path — no silent fake socket. */
-  if (_isFileOrigin && /^ws:\/\//.test(url)) {
-    _showOpenBanner();
-    window._sgBridgeInsecure = true;
-    try { document.dispatchEvent(new CustomEvent('sg:bridgeBlocked', {detail:{url:url, reason:'file_origin'}})); } catch(_){}
-  }
-}
-return protocols ? new _NativeWS(url, protocols) : new _NativeWS(url);
-};
-
-/* Copy static properties */
-window.WebSocket.prototype = _NativeWS.prototype;
-window.WebSocket.CONNECTING = 0;
-window.WebSocket.OPEN       = 1;
-window.WebSocket.CLOSING    = 2;
-window.WebSocket.CLOSED     = 3;
-
-/* Expose for diagnostics */
-window._sgWsPatch = { active: true, fileOrigin: _isFileOrigin };
-console.log(
-'%c[SG_WS] Sovereign patch active' + (_isFileOrigin ? ' — file:// origin: bridge disabled, use http://127.0.0.1:9898' : ' — HTTP origin: ws:// allowed'),
-'color:#00ffc8;font-size:9px'
-);
+ window._sgWsPatch = { active: false, fileOrigin: _isFileOrigin };
+ console.log(
+   '%c[SG_WS] Native WebSocket retained' + (_isFileOrigin ? ' — file:// origin: open via HTTP on :9898' : ' — HTTP origin: ws:// allowed'),
+   'color:#00ffc8;font-size:9px'
+ );
 })();
 
 /* ═══ BRIDGE STATUS SINGLETON ════════════════════════════════════════════════
@@ -541,6 +513,15 @@ var _connected = false;
 var _retries   = 0;
 var _timer     = null;
 
+
+// ─── PROTOCOL-AWARE WS HELPER ───────────────────────────────────────────────
+// Returns 'wss://' on HTTPS origins (mixed-content would block ws://),
+// 'ws://' on HTTP/file origins. All WebSocket connects must use this.
+function _sgWsProto(){ return location.protocol==='https:' ? 'wss://' : 'ws://'; }
+function _sgWsUrl(host){ return _sgWsProto() + (host || '127.0.0.1:9897'); }
+// Guard: once the browser signals ws:// is insecure, stop all reconnect attempts
+function _sgWsBlocked(){ return !!window._sgBridgeInsecure; }
+// ────────────────────────────────────────────────────────────────────────────
 function setConnected(yes, msg) {
 _connected = yes;
 if (bar) bar.style.background = yes ? 'var(--acid,#00ffc8)' : '#ff3d6e';
@@ -1997,7 +1978,7 @@ const BRIDGE = {
     if(this.ws){ try{this.ws.close();}catch(e){} this.ws=null; }
     var self = this;
     try{
-      var wsUrl = 'ws://127.0.0.1:9897'; /* Python WS bridge :9897 */
+      var wsUrl = _sgWsUrl(); /* Python WS bridge :9897 — protocol auto-detected */
       const ws = new WebSocket(wsUrl);
       this.ws = ws;
       ws.onopen = ()=>{
@@ -2054,7 +2035,7 @@ const BRIDGE = {
         /* Cap retries at 5 */
         if (self.wsRetries >= 5) {
           self.updateUI('PORT 9897 OFFLINE','var(--pulse)');
-          self.log('warn','Bridge retry cap reached — start Unified_Server.js then reconnect');
+          self.log('warn','Bridge retry cap reached — start python3_bridge.py then reconnect');
           return;
         }
         var delay = Math.min(2000 * (1 + self.wsRetries), 15000);
@@ -2302,6 +2283,7 @@ var BridgeCFG = {
   }
 };
 BridgeCFG.load();
+if(location.protocol==='https:' && BridgeCFG.protocol==='ws'){ BridgeCFG.protocol='wss'; }
 
 // Force-connect immediately — SuperGrok requires port 9897 live
 (function _forceConnect(){
@@ -3981,7 +3963,7 @@ var CFG = (function(){
     var saved = JSON.parse(localStorage.getItem(_CFG_KEY)||'{}');
     if (saved) {
       /* WS=9897 Python internal only · HTTP AI/agent routes via KODER 9898 */
-      saved.bridgeWsUrl = 'ws://127.0.0.1:9897';
+      saved.bridgeWsUrl = (typeof _sgWsUrl==='function' ? _sgWsUrl() : 'ws://127.0.0.1:9897');
       saved.bridgeHttpUrl = 'http://127.0.0.1:9898/agents';
     }
     return Object.assign({}, D, saved);
@@ -4020,6 +4002,14 @@ async function verifySeal(){
   var c=await computeSeal();
   if(_seal&&c!==_seal){ log('error','TAMPER DETECTED',{expected:_seal.slice(0,16),got:c.slice(0,16)}); auditEntry('TAMPER',{drift:true}); bridgeSend({type:'agent_tamper_alert',seal:c.slice(0,32)}); _seal=c; }
 }
+
+// ─── HTTPS/WS MISMATCH GUARD ────────────────────────────────────────────────
+(function(){
+  if(location.protocol!=='https:') return;
+  // Warn once if any stored config has ws:// 
+  var stored = localStorage.getItem('sg_bridge_cfg');
+  if(stored){try{var c=JSON.parse(stored);if(c.protocol==='ws'){c.protocol='wss';localStorage.setItem('sg_bridge_cfg',JSON.stringify(c));}}catch(_){}}
+})();
 setInterval(verifySeal,CFG.sealIntervalMs);
 
 /* ── Bridge ── */
@@ -4061,7 +4051,7 @@ function bridgeConnect(){
             b.innerHTML = '<span style="font-size:18px">⚠️</span>' +
               '<span><strong>WebSocket blocked by browser security</strong> &mdash; serve via Node server: ' +
               '<a href="http://127.0.0.1:9898" style="color:#fff;font-weight:bold">http://127.0.0.1:9898</a>' +
-              ' &nbsp;(run: <code>node Unified_Server.js</code>)</span>' +
+              ' &nbsp;(run: <code>python3 python3_bridge.py</code>)</span>' +
               '<button onclick="this.parentNode.remove()" style="margin-left:auto;background:transparent;border:1px solid rgba(255,255,255,.5);color:#fff;padding:2px 8px;border-radius:4px;cursor:pointer">✕</button>';
             document.body.insertBefore(b, document.body.firstChild);
           }
@@ -5991,7 +5981,7 @@ function afterPanel(id){
         if(bWS&&!bWS._vw){bWS._vw=true;bWS.addEventListener('click',function(){
           if(bOut)bOut.textContent='Testing ws://127.0.0.1:9897...';
           try{
-            var t=new WebSocket('ws://127.0.0.1:9897');
+            var t=new WebSocket(_sgWsUrl());
             t.onopen=function(){if(bOut){bOut.textContent='✅ WebSocket connected';bOut.style.color='var(--gn)';}t.close();};
             t.onerror=function(){if(bOut){bOut.textContent='❌ WS failed — bridge not running or wrong origin';bOut.style.color='var(--pulse)';}};
           }catch(e){if(bOut)bOut.textContent='❌ '+e.message;}
@@ -8630,7 +8620,7 @@ renderSection('🛠 DEVELOPER TOOLS', devApps, '#f97316') +
 '<div class="card">' +
 '<div class="card-title">⚡ Quick Bridge Commands</div>' +
 '<div style="display:flex;flex-wrap:wrap;gap:5px">' +
-['python3 bridge.py','node Unified_Server.js','git status','git pull',
+['python3 python3_bridge.py','git status','git pull',
 'git push','ls -la','python3 --version','node --version'].map(function(cmd){
 return '<button class="cmd-btn btn-s" data-cmd="'+cmd+'" style="font-size:8px;font-family:monospace">'+cmd+'</button>';
 }).join('') +
@@ -10946,6 +10936,7 @@ kc('ON', 'Live Preview', '#00e676') +
       '<option value="bash">Bash / Shell</option>' +
       '<option value="sql">SQL</option>' +
       '<option value="markdown">Markdown</option>' +
+       '<option value="diff">Unified Diff</option>' +
       '<option value="swift">Swift</option>' +
       '<option value="kotlin">Kotlin</option>' +
       '<option value="rust">Rust</option>' +
@@ -11072,6 +11063,7 @@ kc('ON', 'Live Preview', '#00e676') +
 '<div class="card" id="cm-ai-panel" style="display:none;border-color:var(--volt)22">' +
 '<div class="card-title">\ud83e\udd16 AI Analysis</div>' +
 '<div id="cm-ai-output" style="font-family:var(--mono);font-size:10px;line-height:1.7;white-space:pre-wrap;color:var(--t1)"></div>' +
+'<div id="cm-ai-diff" style="display:none;margin-top:8px;padding:8px;border:1px solid var(--wire);border-radius:var(--r);background:var(--bg1);font-family:var(--mono);font-size:9px;line-height:1.6;white-space:pre-wrap;max-height:260px;overflow:auto"></div>' +
 '<div style="display:flex;gap:8px;margin-top:8px">' +
 '<button class="btn btn-p" id="cm-apply-fix" style="display:none;font-size:9px">\u2714 Apply Fix</button>' +
 '<button class="btn btn-s" id="cm-ai-close" style="font-size:9px">\u2715 Close</button>' +
@@ -11082,7 +11074,7 @@ kc('ON', 'Live Preview', '#00e676') +
 '<div class="card">' +
 '<div class="card-title">\ud83d\udcc1 Files</div>' +
 '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
-'<input type="file" id="cm-file-input" accept=".html,.css,.js,.json,.py,.sh,.sql,.md,.txt,.jsx,.ts,.tsx" style="font-family:var(--mono);font-size:10px;color:var(--t1)">' +
+'<input type="file" id="cm-file-input" accept=".html,.css,.js,.json,.py,.sh,.sql,.md,.diff,.patch,.txt,.jsx,.ts,.tsx" style="font-family:var(--mono);font-size:10px;color:var(--t1)">' +
 '<button class="btn btn-s" id="cm-save-file" style="font-size:9px">\u2193 Save File</button>' +
 '<button class="btn btn-s" id="cm-new-file" style="font-size:9px">+ New</button>' +
 '</div>' +
@@ -12318,7 +12310,7 @@ out += '<div style="font-family:var(--mono);background:var(--bg3);padding:10px;b
 'export ANTHROPIC_API_KEY=sk-ant-...<br>'+
 'export OPENAI_API_KEY=sk-...<br>'+
 'export GROK_API_KEY=xai-...<br>'+
-'python3 bridge.py<br><br>'+
+'python3 python3_bridge.py<br><br>'+
 '# Bridge listens on:<br>'+
 'ws://127.0.0.1:9897   ← WebSocket (AI chat, voice, agent)<br>'+
 'http://127.0.0.1:9898 ← HTTP health + REST endpoints (unified)'+
@@ -12713,7 +12705,7 @@ var c = window._sgLastCert;
 var cfg = '# SuperGrok bridge.py TLS config\n# Generated: '+new Date().toISOString()+'\n\n'+
 'export CERT_B64="'+c.pubB64+'"\nexport KEY_B64="'+c.privB64+'"\n'+
 'export SG_TLS=1\nexport SG_PORT=9897\nexport SG_HOST=localhost\n\n'+
-'# Then run: python3 bridge.py --tls';
+'# Then run: python3 python3_bridge.py --tls';
 var a = document.createElement('a');
 a.href = URL.createObjectURL(new Blob([cfg],{type:'text/plain'}));
 a.download = 'bridge-tls-config.sh';
@@ -13821,7 +13813,7 @@ var key=window._agentApiKeys[ag]||window._agentApiKeys['claude']||'';
 if(!key){
 ab.innerHTML='⚠️ Bridge offline & no API key stored.<br>'+
 '<span style="font-size:9px;color:var(--t3)">Go to <strong>Security → API Keys</strong> panel and paste your key, or start bridge:<br>'+
-'<code style="color:var(--cy)">node Unified_Server.js</code></span>';
+'<code style="color:var(--cy)">python3 python3_bridge.py</code></span>';
 ab.style.color='var(--am)';
 msgs.scrollTop=msgs.scrollHeight;
 return;
@@ -15527,6 +15519,23 @@ if (lang === 'json') {
     consoleAdd('error', 'JSON parse error: ' + e.message, null, null, null);
   }
 }
+if (lang === 'diff') {
+  var diffLines = code.split('\n');
+  var hasHunk = false;
+  diffLines.forEach(function(line, idx) {
+    if (/^@@\s*-\d+(?:,\d+)?\s+\+\d+(?:,\d+)?\s*@@/.test(line)) hasHunk = true;
+    if (/^(?:\s*$|diff --git |index |--- |\+\+\+ |@@ |\\ No newline at end of file|old mode |new mode |new file mode |deleted file mode |copy from |copy to |rename from |rename to |similarity index |dissimilarity index |Binary files |GIT binary patch |literal )/.test(line) || /^[ +\-]/.test(line)) {
+      return;
+    }
+    warnCount++;
+    consoleAdd('warn', 'Unexpected diff line prefix', idx + 1, null, null);
+  });
+  if ((/^[+-](?![+-])/m.test(code) || /^@@/m.test(code)) && !hasHunk) {
+    errCount++;
+    consoleAdd('error', 'Missing unified diff hunk header', null, null, null);
+  }
+}
+
 
 /* Run error rules */
 (rules.errors || []).forEach(function(rule) {
@@ -15538,7 +15547,7 @@ if (lang === 'json') {
     errCount++;
     var msg = typeof rule.msg === 'function' ? rule.msg(m) : rule.msg;
     var lineNo = code.slice(0, m.index).split('\n').length;
-    var fixFn = rule.fix ? rule.fix.bind(null) : null;
+    var fixFn = rule.fix ? (function(fix, match){ return function(source) { return fix(source, match); }; })(rule.fix, m) : null;
     consoleAdd('error', msg, lineNo, fixFn, rule.fixMsg);
     fixes.push({fix: fixFn, msg: msg});
     if (re.lastIndex === m.index) { re.lastIndex++; }
@@ -15555,7 +15564,7 @@ if (lang === 'json') {
     warnCount++;
     var msg = typeof rule.msg === 'function' ? rule.msg(m) : rule.msg;
     var lineNo = code.slice(0, m.index).split('\n').length;
-    var fixFn = rule.fix ? rule.fix.bind(null) : null;
+    var fixFn = rule.fix ? (function(fix, match){ return function(source) { return fix(source, match); }; })(rule.fix, m) : null;
     consoleAdd('warn', msg, lineNo, fixFn, rule.fixMsg);
     if (re.lastIndex === m.index) { re.lastIndex++; }
   }
@@ -15636,6 +15645,21 @@ if (lang === 'html') {
   } catch(e) { frame.srcdoc = '<!DOCTYPE html><html><head>'+'<scr'+'ipt>'+'window.onerror=function(){return true;};'+'var _p=window.parent||window.top||window;'+'window.gi=function(id){return document.getElementById(id)||(_p.document&&_p.document.getElementById(id));};'+'window.toast=function(m,t){if(_p.toast)_p.toast(m,t);};'+'window.loadPanel=function(id){if(_p.loadPanel)_p.loadPanel(id);};'+'window.sg=function(fn){try{fn();}catch(e){if(_p.toast)_p.toast("\u26a0 "+e.message,"err");}};'+'window.sendChat=function(){if(_p.sendChat)_p.sendChat();};'+'window.sgAgentQuery=function(){if(_p.sgAgentQuery)_p.sgAgentQuery();};'+'window.bridgeReconnect=function(){if(_p.bridgeReconnect)_p.bridgeReconnect();};'+'window.sgSetApiKey=function(a,k){if(_p.sgSetApiKey)_p.sgSetApiKey(a,k);};'+'</'+'script>'+'<style>*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#fff;color:#000}</style>'+'</head><body>'
   + ((md_html)||'').replace(/<html[^>]*>/i,'').replace(/<\/html>/i,'').replace(/<head>[\s\S]*?<\/head>/i,'').replace(/<body[^>]*>/i,'').replace(/<\/body>/i,'')
   + '</body></html>'; }
+} else if (lang === 'diff') {
+  frame.style.display = 'none';
+  txtDiv.style.display = 'block';
+  var diffHl = code
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^(diff --git .*)$/gm,'<span style="color:#569cd6">$1</span>')
+    .replace(/^(index .*)$/gm,'<span style="color:#b5cea8">$1</span>')
+    .replace(/^(--- .*)$/gm,'<span style="color:#c586c0">$1</span>')
+    .replace(/^(\+\+\+ .*)$/gm,'<span style="color:#c586c0">$1</span>')
+    .replace(/^(@@ .* @@)$/gm,'<span style="color:#4fc1ff;font-weight:700">$1</span>')
+    .replace(/^(\\ No newline at end of file)$/gm,'<span style="color:#ffb86b">$1</span>')
+    .replace(/^(\+.*)$/gm,'<span style="color:#4ec9b0">$1</span>')
+    .replace(/^(\-.*)$/gm,'<span style="color:#f44747">$1</span>')
+    .replace(/^( .*?)$/gm,'<span style="color:var(--t0)">$1</span>');
+  txtDiv.innerHTML = diffHl;
 } else {
   /* Non-renderable: show as syntax-highlighted text */
   frame.style.display = 'none';
@@ -16395,7 +16419,7 @@ document.addEventListener('change', function(e) {
 if (e.target.id === 'cm-file-input') {
 var file = e.target.files[0]; if (!file) return;
 var ext = file.name.split('.').pop().toLowerCase();
-var langMap = {html:'html',css:'css',js:'js',json:'json',py:'python',sh:'bash',sql:'sql',md:'markdown',jsx:'js',ts:'js',tsx:'js'};
+var langMap = {html:'html',css:'css',js:'js',json:'json',py:'python',sh:'bash',sql:'sql',md:'markdown',diff:'diff',patch:'diff',jsx:'js',ts:'js',tsx:'js'};
 var sel = document.getElementById('cm-lang');
 if (sel && langMap[ext]) sel.value = langMap[ext];
 var r = new FileReader();
@@ -17886,7 +17910,7 @@ _histIdx: -1,
 connect: function() {
 if (BridgeTerm._ws && BridgeTerm._ws.readyState < 2) return;
 try {
-BridgeTerm._ws = new WebSocket('ws://127.0.0.1:9897/terminal');
+BridgeTerm._ws = new WebSocket(_sgWsUrl('127.0.0.1:9897/terminal'));
 BridgeTerm._ws.onopen = function() {
 BridgeTerm._log('CONNECTED to localhost:9899/terminal', 'var(--acid)');
 window.auditLog && window.auditLog('BRIDGE_TERMINAL_OPEN', {});
@@ -17899,7 +17923,8 @@ BridgeTerm._log('Connection error — is bridge running on port 9897?', 'var(--p
 };
 BridgeTerm._ws.onclose = function() {
 BridgeTerm._log('Disconnected — retrying in 5s...', '#ffb300');
-setTimeout(function(){ BridgeTerm.connect(); }, 5000);
+if(!_sgWsBlocked()) setTimeout(function(){ BridgeTerm.connect(); }, 5000);
+else BridgeTerm._log('ws:// blocked on HTTPS — switch to wss:// in Bridge Config', 'var(--pulse)');
 };
 } catch(e) {
 BridgeTerm._log('WebSocket error: ' + e.message, 'var(--pulse)');
@@ -17998,7 +18023,7 @@ kc('ZERO',     'Cloud',         'var(--pulse)') +
 
 '<div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:var(--r);padding:10px;font-family:var(--mono);font-size:9px;color:#22c55e;margin-bottom:12px;line-height:1.8">' +
 '\u26a1 BRIDGE PROTOCOL: SuperGrok connects to localhost:9897 via WebSocket. ' +
-'On iOS: run bridge.py inside iSH or a-Shell. On desktop: python3 bridge.py. ' +
+'On iOS: run python3 python3_bridge.py inside iSH or a-Shell. On desktop: python3 python3_bridge.py. ' +
 'Node.js commands exec via bridge. GitHub clone/pull/push routed through bridge.' +
 '</div>' +
 
@@ -18007,7 +18032,7 @@ kc('ZERO',     'Cloud',         'var(--pulse)') +
 '<div class="card-title">\u26a1 Quick Connect</div>' +
 '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:12px">' +
 [
-{label:'Start Bridge (Python)',  cmd:'python3 bridge.py',         color:'var(--acid)'},
+{label:'Start Bridge (Python)',  cmd:'python3 python3_bridge.py', color:'var(--acid)'},
 {label:'Start Bridge (Node)',    cmd:'node bridge.js',             color:'var(--volt)'},
 {label:'Check Python',           cmd:'python3 --version',          color:'#00b894'},
 {label:'Check Node.js',          cmd:'node --version',             color:'#fdcb6e'},
@@ -18043,8 +18068,8 @@ item.label +
 '<div id="bt-output" style="background:#000;padding:10px;min-height:200px;max-height:45vh;overflow-y:auto;font-family:var(--mono);font-size:10px;color:var(--t2);line-height:1.6">' +
 '<div style="color:var(--acid)">SuperGrok Terminal \u2014 localhost:9899</div>' +
 '<div style="color:var(--t3)">Run commands via bridge. Start bridge.py on device first.</div>' +
-'<div style="color:var(--t3)">iSH: copy bridge.py into /root, run: python3 bridge.py</div>' +
-'<div style="color:var(--t3)">a-Shell: python3 bridge.py in working dir</div>' +
+'<div style="color:var(--t3)">iSH: copy python3_bridge.py into /root, run: python3 python3_bridge.py</div>' +
+'<div style="color:var(--t3)">a-Shell: python3 python3_bridge.py in working dir</div>' +
 '</div>' +
 '</div>' +
 
@@ -20581,6 +20606,23 @@ if (lang === 'json') {
     consoleAdd('error', 'JSON parse error: ' + e.message, null, null, null);
   }
 }
+if (lang === 'diff') {
+  var diffLines = code.split('\n');
+  var hasHunk = false;
+  diffLines.forEach(function(line, idx) {
+    if (/^@@\s*-\d+(?:,\d+)?\s+\+\d+(?:,\d+)?\s*@@/.test(line)) hasHunk = true;
+    if (/^(?:\s*$|diff --git |index |--- |\+\+\+ |@@ |\\ No newline at end of file|old mode |new mode |new file mode |deleted file mode |copy from |copy to |rename from |rename to |similarity index |dissimilarity index |Binary files |GIT binary patch |literal )/.test(line) || /^[ +\-]/.test(line)) {
+      return;
+    }
+    warnCount++;
+    consoleAdd('warn', 'Unexpected diff line prefix', idx + 1, null, null);
+  });
+  if ((/^[+-](?![+-])/m.test(code) || /^@@/m.test(code)) && !hasHunk) {
+    errCount++;
+    consoleAdd('error', 'Missing unified diff hunk header', null, null, null);
+  }
+}
+
 
 /* Run error rules */
 (rules.errors || []).forEach(function(rule) {
@@ -20592,7 +20634,7 @@ if (lang === 'json') {
     errCount++;
     var msg = typeof rule.msg === 'function' ? rule.msg(m) : rule.msg;
     var lineNo = code.slice(0, m.index).split('\n').length;
-    var fixFn = rule.fix ? rule.fix.bind(null) : null;
+    var fixFn = rule.fix ? (function(fix, match){ return function(source) { return fix(source, match); }; })(rule.fix, m) : null;
     consoleAdd('error', msg, lineNo, fixFn, rule.fixMsg);
     fixes.push({fix: fixFn, msg: msg});
     if (re.lastIndex === m.index) { re.lastIndex++; }
@@ -20609,7 +20651,7 @@ if (lang === 'json') {
     warnCount++;
     var msg = typeof rule.msg === 'function' ? rule.msg(m) : rule.msg;
     var lineNo = code.slice(0, m.index).split('\n').length;
-    var fixFn = rule.fix ? rule.fix.bind(null) : null;
+    var fixFn = rule.fix ? (function(fix, match){ return function(source) { return fix(source, match); }; })(rule.fix, m) : null;
     consoleAdd('warn', msg, lineNo, fixFn, rule.fixMsg);
     if (re.lastIndex === m.index) { re.lastIndex++; }
   }
@@ -20690,6 +20732,21 @@ if (lang === 'html') {
   } catch(e) { frame.srcdoc = '<!DOCTYPE html><html><head>'+'<scr'+'ipt>'+'window.onerror=function(){return true;};'+'var _p=window.parent||window.top||window;'+'window.gi=function(id){return document.getElementById(id)||(_p.document&&_p.document.getElementById(id));};'+'window.toast=function(m,t){if(_p.toast)_p.toast(m,t);};'+'window.loadPanel=function(id){if(_p.loadPanel)_p.loadPanel(id);};'+'window.sg=function(fn){try{fn();}catch(e){if(_p.toast)_p.toast("\u26a0 "+e.message,"err");}};'+'window.sendChat=function(){if(_p.sendChat)_p.sendChat();};'+'window.sgAgentQuery=function(){if(_p.sgAgentQuery)_p.sgAgentQuery();};'+'window.bridgeReconnect=function(){if(_p.bridgeReconnect)_p.bridgeReconnect();};'+'window.sgSetApiKey=function(a,k){if(_p.sgSetApiKey)_p.sgSetApiKey(a,k);};'+'</'+'script>'+'<style>*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#fff;color:#000}</style>'+'</head><body>'
   + ((md_html)||'').replace(/<html[^>]*>/i,'').replace(/<\/html>/i,'').replace(/<head>[\s\S]*?<\/head>/i,'').replace(/<body[^>]*>/i,'').replace(/<\/body>/i,'')
   + '</body></html>'; }
+} else if (lang === 'diff') {
+  frame.style.display = 'none';
+  txtDiv.style.display = 'block';
+  var diffHl = code
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^(diff --git .*)$/gm,'<span style="color:#569cd6">$1</span>')
+    .replace(/^(index .*)$/gm,'<span style="color:#b5cea8">$1</span>')
+    .replace(/^(--- .*)$/gm,'<span style="color:#c586c0">$1</span>')
+    .replace(/^(\+\+\+ .*)$/gm,'<span style="color:#c586c0">$1</span>')
+    .replace(/^(@@ .* @@)$/gm,'<span style="color:#4fc1ff;font-weight:700">$1</span>')
+    .replace(/^(\\ No newline at end of file)$/gm,'<span style="color:#ffb86b">$1</span>')
+    .replace(/^(\+.*)$/gm,'<span style="color:#4ec9b0">$1</span>')
+    .replace(/^(\-.*)$/gm,'<span style="color:#f44747">$1</span>')
+    .replace(/^( .*?)$/gm,'<span style="color:var(--t0)">$1</span>');
+  txtDiv.innerHTML = diffHl;
 } else {
   /* Non-renderable: show as syntax-highlighted text */
   frame.style.display = 'none';
@@ -20874,7 +20931,7 @@ document.addEventListener('change', function(e) {
 if (e.target.id === 'cm-file-input') {
 var file = e.target.files[0]; if (!file) return;
 var ext = file.name.split('.').pop().toLowerCase();
-var langMap = {html:'html',css:'css',js:'js',json:'json',py:'python',sh:'bash',sql:'sql',md:'markdown',jsx:'js',ts:'js',tsx:'js'};
+var langMap = {html:'html',css:'css',js:'js',json:'json',py:'python',sh:'bash',sql:'sql',md:'markdown',diff:'diff',patch:'diff',jsx:'js',ts:'js',tsx:'js'};
 var sel = document.getElementById('cm-lang');
 if (sel && langMap[ext]) sel.value = langMap[ext];
 var r = new FileReader();
@@ -22337,7 +22394,7 @@ return hdr('⚙️ Settings','API Keys · Bridge · Roles · Session · Display'
 '<button class="btn btn-p" style="font-size:9px" onclick="bridgeReconnect()">⚡ Reconnect Bridge</button>' +
 '<button class="btn" style="font-size:9px" onclick="window._bridgeGaveUp=false;window._bridgeRetryCount=0;initBridge();toast(\'Retrying...\',\'\')">🔄 Force Retry</button>' +
 '</div>' +
-'<div style="font-family:var(--mono);font-size:8px;color:var(--t3)">Bridge: ws://127.0.0.1:9897 · Run: <code>node Unified_Server.js</code></div>' +
+'<div style="font-family:var(--mono);font-size:8px;color:var(--t3)">Bridge: ws://127.0.0.1:9897 · Run: <code>python3 python3_bridge.py</code></div>' +
 '</div>' +
 
 /* API Keys */
@@ -22732,7 +22789,7 @@ return hdr('🔒 Secure Terminal','WebSSH · SSH Proxy · a-Shell · iSH · On-D
 '<div style="display:flex;flex-wrap:wrap;gap:5px">' +
 ['ls -la','pwd','whoami','python3 --version','node --version','git status',
 'git log --oneline -5','pip3 list','ps aux | head','df -h','free -h',
-'cat /etc/os-release','uname -a','python3 bridge.py','node Unified_Server.js',
+'cat /etc/os-release','uname -a','python3 python3_bridge.py',
 'git pull','npm install','pip3 install -r requirements.txt'].map(function(cmd){
 return '<button class="btn-s" style="font-size:8px;font-family:monospace;padding:3px 8px;border-radius:4px;background:#0d1117;border:1px solid #333;color:#8b949e;cursor:pointer" onclick="sg(function(){SG_SSH.quickCmd(\''+cmd+'\')})">'+cmd+'</button>';
 }).join('') +
@@ -23637,7 +23694,7 @@ _queryDirect: function(agentId, message, history, cb){
   }
 
   /* Bridge offline */
-  var bridgeHint = 'Bridge offline — run: python3 bridge.py  then open http://127.0.0.1:9898';
+  var bridgeHint = 'Bridge offline — run: python3 python3_bridge.py  then open http://127.0.0.1:9898';
   if(cb) cb({error:agentId+': '+bridgeHint, agent:agentId});
 },
 
@@ -23824,7 +23881,7 @@ html += '</div>';
 html += '<div id="ag-thread" style="background:var(--bg1);border:1px solid var(--wire);border-radius:8px;min-height:80px;max-height:300px;overflow-y:auto;padding:10px;font-family:var(--mono);font-size:10px;color:var(--t2)"><span style="color:var(--t4)">Messages appear here\u2026</span></div>';
 html += '</div>';
 }
-html += '<div style="font-family:var(--mono);font-size:8px;color:var(--t4);text-align:center;padding:10px 0">GPT & Grok: run python3 bridge.py \u00b7 open http://127.0.0.1:9898 \u00b7 add keys in \u2630 AI API Keys</div>';
+html += '<div style="font-family:var(--mono);font-size:8px;color:var(--t4);text-align:center;padding:10px 0">GPT & Grok: run python3 python3_bridge.py \u00b7 open http://127.0.0.1:9898 \u00b7 add keys in \u2630 AI API Keys</div>';
 return html;
 };
 
@@ -24149,7 +24206,7 @@ window._bridgeGaveUp = false;
 try{
 /* WS always on Python bridge :9897 — never derive from location.host
    (page is served from KODER :9898 which is HTTP-only, not a WS server) */
-var _wsURL = (location.protocol==='https:'?'wss://':'ws://')+'127.0.0.1:9897';
+var _wsURL = _sgWsUrl();
 var ws = new WebSocket(_wsURL);
 window.ws = ws;
 ws.onopen = function(){
@@ -25017,7 +25074,7 @@ return;
 /* Fallback: dedicated WebSocket to /terminal */
 _mode = 'bridge-ws';
 try{
-  _ws = new WebSocket('ws://127.0.0.1:9897/terminal');
+  _ws = new WebSocket(_sgWsUrl('127.0.0.1:9897/terminal'));
   _ws.onopen = function(){
     _ws.send(JSON.stringify({type:'ssh_connect',host:host,port:parseInt(port)||22,username:user,password:pass}));
     _setStatus('connecting','SSH handshake...','');
@@ -25083,7 +25140,7 @@ connectLocal: function(){
   _setStatus('connected','Local Shell','on-device');
   _prompt = '$ ';
   var p=document.getElementById('ssh-prompt');if(p)p.textContent='$ ';
-  _out('Local shell mode — commands execute via bridge.py\nStart bridge: python3 bridge.py', '#00ffc8');
+  _out('Local shell mode — commands execute via python3_bridge.py\nStart bridge: python3 python3_bridge.py', '#00ffc8');
 },
 
 connectISH: function(){
@@ -25099,7 +25156,7 @@ connectAShell: function(){
   _setStatus('connected','a-Shell','on-device');
   _prompt = 'a-Shell$ ';
   var p=document.getElementById('ssh-prompt');if(p)p.textContent='a-Shell$ ';
-  _out('a-Shell mode — execute commands via bridge.py\n  python3 bridge.py', '#00ffc8');
+  _out('a-Shell mode — execute commands via python3_bridge.py\n  python3 python3_bridge.py', '#00ffc8');
 },
 
 disconnect: function(){
@@ -26092,7 +26149,7 @@ setTimeout(function(){
       }, 30000);
       return;
     }
-    cb({error:agentId+' needs bridge. Claude works without it — run python3 bridge.py for GPT/Grok.'});
+    cb({error:agentId+' needs bridge. Claude works without it — run python3 python3_bridge.py for GPT/Grok.'});
   };
 }, 500);
 
@@ -26287,7 +26344,7 @@ if(aiBtn && !aiBtn._cm){
 aiBtn._cm = true;
 aiBtn.addEventListener('click', function(e){
 if(e){ e.preventDefault(); e.stopPropagation(); }
-if(typeof window.aiAnalyze === 'function') window.aiAnalyze();
+if(typeof _ai === 'function') _ai();
 });
 }
 
@@ -26564,8 +26621,9 @@ function _sgLocalFix(code){
   fixed = fixed.replace(/<b>/gi, '<strong>').replace(/<\/b>/gi, '</strong>');
   try {
     if (typeof DOMParser !== 'undefined') {
+      var fullDoc = /<!doctype[\s\S]*?>|<html\b|<head\b|<body\b/i.test(fixed);
       var doc = new DOMParser().parseFromString(fixed, 'text/html');
-      var nodes = doc.body.querySelectorAll('*');
+      var nodes = doc.querySelectorAll('*');
       for (var i = 0; i < nodes.length; i++) {
         var el = nodes[i];
         for (var j = el.attributes.length - 1; j >= 0; j--) {
@@ -26579,17 +26637,19 @@ function _sgLocalFix(code){
           }
         }
       }
-      fixed = doc.body.innerHTML;
+      fixed = fullDoc ? ((doc.doctype ? '<!DOCTYPE html>\n' : '') + doc.documentElement.outerHTML) : (doc.body ? doc.body.innerHTML : fixed);
     }
   } catch (_) {
   }
-  if (fixed.indexOf('<head>') >= 0 && fixed.indexOf('</head>') < 0) {
-    fixed = fixed.replace(/<\/html>/i, '</head></html>');
-    if (fixed.indexOf('</head>') < 0) fixed += '</head>';
-  }
-  if (fixed.indexOf('<body>') >= 0 && fixed.indexOf('</body>') < 0) {
-    fixed = fixed.replace(/<\/html>/i, '</body></html>');
-    if (fixed.indexOf('</body>') < 0) fixed += '</body>';
+  if (/<html\b/i.test(fixed)) {
+    if (fixed.indexOf('<head>') >= 0 && fixed.indexOf('</head>') < 0) {
+      fixed = fixed.replace(/<\/html>/i, '</head></html>');
+      if (fixed.indexOf('</head>') < 0) fixed += '</head>';
+    }
+    if (fixed.indexOf('<body>') >= 0 && fixed.indexOf('</body>') < 0) {
+      fixed = fixed.replace(/<\/html>/i, '</body></html>');
+      if (fixed.indexOf('</body>') < 0) fixed += '</body>';
+    }
   }
   return fixed;
 }
@@ -26603,41 +26663,54 @@ function _sgLocalAnalyze(code){
   if (/<body>/i.test(text) && !/<\/body>/i.test(text)) issues.push('Close the body tag.');
   return issues.length ? issues.join(' ') : 'No obvious HTML issues found locally.';
 }
+
+function _sgCodeMasterDiff(before, after){
+  var a = String(before || '').split('\n');
+  var b = String(after || '').split('\n');
+  var out = ['--- codemaster://before', '+++ codemaster://after'];
+  var max = Math.max(a.length, b.length);
+  var changed = false;
+  for (var i = 0; i < max; i++) {
+    var oldLine = a[i];
+    var newLine = b[i];
+    if (oldLine === newLine) {
+      if (oldLine !== undefined) out.push(' ' + oldLine);
+      continue;
+    }
+    changed = true;
+    if (oldLine !== undefined) out.push('-' + oldLine);
+    if (newLine !== undefined) out.push('+' + newLine);
+  }
+  if (!changed) out.push(' No local changes');
+  return out.join('\n');
+}
+
+function _sgRenderCodeMasterDiff(target, diffText){
+  if (!target) return;
+  while (target.firstChild) target.removeChild(target.firstChild);
+  String(diffText || '').split('\n').forEach(function(line) {
+    var row = document.createElement('div');
+    row.textContent = line;
+    row.style.whiteSpace = 'pre-wrap';
+    row.style.wordBreak = 'break-word';
+    row.style.color = /^\+/.test(line) ? '#4ec9b0' : /^-/.test(line) ? '#f44747' : /^@@/.test(line) ? '#4fc1ff' : /^(diff --git |index |--- |\+\+\+ )/.test(line) ? '#c586c0' : /^\\ No newline at end of file$/.test(line) ? '#ffb86b' : 'var(--t0)';
+    target.appendChild(row);
+  });
+}
+
+function _sgExtractCodeFence(text){
+  var m = String(text || '').match(/```(?:[\w+-]+)?\s*\n([\s\S]*?)```/i);
+  return m && m[1] ? m[1].replace(/^\s+|\s+$/g, '') : '';
+}
+
 async function aiAnalyzeOrFix(code, mode = 'fix') {
   var source = String(code || '');
   var task = mode === 'fix' ? 'fix' : 'analyze';
-  var prompt = task === 'fix'
-    ? 'Fix all HTML validation errors in this code. Close all unclosed tags, add missing alt attributes, remove javascript: onclick handlers, replace <b> with <strong>. Return ONLY the fixed HTML.\n\n' + source
-    : 'Analyze this code for issues and suggest fixes.\n\n' + source;
-
-  try {
-    var endpoints = ['/api/ai', 'http://127.0.0.1:9897/api/ai', 'http://localhost:9897/api/ai'];
-    for (var i = 0; i < endpoints.length; i++) {
-      try {
-        var res = await fetch(endpoints[i], {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            provider: 'grok',
-            prompt: prompt,
-            mode: task
-          })
-        });
-        if (res.ok) {
-          var data = await res.json();
-          return data.fixed_code || data.result || source;
-        }
-      } catch(e) {}
-    }
-  } catch (e) {
-    console.warn('Local backend unavailable, using client-side fixer');
-  }
-
   return task === 'fix' ? _sgLocalFix(source) : _sgLocalAnalyze(source);
 }
 window.aiAnalyzeOrFix = aiAnalyzeOrFix;
-window.aiAnalyze = function(code){ return aiAnalyzeOrFix(code, 'analyze'); };
-window.aiFixAll = function(code){ return aiAnalyzeOrFix(code, 'fix'); };
+window.aiAnalyze = function(code){ return aiAnalyzeOrFix(typeof code === 'string' ? code : (document.getElementById('cm-editor')||{}).value||'', 'analyze'); };
+window.aiFixAll = function(code){ return aiAnalyzeOrFix(typeof code === 'string' ? code : (document.getElementById('cm-editor')||{}).value||'', 'fix'); };
 function _t(m,k){var c=k==='err'?'#ff3d6e':k==='ok'?'#00ffc8':'#7ca3c8';var el=$('_at');if(!el){el=document.createElement('div');el.id='_at';el.style.cssText='position:fixed;bottom:24px;right:20px;z-index:2147483647;padding:10px 16px;border-radius:8px;font:bold 11px monospace;max-width:320px;display:none;box-shadow:0 4px 20px rgba(0,0,0,.5)';document.body.appendChild(el);}el.style.background='#07101f';el.style.border='1px solid '+c;el.style.color=c;el.textContent=m;el.style.display='block';clearTimeout(el._x);el._x=setTimeout(function(){el.style.display='none';},4000);}
 window._sghToast=_t;
 function _run(){var ed=$('cm-editor'),fr=$('cm-preview-frame');if(!ed||!fr)return;var c=ed.value||'',l=($('cm-lang')||{}).value||'html';if(window.CM&&typeof window.CM.updatePreview==='function'){try{window.CM.updatePreview();return;}catch(_){}}if(l==='html')fr.srcdoc=c;else if(l==='js'||l==='javascript')fr.srcdoc='<!DOCTYPE html><body><sc'+'ript>\n'+c+'\n<\/sc'+'ript></body>';else if(l==='css')fr.srcdoc='<!DOCTYPE html><head><style>'+c+'</style></head><body style="padding:20px;font-family:sans-serif"><p>CSS preview</p></body>';else if(l==='json'){try{fr.srcdoc='<pre style="font:11px monospace;padding:20px;background:#0d0d1a;color:#00ffc8;margin:0">'+JSON.stringify(JSON.parse(c),null,2).replace(/[&<>]/g,function(x){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[x];})+'</pre>';}catch(e){fr.srcdoc='<pre style="color:red;padding:20px">'+e.message+'</pre>';}}else fr.srcdoc='<pre style="font:11px monospace;padding:20px;background:#0d0d1a;color:#00ffc8;margin:0">'+c.replace(/[&<>]/g,function(x){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[x];})+'</pre>';}
@@ -26646,6 +26719,7 @@ function _ai(){
   var ed=document.getElementById('cm-editor');
   var panel=document.getElementById('cm-ai-panel');
   var out=document.getElementById('cm-ai-output');
+  var diff=document.getElementById('cm-ai-diff');
   var ap=document.getElementById('cm-apply-fix');
   var lang=(document.getElementById('cm-lang')||{}).value||'html';
 
@@ -26658,14 +26732,16 @@ function _ai(){
       div.style.cssText='background:#07101f;border:1px solid #00ffc840;border-radius:10px;padding:14px;margin-top:10px;display:block';
       div.innerHTML='<div style="font:700 10px monospace;color:#00ffc8;margin-bottom:8px">🤖 AI ANALYSIS</div>'+
         '<div id="cm-ai-output" style="font:10px/1.7 monospace;color:#eaf0ff;white-space:pre-wrap;max-height:50vh;overflow-y:auto;min-height:60px"></div>'+
+        '<div id="cm-ai-diff" style="display:none;margin-top:8px;padding:8px;border:1px solid #254868;border-radius:8px;background:#0a1628;font:9px/1.6 monospace;white-space:pre-wrap;max-height:260px;overflow:auto"></div>'+
         '<button id="cm-apply-fix" style="display:none;width:100%;padding:12px;margin-top:10px;background:#00ffc8;color:#000;border:none;border-radius:8px;font:700 13px monospace;cursor:pointer">✅ APPLY FIX</button>';
       area.appendChild(div);
-      panel=div;out=document.getElementById('cm-ai-output');ap=document.getElementById('cm-apply-fix');
+      panel=div;out=document.getElementById('cm-ai-output');diff=document.getElementById('cm-ai-diff');ap=document.getElementById('cm-apply-fix');
     }
   }
   if(panel)panel.style.display='block';
   if(out){out.textContent='';out.style.display='block';}
-  if(ap)ap.style.display='none';
+  if(diff){diff.style.display='none';diff.innerHTML='';}
+  if(ap){ap.style.display='none';ap._fixFn=null;}
 
   /* ── Scroll panel into view ── */
   if(panel&&panel.scrollIntoView)panel.scrollIntoView({behavior:'smooth',block:'nearest'});
@@ -26677,7 +26753,8 @@ function _ai(){
     _t('Open CodeMaster first','err');
     return;
   }
-  var code=(ed.value||'').trim();
+  var source=ed.value||'';
+  var code=source.trim();
   if(!code){
     if(out)out.textContent='Paste your code into the editor above, then tap AI FIX.';
     _t('Paste code into the editor first','err');
@@ -26693,13 +26770,18 @@ function _ai(){
   var localAnalysis = '';
   var localFixed;
   var changed = false;
+  var autoFixes = [];
+  var manualFixes = [];
 
   if (isMarkup) {
     localAnalysis = _sgLocalAnalyze(code);
-    localFixed = _sgLocalFix(code);
-    changed = localFixed !== code;
+    localFixed = _sgLocalFix(source);
+    changed = localFixed !== source;
+    if (changed) autoFixes.push('Applied local HTML cleanup.');
+    manualFixes.push(localAnalysis);
   } else {
-    var fixableCount = (window._cmFixes || []).filter(function(f){ return f && f.fix; }).length;
+    var fixableItems = (window._cmFixes || []).filter(function(f){ return f && f.fix; });
+    var fixableCount = fixableItems.length;
     localAnalysis = lint
       ? (
           'Lint results refreshed from the editor.\n' +
@@ -26710,28 +26792,50 @@ function _ai(){
         )
       : 'Lint results are not available for ' + lang.toUpperCase() + '.';
     changed = fixableCount > 0;
+    fixableItems.forEach(function(item) {
+      if (item && item.msg) autoFixes.push(item.msg);
+    });
+    manualFixes.push(localAnalysis);
   }
 
   if (out) {
     out.textContent =
       '✅ CodeMaster Local Analysis (' + lang.toUpperCase() + ')\n\n' +
-      (lint ? ('Errors: ' + lint.errCount + '\nWarnings: ' + lint.warnCount + '\n\n') : '') +
-      localAnalysis +
-      '\n\nNo external API call was used.';
+      'Auto-fix:\n' + (autoFixes.length ? autoFixes.join('\n') : 'None') + '\n\n' +
+      'Manual review:\n' + (manualFixes.length ? manualFixes.join('\n') : 'None') + '\n\n' +
+      'No external API call was used.';
+  }
+
+  var next = source;
+  if (isMarkup) {
+    next = _sgLocalFix(source);
+  } else {
+    var fixes = window._cmFixes || [];
+    fixes.forEach(function(f){ if(f && f.fix) next = f.fix(next) || next; });
+  }
+
+  if (diff) {
+    if (changed) {
+      diff.style.display='block';
+      _sgRenderCodeMasterDiff(diff, _sgCodeMasterDiff(source, next));
+    } else {
+      diff.style.display='none';
+      while (diff.firstChild) diff.removeChild(diff.firstChild);
+    }
   }
 
   if (ap) {
     ap.style.cssText='display:block;width:100%;padding:14px;margin-top:12px;background:#00ffc8;color:#000;border:none;border-radius:8px;font:700 14px monospace;cursor:pointer;letter-spacing:0.5px';
     ap.textContent = changed ? '✅ APPLY LOCAL FIX' : '✅ RE-APPLY LOCAL FIX';
-    ap.onclick=function(){
+    ap._fixFn=function(){
       if (!isMarkup && window.CM && typeof window.CM.runLint === 'function') {
         try { window.CM.runLint(); } catch(_) {}
       }
-      var next = ed.value || '';
-      if (isMarkup) next = _sgLocalFix(next);
-      var fixes = window._cmFixes || [];
-      fixes.forEach(function(f){ if(f && f.fix) next = f.fix(next) || next; });
-      ed.value = next;
+      var applied = ed.value || '';
+      if (isMarkup) applied = _sgLocalFix(applied);
+      var fxs = window._cmFixes || [];
+      fxs.forEach(function(f){ if(f && f.fix) applied = f.fix(applied) || applied; });
+      ed.value = applied;
       ed.dispatchEvent(new Event('input',{bubbles:true}));
       _run();
       _t('Local fixes applied ✓','ok');
@@ -26804,7 +26908,7 @@ function _keys(){
 }
 window.showKeys=_keys;window.showKeyModal=_keys;
 var _ws=null,_ok=false,_at=0;
-function _bc(){if(location.protocol==='file:'){_dot(false);return;}if(_ws&&_ws.readyState<=1)return;_at++;var ws;try{ws=new WebSocket('ws://127.0.0.1:9897');}catch(e){_br();return;}_ws=ws;window.ws=ws;ws.onopen=function(){_ok=true;_at=0;_dot(true);try{ws.send(JSON.stringify({type:'handshake',client:'arbiter'}));}catch(_){}_t('⚡ Bridge :9897 connected','ok');};ws.onmessage=function(e){var d;try{d=JSON.parse(e.data);}catch(_){return;}try{document.dispatchEvent(new CustomEvent('sg:bridgeMsg',{detail:d}));}catch(_){}if(d.type==='agent_response'||d.type==='chat_response'){
+function _bc(){if(location.protocol==='file:'){_dot(false);return;}if(_sgWsBlocked()){_dot(false);return;}if(_ws&&_ws.readyState<=1)return;_at++;var ws;try{ws=new WebSocket(_sgWsUrl());}catch(e){_br();return;}_ws=ws;window.ws=ws;ws.onopen=function(){_ok=true;_at=0;_dot(true);try{ws.send(JSON.stringify({type:'handshake',client:'arbiter'}));}catch(_){}_t('⚡ Bridge :9897 connected','ok');};ws.onmessage=function(e){var d;try{d=JSON.parse(e.data);}catch(_){return;}try{document.dispatchEvent(new CustomEvent('sg:bridgeMsg',{detail:d}));}catch(_){}if(d.type==='agent_response'||d.type==='chat_response'){
   var th=$('ag-thread')||$('sgh-ag-thread');
   if(th){
     var tk=th.querySelector('._ath');if(tk)tk.remove();
@@ -26823,7 +26927,7 @@ if(d.type==='cicd_result'){
   var issues=d.sanitizer&&d.sanitizer.total_issues||0;
   _t('CI/CD: '+(issues===0?'✅ Clean':'⚠ '+issues+' issue(s)')+(d.result&&d.result.status==='success'?'':''),issues===0?'ok':'err');
 }
-if(d.type==='ai_code_review_result'||d.context==='codemaster'){var out=$('cm-ai-output'),ap=$('cm-apply-fix'),ed=$('cm-editor');var text=d.review||d.text||'';if(out)out.textContent=text;if(ap&&ed){var m=text.match(/```[a-z]*\s*\n([\s\S]*?)```/i);if(m&&m[1]){var fx=m[1];ap.style.cssText='display:block;width:100%;padding:12px;margin-top:10px;background:#00ffc8;color:#000;border:none;border-radius:8px;font:bold 13px monospace;cursor:pointer';ap.textContent='✅ APPLY FIX';ap.onclick=function(){ed.value=fx;ed.dispatchEvent(new Event('input',{bubbles:true}));_run();_t('Applied ✓','ok');};}}}};ws.onerror=function(){};ws.onclose=function(){_ok=false;_ws=null;window.ws=null;_dot(false);_br();};}
+if(d.type==='ai_code_review_result'||d.context==='codemaster'){var panel=$('cm-ai-panel'),ed=$('cm-editor'),text=d.review||d.text||'',fx=d.fixed_code||_sgExtractCodeFence(text);if(panel&&ed)panel._cmSource=ed.value||'';_sgUpdateAiFixPanel((panel&&panel._cmSource)||((ed||{}).value||''),fx,text,'✅ APPLY FIX',function(){setCode(fx);});}};ws.onerror=function(){};ws.onclose=function(){_ok=false;_ws=null;window.ws=null;_dot(false);_br();};}
 function _br(){clearTimeout(window._arbR);window._arbR=setTimeout(_bc,Math.min(2000*Math.pow(1.5,Math.min(_at,8)),20000)|0);}
 function _dot(on){window._SGH_BRIDGE_CONNECTED=on;var c=on?'#00ffc8':'#ff3d6e';['rs-bridge-dot','sgh-pill-dot','_ad'].forEach(function(id){var el=$(id);if(el)el.style.background=c;});['bridgeStatus','ftBridge'].forEach(function(id){var el=$(id);if(el){el.textContent=on?'LIVE':'OFFLINE';el.style.color=on?'#00e676':'#ff3d6e';}});try{document.dispatchEvent(new CustomEvent(on?'sg:bridgeConnected':'sg:bridgeDisconnected',{detail:{url:'ws://127.0.0.1:9897'}}));}catch(_){}}
 window.bridgeConnect=_bc;window.bridgeReconnect=_bc;window._SG_BRIDGE_STATUS={reconnect:_bc};window.SG_AGENT=window.SG_AGENT||{reconnectBridge:_bc};
@@ -26865,7 +26969,7 @@ function _send(){
     }
   }).catch(function(e){var t=th&&th.querySelector('._ath');if(t)t.textContent='✗ '+e.message+' (bridge offline?)';});
 }
-document.addEventListener('click',function(ev){var t=ev.target;for(var i=0;i<5;i++){if(!t||t===document.body)break;var id=t.id||'';var dp=t.getAttribute&&(t.getAttribute('data-panel')||t.getAttribute('data-p'));if(id==='cm-ai-fix'){ev.preventDefault();ev.stopImmediatePropagation();_ai();return;}if(id==='cm-run'){ev.preventDefault();ev.stopImmediatePropagation();_run();return;}if(id==='cm-copy-btn'){ev.preventDefault();ev.stopImmediatePropagation();var c=($('cm-editor')||{}).value||'';if(c)navigator.clipboard.writeText(c).then(function(){_t('Copied ✓','ok');});return;}if(id==='cm-clear-btn'){ev.preventDefault();ev.stopImmediatePropagation();var ed=$('cm-editor');if(ed)ed.value='';var fr=$('cm-preview-frame');if(fr)fr.srcdoc='';return;}if(id==='cm-save-file'){ev.preventDefault();ev.stopImmediatePropagation();var ed=$('cm-editor');if(!ed||!ed.value)return;var l=($('cm-lang')||{}).value||'html';var ext={html:'html',css:'css',js:'js',json:'json',python:'py',bash:'sh',sql:'sql',markdown:'md',swift:'swift',rust:'rs',go:'go',java:'java',cpp:'cpp'}[l]||'txt';var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([ed.value],{type:'text/plain'}));a.download='code.'+ext;a.click();URL.revokeObjectURL(a.href);return;}if(id==='cm-ai-close'){ev.preventDefault();ev.stopImmediatePropagation();var p=$('cm-ai-panel');if(p)p.style.display='none';return;}if(id==='cm-fix-all-q-btn'||id==='cm-blade-run'){ev.preventDefault();ev.stopImmediatePropagation();var ed=$('cm-editor');if(!ed)return;ed.value=ed.value.replace(/[\u2018\u2019\u201a\u201b]/g,"'").replace(/[\u201c\u201d\u201e\u201f\u00ab\u00bb\u2039\u203a]/g,'"');ed.dispatchEvent(new Event('input',{bubbles:true}));_run();_t('Quotes fixed ✓','ok');return;}if(id==='cm-preview-refresh'){ev.preventDefault();ev.stopImmediatePropagation();_run();return;}if(id==='ag-send-btn'||id==='sgh-ag-send'){ev.preventDefault();ev.stopImmediatePropagation();_send();return;}if(id==='sg-bridge-reconnect'||id==='connect-bridge-btn'){ev.preventDefault();ev.stopImmediatePropagation();_bc();return;}if(id==='sgh-keys-btn'){ev.preventDefault();ev.stopImmediatePropagation();_keys();return;}if(dp){ev.preventDefault();ev.stopImmediatePropagation();try{window.loadPanel&&window.loadPanel(dp);}catch(_){}var sb=$('sidebar');if(sb)sb.classList.remove('open');return;}t=t.parentElement;}},true);
+document.addEventListener('click',function(ev){var t=ev.target;for(var i=0;i<5;i++){if(!t||t===document.body)break;var id=t.id||'';var dp=t.getAttribute&&(t.getAttribute('data-panel')||t.getAttribute('data-p'));if(id==='cm-ai-fix'){ev.preventDefault();ev.stopImmediatePropagation();_ai();return;}if(id==='cm-run'){ev.preventDefault();ev.stopImmediatePropagation();_run();return;}if(id==='cm-copy-btn'){ev.preventDefault();ev.stopImmediatePropagation();var c=($('cm-editor')||{}).value||'';if(c)navigator.clipboard.writeText(c).then(function(){_t('Copied ✓','ok');});return;}if(id==='cm-clear-btn'){ev.preventDefault();ev.stopImmediatePropagation();var ed=$('cm-editor');if(ed)ed.value='';var fr=$('cm-preview-frame');if(fr)fr.srcdoc='';return;}if(id==='cm-save-file'){ev.preventDefault();ev.stopImmediatePropagation();var ed=$('cm-editor');if(!ed||!ed.value)return;var l=($('cm-lang')||{}).value||'html';var ext={html:'html',css:'css',js:'js',json:'json',python:'py',bash:'sh',sql:'sql',markdown:'md',diff:'diff',swift:'swift',rust:'rs',go:'go',java:'java',cpp:'cpp'}[l]||'txt';var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([ed.value],{type:'text/plain'}));a.download='code.'+ext;a.click();URL.revokeObjectURL(a.href);return;}if(id==='cm-ai-close'){ev.preventDefault();ev.stopImmediatePropagation();var p=$('cm-ai-panel');if(p)p.style.display='none';return;}if(id==='cm-fix-all-q-btn'||id==='cm-blade-run'){ev.preventDefault();ev.stopImmediatePropagation();var ed=$('cm-editor');if(!ed)return;ed.value=ed.value.replace(/[\u2018\u2019\u201a\u201b]/g,"'").replace(/[\u201c\u201d\u201e\u201f\u00ab\u00bb\u2039\u203a]/g,'"');ed.dispatchEvent(new Event('input',{bubbles:true}));_run();_t('Quotes fixed ✓','ok');return;}if(id==='cm-preview-refresh'){ev.preventDefault();ev.stopImmediatePropagation();_run();return;}if(id==='ag-send-btn'||id==='sgh-ag-send'){ev.preventDefault();ev.stopImmediatePropagation();_send();return;}if(id==='sg-bridge-reconnect'||id==='connect-bridge-btn'){ev.preventDefault();ev.stopImmediatePropagation();_bc();return;}if(id==='sgh-keys-btn'){ev.preventDefault();ev.stopImmediatePropagation();_keys();return;}if(dp){ev.preventDefault();ev.stopImmediatePropagation();try{window.loadPanel&&window.loadPanel(dp);}catch(_){}var sb=$('sidebar');if(sb)sb.classList.remove('open');return;}t=t.parentElement;}},true);
 document.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){var id=e.target&&e.target.id;if(id==='ag-inp'||id==='sgh-ag-inp'){e.preventDefault();_send();}}if((e.metaKey||e.ctrlKey)&&e.shiftKey&&(e.key==='K'||e.key==='k')){e.preventDefault();_keys();}});
 function _pill(){if($('_apill'))return;var p=document.createElement('div');p.id='_apill';p.style.cssText='position:fixed;top:6px;right:10px;z-index:2147483647;display:flex;align-items:center;gap:5px';p.innerHTML='<div id="_ad" style="width:8px;height:8px;border-radius:50%;background:#ff3d6e;flex-shrink:0;transition:background .4s"></div><button onclick="bridgeConnect()" style="background:#0e1a2e;border:1px solid #254868;color:#00ffc8;font:700 9px monospace;padding:4px 9px;border-radius:6px;cursor:pointer">⚡ 9897</button><button onclick="showKeys()" style="background:#0e1a2e;border:1px solid #254868;color:#7ca3c8;font:700 9px monospace;padding:4px 9px;border-radius:6px;cursor:pointer">🔑 KEYS</button>';document.body.appendChild(p);}
 function _css(){if($('_acss'))return;var s=document.createElement('style');s.id='_acss';s.textContent='button,[data-panel],[data-p]{cursor:pointer!important}#pa{pointer-events:auto!important}.screen:not(.active){pointer-events:none!important}#cm-apply-fix{background:#00ffc8;color:#000;border:none;border-radius:8px;padding:12px 20px;font:700 13px monospace;cursor:pointer;margin-top:10px;width:100%;display:none}button{-webkit-tap-highlight-color:rgba(0,255,200,.2);touch-action:manipulation}';document.head.appendChild(s);}
