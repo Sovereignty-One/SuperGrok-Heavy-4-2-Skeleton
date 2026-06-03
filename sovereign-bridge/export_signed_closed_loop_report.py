@@ -1,0 +1,1 @@
+$(cat /home/workdir/artifacts/XAI-Fortress/bridge/export_signed_closed_loop_report.py)
