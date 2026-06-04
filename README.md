@@ -28,8 +28,8 @@ All components are designed for **complete operational independence**, **end-to-
 > **No Node.js required.** The bridge is pure Python 3 stdlib — runs natively in [iSH](https://ish.app/) on iOS.
 
 ```sh
-# 1. Place SGHv119.html in your home directory
-cp SGHv119.html ~/
+# 1. Place the dashboard HTML in your home directory
+cp Sghv119-local.html ~/
 
 # 2. (Optional) Set API keys
 export ANTHROPIC_API_KEY=sk-ant-...
