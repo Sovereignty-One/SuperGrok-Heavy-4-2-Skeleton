@@ -610,7 +610,12 @@ function runPreview() {
         .replace(/:\s*(\d+\.?\d*)/g, ": <span style='color:#b5cea8'>$1</span>");
       tx.innerHTML = "<pre style='font:10px/1.6 var(--mono)'>" + hl + "</pre>";
     } catch (e) {
-      tx.innerHTML = "<pre style='color:var(--pulse);font:10px var(--mono)'>" + e.message + "</pre>";
+      tx.textContent = "";
+      var err = document.createElement("pre");
+      err.style.color = "var(--pulse)";
+      err.style.font = "10px var(--mono)";
+      err.textContent = e.message;
+      tx.appendChild(err);
     }
     return;
   }
