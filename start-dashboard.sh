@@ -30,14 +30,19 @@ echo "+ $BRIDGE found"
 
 # Locate dashboard HTML and stage in HOME for bridge auto-discovery
 HTML=""
-for candidate in "$SCRIPT_DIR/SGHv119.html" "$HOME/SGHv119.html"; do
+for candidate in \
+    "$SCRIPT_DIR/Sghv119-local.html" \
+    "$HOME/Sghv119-local.html" \
+    "$SCRIPT_DIR/SGHv119.html" \
+    "$HOME/SGHv119.html"; do
     if [ -f "$candidate" ]; then
         HTML="$candidate"
         break
     fi
 done
 if [ -z "$HTML" ]; then
-    for f in "$SCRIPT_DIR"/SGH*.html "$HOME"/SGH*.html \
+    for f in "$SCRIPT_DIR"/Sgh*.html "$HOME"/Sgh*.html \
+             "$SCRIPT_DIR"/SGH*.html "$HOME"/SGH*.html \
              "$SCRIPT_DIR"/SuperGrok*.html "$HOME"/SuperGrok*.html; do
         if [ -f "$f" ]; then
             HTML="$f"

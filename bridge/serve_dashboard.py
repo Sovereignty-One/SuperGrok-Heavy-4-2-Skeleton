@@ -9,6 +9,7 @@ from pathlib import Path
 DEFAULT_DASHBOARD_PORT = 9898
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DASHBOARD_CANDIDATES = (
+    "Sghv119-local.html",
     "SGHv119.html",
     "FullDashboard.html",
     "SuperGrok_Global_Role_Dashboard.html",

@@ -47,6 +47,7 @@ RATE_LIMIT_MAX = int(os.getenv("RATE_LIMIT_MAX", "100"))
 # Files whose integrity is tracked between sweeps
 WATCHED_FILES = [
     "python3_bridge.py",
+    "Sghv119-local.html",
     "SGHv119.html",
     "security_sentinel.py",
     "Unified_Server.js",
