@@ -1,1 +1,8 @@
-$(cat /home/workdir/artifacts/XAI-Fortress/bridge/export_signed_closed_loop_report.py)
+#!/usr/bin/env python3
+
+def main() -> None:
+    pass
+
+
+if __name__ == "__main__":
+    main()
