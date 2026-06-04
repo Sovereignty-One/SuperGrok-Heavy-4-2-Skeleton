@@ -5,6 +5,7 @@
 # No Node.js required.
 
 PORT="${PORT:-9898}"
+DASHBOARD_HOST="${DASHBOARD_HOST:-127.0.0.1}"
 BRIDGE="bridge/serve_dashboard.py"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -29,8 +30,8 @@ fi
 echo "+ $BRIDGE found"
 
 echo ""
-echo "  Open Safari:   http://127.0.0.1:$PORT"
-echo "  Health check:  http://127.0.0.1:$PORT/api/health"
+echo "  Open Safari:   http://$DASHBOARD_HOST:$PORT"
+echo "  Health check:  http://$DASHBOARD_HOST:$PORT/api/health"
 echo "  WebSocket:     none in this mode"
 echo ""
 echo "  Optional API keys:"
@@ -43,4 +44,5 @@ echo ""
 
 cd "$SCRIPT_DIR"
 export PORT
+export DASHBOARD_HOST
 exec python3 "$BRIDGE"
