@@ -1,2 +1,8 @@
+fastapi
+uvicorn
+blake3
+pydantic
+liboqs-python
+cryptography
 pytest
 pytest-asyncio
