@@ -522,6 +522,15 @@ function bugHunterClose() {
   if (mask) mask.style.display = "none";
 }
 
+function previewSetPre(container, text, styleText) {
+  if (!container) return;
+  container.textContent = "";
+  var pre = document.createElement("pre");
+  pre.style.cssText = styleText;
+  pre.textContent = text;
+  container.appendChild(pre);
+}
+
 function bugHunterRun() {
   var before = runLint();
   var beforeIssues = before.issues.slice();
@@ -603,43 +612,20 @@ function runPreview() {
 
   if (l === "json") {
     try {
-      var hl = JSON.stringify(JSON.parse(code), null, 2)
-        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-        .replace(/("[\w-]+")\s*:/g, "<span style='color:#9cdcfe'>$1</span>:")
-        .replace(/:\s*(".*?")/g, ": <span style='color:#ce9178'>$1</span>")
-        .replace(/:\s*(\d+\.?\d*)/g, ": <span style='color:#b5cea8'>$1</span>");
-      tx.innerHTML = "<pre style='font:10px/1.6 var(--mono)'>" + hl + "</pre>";
+      previewSetPre(tx, JSON.stringify(JSON.parse(code), null, 2), "font:10px/1.6 var(--mono)");
     } catch (e) {
-      tx.textContent = "";
-      var err = document.createElement("pre");
-      err.style.color = "var(--pulse)";
-      err.style.font = "10px var(--mono)";
-      err.textContent = e.message;
-      tx.appendChild(err);
+      previewSetPre(tx, e.message, "color:var(--pulse);font:10px var(--mono)");
     }
     return;
   }
 
   if (l === "diff") {
-    tx.innerHTML = "<pre style='font:10px/1.6 var(--mono)'>"
-      + code.replace(/&/g, "&amp;").replace(/</g, "&lt;")
-        .replace(/^(\+\+\+.*)$/gm, "<span style='color:#c586c0'>$1</span>")
-        .replace(/^(---.*)$/gm,    "<span style='color:#c586c0'>$1</span>")
-        .replace(/^(@@.*)$/gm,     "<span style='color:#4fc1ff'>$1</span>")
-        .replace(/^(\+.*)$/gm,     "<span style='color:#4ec9b0'>$1</span>")
-        .replace(/^(-[^-].*)$/gm,  "<span style='color:#f44747'>$1</span>")
-      + "</pre>";
+    previewSetPre(tx, code, "font:10px/1.6 var(--mono)");
     return;
   }
 
   /* generic syntax highlight for python / bash / etc */
-  tx.innerHTML = "<pre style='font:10px/1.6 var(--mono)'>"
-    + code.replace(/&/g, "&amp;").replace(/</g, "&lt;")
-      .replace(/(#.*$)/gm,  "<span style='color:#6a9955'>$1</span>")
-      .replace(/(\/\/.*$)/gm,"<span style='color:#6a9955'>$1</span>")
-      .replace(/\b(function|var|return|if|else|for|while|def|class|import|from|async|await)\b/g,
-               "<span style='color:#569cd6'>$1</span>")
-    + "</pre>";
+  previewSetPre(tx, code, "font:10px/1.6 var(--mono)");
 }
 
 /* -- diff viewer ------------------------------------------------------- */
