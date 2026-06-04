@@ -5153,7 +5153,13 @@ function buildRoles(q,_retry){
     cats[cat].forEach(function(k){grid.appendChild(makeRC(k,ROLES[k]));total++;});
     wrap.appendChild(grid);body.appendChild(wrap);
   });
-  if(!total){body.innerHTML='<div style="padding:40px;text-align:center;color:var(--t3);font-family:var(--mono);font-size:11px">No results for "'+q+'"</div>';}
+  if(!total){
+    body.innerHTML='';
+    var empty=document.createElement('div');
+    empty.style.cssText='padding:40px;text-align:center;color:var(--t3);font-family:var(--mono);font-size:11px';
+    empty.textContent='No results for "'+q+'"';
+    body.appendChild(empty);
+  }
 }
 
 function makeRC(key,r){
@@ -5723,7 +5729,19 @@ function loadPanel(id,isBack){ window._currentPanel=id;
     pa.innerHTML=fn(id);
   }catch(e){
     console.warn('[loadPanel] '+id+' threw:',e.message);
-    pa.innerHTML='<div style="padding:20px;font-family:monospace;font-size:11px;color:#ff6b6b">⚠️ Panel error: '+id+'<br>'+e.message+'<br><button onclick="loadPanel(\'dashboard\')" style="margin-top:8px;padding:4px 12px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;cursor:pointer">← Dashboard</button></div>';
+    pa.innerHTML='';
+    var err=document.createElement('div');
+    err.style.cssText='padding:20px;font-family:monospace;font-size:11px;color:#ff6b6b';
+    err.appendChild(document.createTextNode('⚠️ Panel error: '+id));
+    err.appendChild(document.createElement('br'));
+    err.appendChild(document.createTextNode(String(e.message||e)));
+    err.appendChild(document.createElement('br'));
+    var btn=document.createElement('button');
+    btn.onclick=function(){ loadPanel('dashboard'); };
+    btn.style.cssText='margin-top:8px;padding:4px 12px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;cursor:pointer';
+    btn.textContent='← Dashboard';
+    err.appendChild(btn);
+    pa.appendChild(err);
   }
   afterPanel(id);
 }
@@ -8248,7 +8266,21 @@ list.innerHTML = '';
 _files.forEach(function(f, i) {
 var chip = document.createElement('div');
 chip.style.cssText = 'display:flex;align-items:center;gap:5px;background:' + (i===_active?'var(--acid)22':'var(--bg2)') + ';border:1px solid ' + (i===_active?'var(--acid)':'var(--wire)') + ';border-radius:6px;padding:4px 9px;cursor:pointer;font-family:var(--mono);font-size:9px';
-chip.innerHTML = fileIcon(f.ext) + '<span style="color:' + (i===_active?'var(--acid)':'var(--t1)') + '">' + esc(f.name) + '</span><span style="color:var(--t3)"> '+fmtSize(f.size)+'</span><span class="fai-remove" data-idx="'+i+'" style="color:var(--pulse);margin-left:4px;cursor:pointer">\u2715</span>';
+chip.innerHTML = fileIcon(f.ext);
+var chipName = document.createElement('span');
+chipName.style.color = i===_active ? 'var(--acid)' : 'var(--t1)';
+chipName.textContent = f.name;
+chip.appendChild(chipName);
+var chipSize = document.createElement('span');
+chipSize.style.color = 'var(--t3)';
+chipSize.textContent = ' ' + fmtSize(f.size);
+chip.appendChild(chipSize);
+var chipRemove = document.createElement('span');
+chipRemove.className = 'fai-remove';
+chipRemove.setAttribute('data-idx', i);
+chipRemove.style.cssText = 'color:var(--pulse);margin-left:4px;cursor:pointer';
+chipRemove.textContent = '\u2715';
+chip.appendChild(chipRemove);
 chip.addEventListener('click', function(ev) {
 if (ev.target.classList.contains('fai-remove')) {
 _files.splice(parseInt(ev.target.getAttribute('data-idx')), 1);
@@ -8269,13 +8301,23 @@ var qc = document.getElementById('fai-queue-card');
 var ql = document.getElementById('fai-queue-list');
 if (qc) qc.style.display = _files.length > 1 ? 'block' : 'none';
 if (ql) {
-  ql.innerHTML = _files.map(function(f, i){
-    return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--wire)11;cursor:pointer" data-qi="'+i+'">' +
-      fileIcon(f.ext) +
-      '<span style="font-family:var(--mono);font-size:9px;color:' + (i===_active?'var(--acid)':'var(--t1)') + ';flex:1">' + esc(f.name) + '</span>' +
-      '<span style="font-family:var(--mono);font-size:8px;color:var(--t3)">' + fmtSize(f.size) + '</span>' +
-    '</div>';
-  }).join('');
+  ql.innerHTML = '';
+  _files.forEach(function(f, i){
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--wire)11;cursor:pointer';
+    row.setAttribute('data-qi', i);
+    row.innerHTML = fileIcon(f.ext);
+    var rowName = document.createElement('span');
+    rowName.style.cssText = 'font-family:var(--mono);font-size:9px;flex:1';
+    rowName.style.color = i===_active ? 'var(--acid)' : 'var(--t1)';
+    rowName.textContent = f.name;
+    row.appendChild(rowName);
+    var rowSize = document.createElement('span');
+    rowSize.style.cssText = 'font-family:var(--mono);font-size:8px;color:var(--t3)';
+    rowSize.textContent = fmtSize(f.size);
+    row.appendChild(rowSize);
+    ql.appendChild(row);
+  });
   ql.querySelectorAll('[data-qi]').forEach(function(row) {
     row.addEventListener('click', function() {
       _active = parseInt(row.getAttribute('data-qi'));
@@ -8322,7 +8364,7 @@ txt:'\ud83d\udcc4',sh:'\ud83d\udcbb',png:'\ud83d\uddbc\ufe0f',jpg:'\ud83d\uddbc\
 pdf:'\ud83d\udcd5',rs:'\ud83e\udd80',rb:'\ud83d\udc8e',go:'\ud83d\udc39',sql:'\ud83d\uddc4\ufe0f'};
 return '<span style="font-size:12px;margin-right:3px">' + (map[ext]||'\ud83d\udcc4') + '</span>';
 }
-function esc(s){ return String(s||'').replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>'); }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 /* ── AI ── */
 function runAI() {
@@ -8669,8 +8711,9 @@ return allApps().filter(function(a){ return ids.indexOf(a.id)===-1; });
 }
 function esc(s){
 return String(s||'')
-.replace(/&/g,'&').replace(/</g,'<')
-.replace(/>/g,'>').replace(/"/g,'"');
+.replace(/&/g,'&amp;').replace(/</g,'&lt;')
+.replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+.replace(/'/g,'&#39;');
 }
 
 /* ── Root render ──────────────────────────────────────────────────────── */
