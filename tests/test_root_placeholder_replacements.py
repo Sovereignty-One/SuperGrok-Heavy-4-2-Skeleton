@@ -105,3 +105,12 @@ def test_python_bridge_valid_max_tokens_is_used(monkeypatch):
     bridge = importlib.reload(python3_bridge)
 
     assert bridge.AI_MAX_TOKENS == 2048
+
+
+def test_bridge_entrypoints_import():
+    import bridge.python3_bridge as bridge_python
+    import bridge.serve_dashboard as bridge_dashboard
+
+    assert bridge_python.AI_MAX_TOKENS == 131072
+    assert callable(bridge_python.main)
+    assert callable(bridge_dashboard.main)
