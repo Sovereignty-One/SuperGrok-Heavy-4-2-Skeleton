@@ -1,1 +1,9 @@
-$(cat /home/workdir/artifacts/XAI-Fortress/bridge/wetlab/closed_loop_orchestrator.py)
+#!/usr/bin/env python3
+
+
+def main() -> None:
+    pass
+
+
+if __name__ == "__main__":
+    main()
