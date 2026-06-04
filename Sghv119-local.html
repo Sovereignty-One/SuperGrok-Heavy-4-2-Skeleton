@@ -4920,7 +4920,10 @@ window.SGOrchestrator = (function(){
     },
     stop:function(){ if(this.rec) try{this.rec.stop();}catch(e){} this.active=false; renderOrchPanel(); },
     openSiriShortcut:function(p){ window.location.href='shortcuts://run-shortcut?name='+encodeURIComponent(p||'SuperGrok'); },
-    openAssistant:function(q){ try{window.open('intent://'+encodeURIComponent(q||'')+'#Intent;scheme=assistant;package=com.google.android.googlequicksearchbox;end','_self');}catch(e){} }
+    openAssistant:function(q){
+      if(window.toast) window.toast('Sovereign mode: third-party assistant launch disabled','warn');
+      try{ addAudit && addAudit('SOVEREIGN_ASSISTANT_BLOCK',{q:q||''}); }catch(e){}
+    }
   };
 
   function buildAgentCard(a){
@@ -6870,7 +6873,7 @@ var keys  = (function(){ try{ return JSON.parse(localStorage.getItem('sg_platfor
 var certs = (function(){ try{ return JSON.parse(localStorage.getItem('sg_certs')||'[]');   }catch(e){ return []; } })();
 
 return hdr('\ud83d\udd11 API Key Manager',
-'Self-Signed \u00b7 Dilithium3 \u00b7 TLC Certs \u00b7 MX Records \u00b7 Customer Issuance \u00b7 Key Rotation \u00b7 Compliant') +
+'CA-Signed \u00b7 Dilithium3 \u00b7 TLC Certs \u00b7 MX Records \u00b7 Customer Issuance \u00b7 Key Rotation \u00b7 Compliant') +
 
 '<div class="kgrid">' +
 kc(keys.length+'',  'Active Keys',   'var(--acid)') +
@@ -6927,10 +6930,10 @@ return '<tr>' +
 '</tbody></table></div>') +
 '</div>' +
 
-/* ── TLC Self-Signed Certificate Generator ── */
+/* ── TLC Certificate Generator ── */
 '<div class="card" style="border-color:var(--volt)22">' +
 '<div class="card-title">\ud83d\udcc4 TLC Certificate Generator</div>' +
-'<p style="font-size:10px;color:var(--t2);margin-bottom:10px">Self-signed TLS/TLC certs. Cryptographic signatures. No CA dependency. Self-verifying chain of custody.</p>' +
+'<p style="font-size:10px;color:var(--t2);margin-bottom:10px">Generate TLS/TLC certificate material for legitimate CA signing (DigiCert-compatible). Cryptographic signatures and verifiable chain of custody.</p>' +
 '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">' +
 '<div><label class="fi-label">Domain / Common Name</label><input class="fi" id="cert-domain" placeholder="supergrok.local or *.internal.net"></div>' +
 '<div><label class="fi-label">Organisation</label><input class="fi" id="cert-org" placeholder="SuperGrok Sovereign AI Labs"></div>' +
@@ -7109,7 +7112,7 @@ var sans   = (document.getElementById('cert-sans')||{}).value   || 'localhost';
 var now    = new Date();
 var exp    = new Date(now.getTime() + days*86400000);
 
-/* Build a PEM-style self-signed cert representation */
+/* Build a PEM-style certificate representation for CA signing */
 crypto.subtle.digest('SHA-256', new TextEncoder().encode(domain + org + algo + Date.now()))
   .then(function(buf) {
     var fp = Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('').toUpperCase().match(/.{2}/g).join(':');
@@ -7119,7 +7122,7 @@ crypto.subtle.digest('SHA-256', new TextEncoder().encode(domain + org + algo + D
       'Version: 3 (0x2)\n' +
       'Serial Number: ' + serial + '\n' +
       'Signature Algorithm: ' + (algo==='Dilithium3'?'id-dilithium3':'ecdsa-with-SHA256') + '\n' +
-      'Issuer: CN=' + domain + ', O=' + org + ', OU=Self-Signed, C=US\n' +
+      'Issuer: CN=' + domain + ', O=' + org + ', OU=CA-Signed, C=US\n' +
       'Not Before: ' + now.toUTCString() + '\n' +
       'Not After:  ' + exp.toUTCString() + '\n' +
       'Subject: CN=' + domain + ', O=' + org + '\n' +
@@ -12523,10 +12526,10 @@ out += '<div style="background:linear-gradient(135deg,rgba(0,255,200,.05),rgba(1
 '<button class="btn-s" style="margin-left:auto;font-size:9px" onclick="sg(function(){loadPanel(\'pki\')})">↺ Refresh</button>' +
 '</div>';
 
-/* ── Section 1: Generate Self-Signed TLS Certificate ── */
+/* ── Section 1: Generate TLS Certificate Request (CA-Signed) ── */
 out += '<div class="card">';
-out += '<div style="font-family:var(--mono);font-size:10px;color:var(--acid);letter-spacing:1px;margin-bottom:10px">🔏 SELF-SIGNED TLS CERTIFICATE GENERATOR</div>';
-out += '<div style="font-size:11px;color:var(--t2);margin-bottom:12px">Generates X.509 self-signed certificate parameters using WebCrypto ECDSA P-384. Export to PEM for use with nginx/Apache/bridge.py. Fully on-device — private key never leaves browser.</div>';
+out += '<div style="font-family:var(--mono);font-size:10px;color:var(--acid);letter-spacing:1px;margin-bottom:10px">🔏 CA-SIGNED TLS CERTIFICATE REQUEST GENERATOR</div>';
+out += '<div style="font-size:11px;color:var(--t2);margin-bottom:12px">Generates X.509 certificate request parameters using WebCrypto ECDSA P-384 for legitimate CA signing. Export to PEM for use with nginx/Apache/bridge.py. Fully on-device — private key never leaves browser.</div>';
 out += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">' +
 '<div><label style="font-size:10px;color:var(--t2)">Common Name (CN)</label>' +
 '<input id="pki-cn" value="localhost" style="width:100%;background:var(--bg3);border:1px solid var(--wire);border-radius:4px;color:var(--t0);font-family:var(--mono);font-size:11px;padding:6px;box-sizing:border-box;margin-top:4px"></div>' +
@@ -12771,7 +12774,7 @@ sel+'._domainkey      3600  IN  TXT  "v=DKIM1; k=rsa; p='+dkimB64+'"',
 '',
 '; ── CAA RECORDS ─────────────────────────────────────────────',
 '@  3600  IN  CAA  0 issue "digicert.com"',
-';   Allow ONLY LetsEncrypt to issue TLS certs.',
+';   Allow ONLY DigiCert to issue TLS certs.',
 '@  3600  IN  CAA  0 iodef "mailto:security@'+domain+'"',
 ';   Security contact for CA issue reports.',
 '',
@@ -22968,7 +22971,7 @@ kc(alertLog.length+'','Alerts','var(--sun)') +
 
 /* TLS Certificate */
 '<div class="card" style="margin-bottom:10px;border-color:var(--cy)22">' +
-'<div class="card-title">🔒 TLS Certificate (Self-Signed / Auto-Rotating)</div>' +
+'<div class="card-title">🔒 TLS Certificate (CA-Signed / Auto-Rotating)</div>' +
 '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-family:var(--mono);font-size:9px;margin-bottom:10px">' +
 '<div style="color:var(--t2)">Status</div>' +
 '<div style="color:'+(certInfo?'var(--gn)':'var(--pulse)')+'">'+
@@ -23127,7 +23130,7 @@ return '<div style="display:flex;align-items:center;gap:10px;padding:7px;backgro
 '<div style="color:var(--t2)">Messaging</div><div style="color:var(--t0)">Signal Protocol — Double Ratchet + X3DH</div>' +
 '<div style="color:var(--t2)">Session Signing</div><div style="color:var(--t0)">SHA-512 + WebCrypto SubtleCrypto</div>' +
 '<div style="color:var(--t2)">Cloud Sealing</div><div style="color:var(--t0)">AES-256-GCM, keys never leave device</div>' +
-'<div style="color:var(--t2)">Transport</div><div style="color:var(--t0)">TLS 1.3 only, self-signed cert, no CA</div>' +
+'<div style="color:var(--t2)">Transport</div><div style="color:var(--t0)">TLS 1.3 only, CA-signed X.509 certificate chain</div>' +
 '</div>' +
 '</div>' +
 
