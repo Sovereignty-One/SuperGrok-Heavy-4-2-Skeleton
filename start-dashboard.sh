@@ -1,11 +1,12 @@
 #!/bin/sh
 # SuperGrok Heavy 4.2 - Dashboard Launcher
-# Runs python3_bridge.py on port 9897.
+# Runs the standalone dashboard server on port 9898.
 # Works on iSH (Alpine Linux / iOS), macOS, and Linux.
 # No Node.js required.
 
-SG_PORT="${SG_PORT:-9897}"
-BRIDGE="python3_bridge.py"
+PORT="${PORT:-9898}"
+DASHBOARD_HOST="${DASHBOARD_HOST:-127.0.0.1}"
+BRIDGE="bridge/serve_dashboard.py"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "SuperGrok Heavy 4.2 - Dashboard Launcher"
@@ -28,42 +29,10 @@ if [ ! -f "$SCRIPT_DIR/$BRIDGE" ]; then
 fi
 echo "+ $BRIDGE found"
 
-# Locate dashboard HTML and stage in HOME for bridge auto-discovery
-HTML=""
-for candidate in \
-    "$SCRIPT_DIR/Sghv119-local.html" \
-    "$HOME/Sghv119-local.html" \
-    "$SCRIPT_DIR/SGHv119.html" \
-    "$HOME/SGHv119.html"; do
-    if [ -f "$candidate" ]; then
-        HTML="$candidate"
-        break
-    fi
-done
-if [ -z "$HTML" ]; then
-    for f in "$SCRIPT_DIR"/Sgh*.html "$HOME"/Sgh*.html \
-             "$SCRIPT_DIR"/SGH*.html "$HOME"/SGH*.html \
-             "$SCRIPT_DIR"/SuperGrok*.html "$HOME"/SuperGrok*.html; do
-        if [ -f "$f" ]; then
-            HTML="$f"
-            break
-        fi
-    done
-fi
-if [ -n "$HTML" ]; then
-    echo "+ Dashboard: $HTML"
-    if [ "$HTML" != "$HOME/SGHv119.html" ] && [ -w "$HOME" ]; then
-        cp "$HTML" "$HOME/SGHv119.html" 2>/dev/null || true
-    fi
-else
-    echo "WARNING: No dashboard HTML found - bridge will show status page."
-    echo "  Copy SGHv119.html to $HOME/ and rerun."
-fi
-
 echo ""
-echo "  Open Safari:   http://127.0.0.1:$SG_PORT"
-echo "  Health check:  http://127.0.0.1:$SG_PORT/api/health"
-echo "  WebSocket:     ws://127.0.0.1:$SG_PORT"
+echo "  Open Safari:   http://$DASHBOARD_HOST:$PORT"
+echo "  Health check:  http://$DASHBOARD_HOST:$PORT/api/health"
+echo "  WebSocket:     none in this mode"
 echo ""
 echo "  Optional API keys:"
 echo "    export ANTHROPIC_API_KEY=sk-ant-..."
@@ -74,5 +43,6 @@ echo "Press Ctrl+C to stop."
 echo ""
 
 cd "$SCRIPT_DIR"
-export SG_PORT
+export PORT
+export DASHBOARD_HOST
 exec python3 "$BRIDGE"

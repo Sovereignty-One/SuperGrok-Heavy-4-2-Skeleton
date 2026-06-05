@@ -17,9 +17,10 @@ class DeepScanner:
         comments = []
         try:
             import astroid  # optional dependency
+            from astroid.nodes import FunctionDef
 
             module = astroid.parse(code)
-            for node in module.nodes_of_class(astroid.FunctionDef):
+            for node in module.nodes_of_class(FunctionDef):
                 if not getattr(node, "returns", None) and len(node.body) > 20:
                     comments.append(
                         f"# Suspicious: long function '{node.name}' — refactor?\n"
