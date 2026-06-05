@@ -44,7 +44,12 @@ jobs:
           extra-packages: lintr
 
       - name: Run lintr
-        run: lintr::sarif_output(lintr::lint_dir("."), "lintr-results.sarif")
+        run: |
+          lints <- lintr::lint_dir(".")
+          if (is.null(attr(lints, "path"))) {
+            attr(lints, "path") <- "."
+          }
+          lintr::sarif_output(lints, "lintr-results.sarif")
         shell: Rscript {0}
         continue-on-error: true
 
