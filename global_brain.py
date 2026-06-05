@@ -138,12 +138,12 @@ async def process_command(command: str) -> str:
                 "action": "sign",
                 "message": message,
                 "signature": signature.hex(),
-                "algorithm": "ML-DSA-65",
+                "algorithm": "HMAC-SHA256",
                 "timestamp": time.time()
             }
 
             persist_brain(brain_state["state"], new_logs=[{
-                "type": "pqc_sign",
+                "type": "hmac_sign",
                 "message": message[:60]
             }])
 
