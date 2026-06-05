@@ -281,7 +281,7 @@ npm install <package>@latest
 
 The dashboard can export:
 
-1. **Python Backend**: FastAPI with oqs-python, SQLAlchemy, full REST API
+1. **Python Backend**: FastAPI with liboqs-python, SQLAlchemy, full REST API
 2. **Docker Setup**: Dockerfile, docker-compose.yml, nginx configuration
 3. **Kubernetes**: Complete K8s manifests with ingress, services, deployments
 
