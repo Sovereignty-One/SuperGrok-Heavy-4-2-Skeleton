@@ -105,3 +105,22 @@ def test_python_bridge_valid_max_tokens_is_used(monkeypatch):
     bridge = importlib.reload(python3_bridge)
 
     assert bridge.AI_MAX_TOKENS == 2048
+
+
+def test_bridge_entrypoints_import():
+    import bridge.python3_bridge as bridge_python
+    import bridge.serve_dashboard as bridge_dashboard
+
+    assert bridge_python.AI_MAX_TOKENS == 131072
+    assert callable(bridge_python.main)
+    assert callable(bridge_dashboard.main)
+
+
+def test_dashboard_server_finds_local_dashboard(tmp_path, monkeypatch):
+    import bridge.serve_dashboard as bridge_dashboard
+
+    local_dashboard = tmp_path / "Sghv119-local.html"
+    local_dashboard.write_text("<!doctype html><title>local</title>", encoding="utf-8")
+    monkeypatch.setattr(bridge_dashboard, "REPO_ROOT", tmp_path)
+
+    assert bridge_dashboard._dashboard_path() == local_dashboard

@@ -131,7 +131,7 @@ async def process_command(command: str) -> str:
             if not message:
                 return "❌ Usage: sign <message>"
 
-            from sovereign_persistent_brain.scripts.persist_brain import signer
+            from sovereign_persistent_brain.scripts import signer
             signature = signer.sign(message.encode())
 
             result = {
