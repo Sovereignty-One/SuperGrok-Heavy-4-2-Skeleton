@@ -23622,7 +23622,7 @@ _renderDots: function(){
 _queryDirect: function(agentId, message, history, cb){
   /* ── Key resolution ── */
   var _lsk = {};
-  try{ _lsk = JSON.parse(localStorage.getItem('sg_apikeys') || '{}'); }catch(_){} 
+  try{ _lsk = JSON.parse(localStorage.getItem('sg_apikeys') || '{}'); }catch(_){}
   var keys = Object.assign({}, _lsk, window._agentApiKeys||{}, window.SG_APIKEYS||{});
   if(keys.anthropic && !keys.claude) keys.claude = keys.anthropic;
   if(keys.openai    && !keys.gpt)    keys.gpt    = keys.openai;
@@ -25868,7 +25868,7 @@ display:flex;align-items:center;justify-content:center;
     <span style="color:#00ffc8;font-size:11px;font-weight:700;letter-spacing:1px">🔑 SESSION KEYS</span>
     <span id="sg-kp-status" style="font-size:9px;color:#4a6080">Loading...</span>
     <span style="flex:1"></span>
-    <button onclick="event.stopPropagation();window.exportKeysPDF&&exportKeysPDF()" 
+    <button onclick="event.stopPropagation();window.exportKeysPDF&&exportKeysPDF()"
       style="background:#00ffc822;border:1px solid #00ffc844;color:#00ffc8;border-radius:5px;padding:2px 8px;font-size:8px;cursor:pointer">📄 PDF</button>
     <button onclick="event.stopPropagation();window.rotateSessionKeys&&rotateSessionKeys().then(function(){updateKeyPanel();})"
       style="background:#7c4dff22;border:1px solid #7c4dff44;color:#7c4dff;border-radius:5px;padding:2px 8px;font-size:8px;cursor:pointer">🔄 Rotate</button>
