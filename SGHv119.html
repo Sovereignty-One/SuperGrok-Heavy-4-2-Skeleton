@@ -92,6 +92,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t0);font:
       <button class="btn bp" id="b-ai">AI Fix</button>
       <button class="btn" id="b-lint">Lint</button>
       <button class="btn" id="b-fa" style="display:none">Fix All</button>
+      <button class="btn" id="b-bh">Bug Hunter</button>
       <button class="btn" id="b-cp">Copy</button>
       <button class="btn" id="b-sv">Save</button>
       <label class="btn" onclick="document.getElementById('b-open').click()">Open</label>
@@ -220,6 +221,25 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t0);font:
 </div>
 </div>
 <div id="toast"></div>
+<div id="bh-mask" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.78);align-items:center;justify-content:center;padding:16px">
+  <div style="width:min(1100px,96vw);max-height:88vh;overflow:hidden;display:flex;flex-direction:column;background:var(--bg1);border:1px solid var(--wire2);border-radius:10px;box-shadow:0 12px 60px rgba(0,0,0,.8)">
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--wire)">
+      <strong style="color:var(--acid);font:700 11px var(--mono)">Sovereign Bug Hunter</strong>
+      <span id="bh-summary" style="font:9px var(--mono);color:var(--t2)"></span>
+      <button id="bh-close" class="btn" style="margin-left:auto">Close</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px;overflow:auto;min-height:0">
+      <div class="card" style="margin:0">
+        <div class="ct">FIXED</div>
+        <div id="bh-fixed" style="font:10px/1.6 var(--mono);white-space:pre-wrap;max-height:60vh;overflow:auto"></div>
+      </div>
+      <div class="card" style="margin:0">
+        <div class="ct">NEEDS FIX</div>
+        <div id="bh-needs" style="font:10px/1.6 var(--mono);white-space:pre-wrap;max-height:60vh;overflow:auto"></div>
+      </div>
+    </div>
+  </div>
+</div>
 <script>
 (function () {
 "use strict";
@@ -323,6 +343,7 @@ var _cn = 0;
 function conClr() {
   _cn = 0;
   _mk = [];
+  _lintIssues = [];
   var el = document.getElementById("con");
   if (el) el.innerHTML = "";
   var n = document.getElementById("c-n");
@@ -336,6 +357,9 @@ function conAdd(type, msg, ln, fixFn) {
   var el = document.getElementById("con");
   if (!el) return;
   if (ln && (type === "e" || type === "w")) _mk.push({ ln: ln, type: type });
+  if (type === "e" || type === "w") {
+    _lintIssues.push({ type: type, msg: msg, ln: ln || null, fixable: !!fixFn });
+  }
   var C = { e: "var(--pulse)", w: "var(--sun)", o: "var(--acid)", i: "var(--t2)" };
   var I = { e: "-", w: "!", o: "-", i: "i" };
   var row = document.createElement("div"); row.className = "cr";
@@ -401,6 +425,7 @@ var RULES = {
 };
 
 var _fixes = [];
+var _lintIssues = [];
 function runLint() {
   conClr(); _fixes = [];
   var code = getCode(), l = getLang(), ec = 0, wc = 0;
@@ -453,12 +478,106 @@ function runLint() {
   if (sok) sok.style.display = (!ec && !wc && code.trim()) ? "inline" : "none";
   if (bfa) bfa.style.display = _fixes.length ? "inline-flex" : "none";
   setTimeout(markersDraw, 0);
-  return { ec: ec, wc: wc };
+  return { ec: ec, wc: wc, issues: _lintIssues.slice() };
 }
 function fixAll() {
   var code = getCode();
   _fixes.forEach(function (fn) { var r = fn(); if (r !== undefined) code = r; });
   setCode(code); toast("All fixes applied", "ok");
+}
+
+function bugHunterIssueKey(issue) {
+  return (issue.type || "") + "|" + (issue.msg || "");
+}
+
+function bugHunterFillList(target, items, emptyText) {
+  var el = document.getElementById(target);
+  if (!el) return;
+  el.textContent = "";
+  if (!items.length) {
+    el.textContent = emptyText;
+    return;
+  }
+  items.forEach(function (issue) {
+    var row = document.createElement("div");
+    row.style.marginBottom = "6px";
+    row.textContent = (issue.ln ? "L" + issue.ln + ": " : "") + issue.msg;
+    el.appendChild(row);
+  });
+}
+
+function bugHunterOpen(summary, fixedItems, needsItems) {
+  var mask = document.getElementById("bh-mask");
+  var sum = document.getElementById("bh-summary");
+  if (sum) {
+    sum.textContent = summary;
+  }
+  bugHunterFillList("bh-fixed", fixedItems, "No auto-fixes were applied.");
+  bugHunterFillList("bh-needs", needsItems, "No remaining issues.");
+  if (mask) mask.style.display = "flex";
+}
+
+function bugHunterClose() {
+  var mask = document.getElementById("bh-mask");
+  if (mask) mask.style.display = "none";
+}
+
+function previewSetPre(container, text, styleText) {
+  if (!container) return;
+  container.textContent = "";
+  var pre = document.createElement("pre");
+  pre.style.cssText = styleText;
+  pre.textContent = text;
+  container.appendChild(pre);
+}
+
+function bugHunterRun() {
+  var before = runLint();
+  var beforeIssues = before.issues.slice();
+  var beforeCounts = {};
+  var afterCounts = {};
+  var fixed = [];
+  var needs = [];
+
+  beforeIssues.forEach(function (issue) {
+    var key = bugHunterIssueKey(issue);
+    beforeCounts[key] = (beforeCounts[key] || 0) + 1;
+  });
+
+  if (_fixes.length) fixAll();
+
+  var after = runLint();
+  var afterIssues = after.issues.slice();
+  afterIssues.forEach(function (issue) {
+    var key = bugHunterIssueKey(issue);
+    afterCounts[key] = (afterCounts[key] || 0) + 1;
+  });
+
+  var fixedBudget = {};
+  Object.keys(beforeCounts).forEach(function (key) {
+    fixedBudget[key] = Math.max(0, beforeCounts[key] - (afterCounts[key] || 0));
+  });
+
+  beforeIssues.forEach(function (issue) {
+    var key = bugHunterIssueKey(issue);
+    if (fixedBudget[key] > 0 && issue.fixable) {
+      fixed.push(issue);
+      fixedBudget[key]--;
+    }
+  });
+
+  needs = afterIssues.slice();
+
+  bugHunterOpen(
+    "Applied " + fixed.length + " fix" + (fixed.length === 1 ? "" : "es") +
+      " · " + needs.length + " issue" + (needs.length === 1 ? "" : "s") + " remain",
+    fixed,
+    needs
+  );
+  toast(
+    "Bug Hunter: " + fixed.length + " fixed, " + needs.length + " remaining",
+    needs.length ? "warn" : "ok"
+  );
 }
 
 /* -- preview ----------------------------------------------------------- */
@@ -493,38 +612,20 @@ function runPreview() {
 
   if (l === "json") {
     try {
-      var hl = JSON.stringify(JSON.parse(code), null, 2)
-        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-        .replace(/("[\w-]+")\s*:/g, "<span style='color:#9cdcfe'>$1</span>:")
-        .replace(/:\s*(".*?")/g, ": <span style='color:#ce9178'>$1</span>")
-        .replace(/:\s*(\d+\.?\d*)/g, ": <span style='color:#b5cea8'>$1</span>");
-      tx.innerHTML = "<pre style='font:10px/1.6 var(--mono)'>" + hl + "</pre>";
+      previewSetPre(tx, JSON.stringify(JSON.parse(code), null, 2), "font:10px/1.6 var(--mono)");
     } catch (e) {
-      tx.innerHTML = "<pre style='color:var(--pulse);font:10px var(--mono)'>" + e.message + "</pre>";
+      previewSetPre(tx, e.message, "color:var(--pulse);font:10px var(--mono)");
     }
     return;
   }
 
   if (l === "diff") {
-    tx.innerHTML = "<pre style='font:10px/1.6 var(--mono)'>"
-      + code.replace(/&/g, "&amp;").replace(/</g, "&lt;")
-        .replace(/^(\+\+\+.*)$/gm, "<span style='color:#c586c0'>$1</span>")
-        .replace(/^(---.*)$/gm,    "<span style='color:#c586c0'>$1</span>")
-        .replace(/^(@@.*)$/gm,     "<span style='color:#4fc1ff'>$1</span>")
-        .replace(/^(\+.*)$/gm,     "<span style='color:#4ec9b0'>$1</span>")
-        .replace(/^(-[^-].*)$/gm,  "<span style='color:#f44747'>$1</span>")
-      + "</pre>";
+    previewSetPre(tx, code, "font:10px/1.6 var(--mono)");
     return;
   }
 
   /* generic syntax highlight for python / bash / etc */
-  tx.innerHTML = "<pre style='font:10px/1.6 var(--mono)'>"
-    + code.replace(/&/g, "&amp;").replace(/</g, "&lt;")
-      .replace(/(#.*$)/gm,  "<span style='color:#6a9955'>$1</span>")
-      .replace(/(\/\/.*$)/gm,"<span style='color:#6a9955'>$1</span>")
-      .replace(/\b(function|var|return|if|else|for|while|def|class|import|from|async|await)\b/g,
-               "<span style='color:#569cd6'>$1</span>")
-    + "</pre>";
+  previewSetPre(tx, code, "font:10px/1.6 var(--mono)");
 }
 
 /* -- diff viewer ------------------------------------------------------- */
@@ -813,6 +914,9 @@ document.getElementById("aa").addEventListener("click", function () {
     _aiPend = null;
   }
 });
+
+document.getElementById("b-bh").addEventListener("click", bugHunterRun);
+document.getElementById("bh-close").addEventListener("click", bugHunterClose);
 
 /* -- terminal ---------------------------------------------------------- */
 var _th = [], _ti = -1;

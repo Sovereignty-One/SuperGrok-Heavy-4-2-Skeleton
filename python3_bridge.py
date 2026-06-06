@@ -1,18 +1,29 @@
+"""Compatibility wrapper for the actual bridge server implementation."""
+
 from __future__ import annotations
 
 import os
 
-DEFAULT_AI_MAX_TOKENS = 131072
+from bridge.python3_bridge import (  # noqa: F401
+    DEFAULT_AI_MAX_TOKENS,
+    BridgeHandler,
+    build_health_payload,
+    main,
+    _resolve_ai_max_tokens,
+)
 
-
-def _resolve_ai_max_tokens(value: str | None) -> int:
-    if not value:
-        return DEFAULT_AI_MAX_TOKENS
-    try:
-        parsed = int(value)
-    except (TypeError, ValueError):
-        return DEFAULT_AI_MAX_TOKENS
-    return parsed if parsed > 0 else DEFAULT_AI_MAX_TOKENS
-
-
+# Dynamically compute AI_MAX_TOKENS to support environment variable changes.
 AI_MAX_TOKENS = _resolve_ai_max_tokens(os.getenv("SG_MAX_TOKENS"))
+
+__all__ = [
+    "AI_MAX_TOKENS",
+    "DEFAULT_AI_MAX_TOKENS",
+    "BridgeHandler",
+    "build_health_payload",
+    "main",
+    "_resolve_ai_max_tokens",
+]
+
+
+if __name__ == "__main__":
+    main()

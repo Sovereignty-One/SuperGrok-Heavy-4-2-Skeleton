@@ -18,7 +18,6 @@ class DeepScanner:
         try:
             import astroid  # optional dependency
             from astroid import nodes
-
             module = astroid.parse(code)
             for node in module.nodes_of_class(nodes.FunctionDef):
                 if not getattr(node, "returns", None) and len(node.body) > 20:

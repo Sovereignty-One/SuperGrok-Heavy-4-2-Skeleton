@@ -5,7 +5,7 @@ fastapi
 liboqs-python
 prometheus-client
 pydantic
+redis
 pytest
 pytest-asyncio
-redis
 uvicorn

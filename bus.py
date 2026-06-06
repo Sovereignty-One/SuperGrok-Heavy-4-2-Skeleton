@@ -25,7 +25,7 @@ _handlers: Dict[str, Callable] = {}
 
 
 async def _get_redis():
-    """Return a Redis client, creating it on first call."""
+    """Return a Redis asyncio client, creating it on first call."""
     global _redis_client
     if _redis_client is None and _REDIS_URL:
         try:
