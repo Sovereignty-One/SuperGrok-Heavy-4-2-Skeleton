@@ -28,8 +28,8 @@ All components are designed for **complete operational independence**, **end-to-
 > **No Node.js required.** The bridge is pure Python 3 stdlib — runs natively in [iSH](https://ish.app/) on iOS.
 
 ```sh
-# 1. Place SGHv119.html in your home directory
-cp SGHv119.html ~/
+# 1. Place the dashboard HTML in your home directory
+cp Sghv119-local.html ~/
 
 # 2. (Optional) Set API keys
 export ANTHROPIC_API_KEY=sk-ant-...
@@ -39,10 +39,10 @@ export GROK_API_KEY=xai-...
 # 3. Launch
 sh start-dashboard.sh
 
-# 4. Open Safari → http://127.0.0.1:9897
+# 4. Open Safari → http://127.0.0.1:9898
 ```
 
-If you want the browser dashboard instead of the standalone bridge, run `node server_9898.js` and open `http://127.0.0.1:9898`.
+If you want the Node-based frontend/dashboard instead of the standalone launcher, run `node server_9898.js` and open `http://127.0.0.1:9898`.
 
 ### iSH First-Time Setup
 
@@ -57,17 +57,13 @@ cd ~/SuperGrok-Heavy-4-2-Skeleton
 sh start-dashboard.sh
 ```
 
-### API Routes (python3_bridge.py)
+### Bridge Routes (bridge/python3_bridge.py)
 
 | Endpoint | Method | Description |
 |---|---|---|
-| `/` | GET | Serves `SGHv119.html` |
-| `/api/health` | GET | JSON health + key status |
-| `/api/ai` | POST | `{"agent":"claude","prompt":"…"}` |
-| `/api/exec` | POST | `{"cmd":"ls -la"}` shell exec |
-| `/api/keys` | POST | Set API keys at runtime |
-| `/api/speak` | POST | `{"text":"…"}` TTS via `say`/`espeak` |
-| `ws://…:9897` | WS | Full-duplex AI + agent bus |
+| `/` | GET | JSON health payload |
+| `/health` | GET | JSON health payload |
+| `/api/health` | GET | JSON health payload |
 
 ---
 

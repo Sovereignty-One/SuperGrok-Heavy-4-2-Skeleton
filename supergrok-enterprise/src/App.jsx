@@ -516,7 +516,7 @@ function App() {
                   <h3 className="text-lg font-bold text-white">Backend Export</h3>
                 </div>
                 <p className="text-slate-400 text-sm mb-4">
-                  FastAPI with oqs-python (Dilithium3, Falcon-512, ChaCha20-Poly1305)
+                  FastAPI with liboqs-python (Dilithium3, Falcon-512, ChaCha20-Poly1305)
                 </p>
                 <button
                   onClick={() => {
@@ -582,7 +582,7 @@ function App() {
               <div className="space-y-2 font-mono text-sm">
                 <div className="p-3 bg-slate-900 rounded">
                   <div className="text-slate-400 text-xs mb-1">Install Dependencies:</div>
-                  <div className="text-green-400">pip install fastapi uvicorn oqs-python cryptography</div>
+                  <div className="text-green-400">pip install fastapi uvicorn liboqs-python cryptography</div>
                 </div>
                 <div className="p-3 bg-slate-900 rounded">
                   <div className="text-slate-400 text-xs mb-1">Run Server:</div>
