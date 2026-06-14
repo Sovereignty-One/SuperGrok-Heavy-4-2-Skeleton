@@ -25,6 +25,25 @@ def _parse_ai_max_tokens() -> int:
 AI_MAX_TOKENS = _parse_ai_max_tokens()
 
 
+def build_health_payload() -> dict:
+    return {
+        "status": "live",
+        "service": "SovereignBridge",
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "port": DEFAULT_BRIDGE_PORT,
+        "max_tokens": AI_MAX_TOKENS,
+    }
+
+
+def build_connect_payload() -> dict:
+    return {
+        "status": "ok",
+        "service": "SovereignBridge",
+        "port": DEFAULT_BRIDGE_PORT,
+        "max_tokens": AI_MAX_TOKENS,
+    }
+
+
 def _load_state() -> dict:
     try:
         if STATE_FILE.exists():
@@ -76,7 +95,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         if self.path in {"/", "/health", "/api/health"}:
-            self._send_json(200, {"status": "live", "service": "SovereignBridge", "timestamp": datetime.utcnow().isoformat() + "Z", **_sync_hint()})
+            self._send_json(200, {**build_health_payload(), **_sync_hint()})
             return
         if self.path in {"/sync", "/api/sync", "/api/bootstrap"}:
             self._send_json(200, _sync_hint())
