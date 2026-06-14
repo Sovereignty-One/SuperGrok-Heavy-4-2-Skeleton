@@ -11,6 +11,24 @@ import os
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+DEFAULT_AI_MAX_TOKENS = 131072
+
+
+def _parse_ai_max_tokens() -> int:
+    raw = os.getenv("SG_MAX_TOKENS")
+    if raw is None:
+        return DEFAULT_AI_MAX_TOKENS
+
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return DEFAULT_AI_MAX_TOKENS
+
+    return value if value > 0 else DEFAULT_AI_MAX_TOKENS
+
+
+AI_MAX_TOKENS = _parse_ai_max_tokens()
+
 # --- Simple in-memory identity store (replace with real REPMHL later) ---
 CURRENT_IDENTITY = {
     "name": "Derek Appel",
