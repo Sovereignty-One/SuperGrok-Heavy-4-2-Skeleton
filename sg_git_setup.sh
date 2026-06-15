@@ -2,10 +2,9 @@
 
 # ══════════════════════════════════════════════════════════════════
 # SuperGrok v82 — GitHub SSH Push Setup
-# Repos:
-#   https://github.com/Appel420/Sovereignty-AI-Studio.git
+# Repo:
 #   git@github.com:Sovereignty-One/SuperGrok-Heavy-4-2-Skeleton.git
-# Run once to configure remotes, then use dashboard GitHub panel
+# Run once to configure the remote, then use dashboard GitHub panel
 # ══════════════════════════════════════════════════════════════════
 
 set -euo pipefail
@@ -46,11 +45,10 @@ logs/
 GITIGNORE
 echo "✅ .gitignore written"
 
-# ── Configure remotes ──────────────────────────────────────────
+# ── Configure remote ───────────────────────────────────────────
 git remote remove appel420 2>/dev/null || true
 git remote remove sovereignty-one 2>/dev/null || true
 
-git remote add appel420 https://github.com/Appel420/Sovereignty-AI-Studio.git
 git remote add sovereignty-one git@github.com:Sovereignty-One/SuperGrok-Heavy-4-2-Skeleton.git
 
 echo "✅ Remotes configured:"
@@ -67,12 +65,7 @@ MSG="chore: SuperGrok v82 — port unification 9898, auth fix, SG_MEMORY, SG_AGE
 git commit -m "$MSG"
 echo "✅ Committed: $MSG"
 
-# ── Push both ─────────────────────────────────────────────────
-echo ""
-echo "Pushing to Appel420/Sovereignty-AI-Studio..."
-git push appel420 $BRANCH --force-with-lease 2>&1 || git push appel420 $BRANCH 2>&1
-echo "✅ Pushed to Appel420"
-
+# ── Push to SuperGrok repo ─────────────────────────────────────
 echo ""
 echo "Pushing to Sovereignty-One/SuperGrok-Heavy-4-2-Skeleton..."
 git push sovereignty-one $BRANCH --force-with-lease 2>&1 || git push sovereignty-one $BRANCH 2>&1
