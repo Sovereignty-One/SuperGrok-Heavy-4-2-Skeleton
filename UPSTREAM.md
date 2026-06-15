@@ -1,7 +1,7 @@
 # Upstream: Sovereignty AI Studio
 
 This repository (`sovereignty-one/supergrok-heavy-4-2-skeleton`) is a lightweight skeleton
-derivative of **[appel420/sovereignty-ai-studio](https://github.com/appel420/sovereignty-ai-studio)**.
+derivative of **[Appel420/Sovereignty-AI-Studio](https://github.com/Appel420/Sovereignty-AI-Studio)**.
 
 ## Relationship
 
@@ -19,7 +19,7 @@ derivative of **[appel420/sovereignty-ai-studio](https://github.com/appel420/sov
 
 ```bash
 # Add the upstream remote (one-time setup)
-git remote add upstream https://github.com/appel420/sovereignty-ai-studio.git
+git remote add upstream https://github.com/Appel420/Sovereignty-AI-Studio.git
 git fetch upstream
 ```
 
@@ -34,7 +34,7 @@ git merge upstream/main --allow-unrelated-histories -m "chore: sync from soverei
 ### Option B: Subtree pull (for the nested Sovereignty-AI-Studio-main/ directory)
 ```bash
 git subtree pull --prefix=Sovereignty-AI-Studio-main \
-  https://github.com/appel420/sovereignty-ai-studio.git main --squash
+  https://github.com/Appel420/Sovereignty-AI-Studio.git main --squash
 ```
 
 ## Configuration
