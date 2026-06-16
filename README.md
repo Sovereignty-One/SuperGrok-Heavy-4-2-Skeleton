@@ -81,6 +81,12 @@ cp ci-cd/local/local-cicd.env.example ci-cd/local/local-cicd.env
 ./ci-cd/local/deploy-local.sh
 ```
 
+Or run the same flow through npm:
+
+```bash
+npm run local:deploy-sync
+```
+
 What it does:
 - local deploy via `docker compose`
 - archives compliance exports + Merkle signatures into `exports/`
