@@ -14,7 +14,7 @@ ENABLE_DEPLOY="${ENABLE_DEPLOY:-1}"
 ENABLE_EXPORT_ARCHIVE="${ENABLE_EXPORT_ARCHIVE:-1}"
 ENABLE_MIRROR_PUSH="${ENABLE_MIRROR_PUSH:-1}"
 EXPORT_URL="${EXPORT_URL:-http://127.0.0.1:9899/compliance/export}"
-EXPORT_DIR="${EXPORT_DIR:-${REPO_ROOT}/exports}"
+EXPORT_DIR="${EXPORT_DIR:-${REPO_ROOT}/.local-cicd-exports}"
 EXPORT_RETENTION="${EXPORT_RETENTION:-10}"
 TARGET_REMOTE_NAME="${TARGET_REMOTE_NAME:-sovereignty-ai-studio}"
 TARGET_REPO_URL="${TARGET_REPO_URL:-git@github.com:Appel420/Sovereignty-AI-Studio.git}"
@@ -87,10 +87,10 @@ archive_export() {
     exit 1
   fi
 
-  local ts export_file merkle_file merkle_root signature
+  local ts export_file merkle_file merkle_root digest
   ts="$(date +%Y%m%d_%H%M%S)"
   export_file="${EXPORT_DIR}/compliance_export_${ts}.json"
-  merkle_file="${EXPORT_DIR}/merkle_signature_${ts}.txt"
+  merkle_file="${EXPORT_DIR}/merkle_digest_${ts}.txt"
 
   curl --silent --show-error --fail "${EXPORT_URL}" >"${export_file}"
   merkle_root="$(jq -r '.summary.merkleRoot // empty' "${export_file}")"
@@ -100,14 +100,14 @@ archive_export() {
     exit 1
   fi
 
-  signature="$(sha256_text "${merkle_root}")"
+  digest="$(sha256_text "${merkle_root}")"
   {
     printf 'Merkle Root: %s\n' "${merkle_root}"
-    printf 'Signature: %s\n' "${signature}"
+    printf 'SHA-256 Digest: %s\n' "${digest}"
   } >"${merkle_file}"
 
   info "Compliance export archived: ${export_file}"
-  info "Merkle signature archived: ${merkle_file}"
+  info "Merkle digest archived: ${merkle_file}"
 
   local stamps=() idx stamp
   while IFS= read -r stamp; do
@@ -119,13 +119,18 @@ archive_export() {
     info "Pruning exports older than latest ${EXPORT_RETENTION} snapshots..."
     for ((idx = EXPORT_RETENTION; idx < ${#stamps[@]}; idx++)); do
       stamp="${stamps[idx]}"
-      rm -f "${EXPORT_DIR}/compliance_export_${stamp}.json" "${EXPORT_DIR}/merkle_signature_${stamp}.txt"
+      rm -f "${EXPORT_DIR}/compliance_export_${stamp}.json" "${EXPORT_DIR}/merkle_digest_${stamp}.txt"
     done
   fi
 }
 
 run_mirror_push() {
   local existing_url=""
+  if [ -z "${TARGET_BRANCH}" ] || [ "${TARGET_BRANCH}" = "HEAD" ]; then
+    error "Unable to detect a checked-out branch. Set TARGET_BRANCH before ENABLE_MIRROR_PUSH=1 when running from detached HEAD."
+    exit 1
+  fi
+
   if ! existing_url="$(git -C "${REPO_ROOT}" remote get-url "${TARGET_REMOTE_NAME}" 2>/dev/null)"; then
     info "Adding mirror remote '${TARGET_REMOTE_NAME}' => ${TARGET_REPO_URL}"
     git -C "${REPO_ROOT}" remote add "${TARGET_REMOTE_NAME}" "${TARGET_REPO_URL}"
