@@ -72,6 +72,29 @@ npm start
 
 For the full stack, review the architecture doc first and then launch the bridge and dashboard components as needed.
 
+## Local CI/CD deploy + mirror
+
+Use the local entrypoint below (no GitHub Actions required):
+
+```bash
+cp ci-cd/local/local-cicd.env.example ci-cd/local/local-cicd.env
+./ci-cd/local/deploy-local.sh
+```
+
+Or run the same flow through npm:
+
+```bash
+npm run local:deploy-sync
+```
+
+What it does:
+- local deploy via `docker compose`
+- archives compliance exports + Merkle signatures into `exports/`
+- prunes old archive snapshots (default keep: 10)
+- pushes current branch to `Appel420/Sovereignty-AI-Studio` through the configured mirror remote
+
+The script fails fast with clear errors if deploy, export, or push steps fail.
+
 ## Related documentation
 
 - `CHANGES.md`
