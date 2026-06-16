@@ -50,4 +50,4 @@ cp ci-cd/local/local-cicd.env.example ci-cd/local/local-cicd.env
 ./ci-cd/local/deploy-local.sh
 ```
 
-Set `TARGET_REPO_URL`, `TARGET_REMOTE_NAME`, and `TARGET_BRANCH` in `ci-cd/local/local-cicd.env` as needed.
+Set `TARGET_REPO_URL`, `TARGET_REMOTE_NAME`, and `TARGET_BRANCH` in `ci-cd/local/local-cicd.env` as needed. Leave `TARGET_BRANCH` blank to mirror the checked-out branch, and set it explicitly when running from a detached HEAD.

@@ -89,9 +89,9 @@ npm run local:deploy-sync
 
 What it does:
 - local deploy via `docker compose`
-- archives compliance exports + Merkle signatures into `exports/`
+- archives compliance exports + Merkle digests into `.local-cicd-exports/`
 - prunes old archive snapshots (default keep: 10)
-- pushes current branch to `Appel420/Sovereignty-AI-Studio` through the configured mirror remote
+- pushes the checked-out branch to `Appel420/Sovereignty-AI-Studio` through the configured mirror remote (or `TARGET_BRANCH` when set)
 
 The script fails fast with clear errors if deploy, export, or push steps fail.
 
