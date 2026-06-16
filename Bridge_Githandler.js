@@ -1,1 +1,0 @@
-/* Bridge handler updated - SGHV119_Newest references removed */
