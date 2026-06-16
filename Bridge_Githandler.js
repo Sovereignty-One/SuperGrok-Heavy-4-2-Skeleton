@@ -1,1 +1,1 @@
-/* Cleaned version - references to SGHV119_Newest.html removed */
+/* Bridge handler updated - SGHV119_Newest references removed */

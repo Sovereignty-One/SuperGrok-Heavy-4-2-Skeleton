@@ -1,1 +1,1 @@
-# Cleaned version - references to SGHV119_Newest.html removed
+# fix_codemaster.py - references to SGHV119_Newest.html have been removed and updated to SGHv119.html
