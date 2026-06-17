@@ -152,3 +152,5 @@ package-lock.json
 
 # Persistent memory store (runtime data — inject via MEM_STORE_FILE env or mount as volume)
 data/memory/
+exports/
+.local-cicd-exports/

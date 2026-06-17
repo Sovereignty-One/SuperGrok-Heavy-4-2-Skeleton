@@ -22082,17 +22082,16 @@ toast:toast
 };
 
 /* ══════════════════════════════════════════════════════════════════════
-PANELS.github — Git push to both Sovereignty repos via SSH
+PANELS.github — Git push to SuperGrok repo via SSH
 ══════════════════════════════════════════════════════════════════════ */
 PANELS.github = function(){
 var st = window.ST || {};
-return hdr('🐙 GitHub Sync','Push to Sovereignty repos via SSH') +
+return hdr('🐙 GitHub Sync','Push to SuperGrok repo via SSH') +
 '<div style="display:grid;gap:12px;padding:8px 0">' +
 
 '<div style="background:rgba(0,255,200,.05);border:1px solid rgba(0,255,200,.15);border-radius:10px;padding:14px">' +
-'<div style="font-family:var(--mono);font-size:8px;color:var(--cy);letter-spacing:1px;margin-bottom:10px">📦 SOVEREIGNTY REPOS — SSH ONLY · NO HTTPS</div>' +
+'<div style="font-family:var(--mono);font-size:8px;color:var(--cy);letter-spacing:1px;margin-bottom:10px">📦 SUPERGROK REPO — SSH ONLY · NO HTTPS</div>' +
 '<div style="display:grid;gap:8px">' +
-mkRepoCard('Appel420/Sovereignty-AI-Studio','ssh://git@github.com:Appel420/Sovereignty-AI-Studio.git','var(--vt)','Personal sovereignty studio — all builds') +
 mkRepoCard('Sovereignty-One/SuperGrok-Heavy-4-2-Skeleton','ssh://git@github.com:Sovereignty-One/SuperGrok-Heavy-4-2-Skeleton.git','var(--acid)','SuperGrok production skeleton + releases') +
 '</div></div>' +
 
@@ -22103,9 +22102,7 @@ mkRepoCard('Sovereignty-One/SuperGrok-Heavy-4-2-Skeleton','ssh://git@github.com:
 '<div><label class="fl">Branch</label><input class="fi-inp" id="gh-branch" value="main" style="font-family:var(--mono);font-size:10px"></div>' +
 '</div>' +
 '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-'<button class="btn-p" style="font-size:9px" onclick="sgGitPush(\'both\')">⬆️ Push Both Repos</button>' +
-'<button class="btn-s" style="font-size:9px" onclick="sgGitPush(\'appel420\')">Push Appel420 Only</button>' +
-'<button class="btn-s" style="font-size:9px" onclick="sgGitPush(\'sovereignty-one\')">Push Sovereignty-One Only</button>' +
+'<button class="btn-p" style="font-size:9px" onclick="sgGitPush()">⬆️ Push SuperGrok Repo</button>' +
 '<button class="btn-s" style="font-size:9px" onclick="sgGitStatus()">📊 Status</button>' +
 '</div></div>' +
 
@@ -22131,10 +22128,9 @@ var branch = (gi('gh-branch')||{}).value || 'main';
 var out = gi('gh-out');
 if(out) out.textContent = '⏳ Sending push command to bridge...\n';
 var repos = {
-'appel420':      {remote:'git@github.com:Appel420/Sovereignty-AI-Studio.git',    name:'Sovereignty-AI-Studio'},
 'sovereignty-one':{remote:'git@github.com:Sovereignty-One/SuperGrok-Heavy-4-2-Skeleton.git', name:'SuperGrok-Heavy-4-2-Skeleton'}
 };
-var targets = target==='both' ? ['appel420','sovereignty-one'] : [target];
+var targets = ['sovereignty-one'];
 targets.forEach(function(t){
 var r = repos[t];
 if(!r) return;
