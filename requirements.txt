@@ -1,2 +1,13 @@
+astroid
+blake3
+cryptography
+fastapi
+liboqs-python
+python-multipart
+prometheus-client
+pydantic
+redis
 pytest
 pytest-asyncio
+sqlalchemy
+uvicorn

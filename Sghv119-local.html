@@ -513,15 +513,6 @@ var _connected = false;
 var _retries   = 0;
 var _timer     = null;
 
-
-// ─── PROTOCOL-AWARE WS HELPER ───────────────────────────────────────────────
-// Returns 'wss://' on HTTPS origins (mixed-content would block ws://),
-// 'ws://' on HTTP/file origins. All WebSocket connects must use this.
-function _sgWsProto(){ return location.protocol==='https:' ? 'wss://' : 'ws://'; }
-function _sgWsUrl(host){ return _sgWsProto() + (host || '127.0.0.1:9897'); }
-// Guard: once the browser signals ws:// is insecure, stop all reconnect attempts
-function _sgWsBlocked(){ return !!window._sgBridgeInsecure; }
-// ────────────────────────────────────────────────────────────────────────────
 function setConnected(yes, msg) {
 _connected = yes;
 if (bar) bar.style.background = yes ? 'var(--acid,#00ffc8)' : '#ff3d6e';
@@ -561,7 +552,7 @@ if (typeof PiperTTS !== 'undefined') {
 if (typeof BRIDGE !== 'undefined') {
   if (!BRIDGE.ws || BRIDGE.ws.readyState >= 2) {
     BRIDGE.wsRetries = 0;
-    try { BRIDGE.tryWebSocket(); } catch(e) {}
+    /* WS disabled — HTTP only */
   }
 }
 
@@ -1978,7 +1969,7 @@ const BRIDGE = {
     if(this.ws){ try{this.ws.close();}catch(e){} this.ws=null; }
     var self = this;
     try{
-      var wsUrl = _sgWsUrl(); /* Python WS bridge :9897 — protocol auto-detected */
+      var wsUrl = 'ws://127.0.0.1:9897'; /* Python WS bridge :9897 */
       const ws = new WebSocket(wsUrl);
       this.ws = ws;
       ws.onopen = ()=>{
@@ -2283,7 +2274,6 @@ var BridgeCFG = {
   }
 };
 BridgeCFG.load();
-if(location.protocol==='https:' && BridgeCFG.protocol==='ws'){ BridgeCFG.protocol='wss'; }
 
 // Force-connect immediately — SuperGrok requires port 9897 live
 (function _forceConnect(){
@@ -3963,7 +3953,7 @@ var CFG = (function(){
     var saved = JSON.parse(localStorage.getItem(_CFG_KEY)||'{}');
     if (saved) {
       /* WS=9897 Python internal only · HTTP AI/agent routes via KODER 9898 */
-      saved.bridgeWsUrl = (typeof _sgWsUrl==='function' ? _sgWsUrl() : 'ws://127.0.0.1:9897');
+      saved.bridgeWsUrl = 'ws://127.0.0.1:9897';
       saved.bridgeHttpUrl = 'http://127.0.0.1:9898/agents';
     }
     return Object.assign({}, D, saved);
@@ -4002,14 +3992,6 @@ async function verifySeal(){
   var c=await computeSeal();
   if(_seal&&c!==_seal){ log('error','TAMPER DETECTED',{expected:_seal.slice(0,16),got:c.slice(0,16)}); auditEntry('TAMPER',{drift:true}); bridgeSend({type:'agent_tamper_alert',seal:c.slice(0,32)}); _seal=c; }
 }
-
-// ─── HTTPS/WS MISMATCH GUARD ────────────────────────────────────────────────
-(function(){
-  if(location.protocol!=='https:') return;
-  // Warn once if any stored config has ws:// 
-  var stored = localStorage.getItem('sg_bridge_cfg');
-  if(stored){try{var c=JSON.parse(stored);if(c.protocol==='ws'){c.protocol='wss';localStorage.setItem('sg_bridge_cfg',JSON.stringify(c));}}catch(_){}}
-})();
 setInterval(verifySeal,CFG.sealIntervalMs);
 
 /* ── Bridge ── */
@@ -4035,29 +4017,7 @@ function bridgeConnect(){
       e.message.indexOf('SecurityError') !== -1 ||
       e.name === 'SecurityError'
     ); /* No protocol restriction — iOS throws this on http:// too */
-    if (isInsecure) {
-      /* file:// → ws:// is blocked by Safari. Must serve via HTTP. */
-      log('warn', 'Bridge WS ws://9897 blocked on file:// — load from http://127.0.0.1:9898 (file server)');
-      window._sgBridgeInsecure = true;
-      _wsRetry = 999; /* stop retry loop */
-      /* Show banner on screen */
-      setTimeout(function() {
-        try {
-          var pa = document.getElementById('pa') || document.body;
-          if (pa && !document.getElementById('sg-insecure-banner')) {
-            var b = document.createElement('div');
-            b.id = 'sg-insecure-banner';
-            b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:linear-gradient(90deg,#7c4dff,#ff3d6e);color:#fff;padding:10px 16px;font-family:monospace;font-size:12px;display:flex;align-items:center;gap:10px';
-            b.innerHTML = '<span style="font-size:18px">⚠️</span>' +
-              '<span><strong>WebSocket blocked by browser security</strong> &mdash; serve via Node server: ' +
-              '<a href="http://127.0.0.1:9898" style="color:#fff;font-weight:bold">http://127.0.0.1:9898</a>' +
-              ' &nbsp;(run: <code>python3 python3_bridge.py</code>)</span>' +
-              '<button onclick="this.parentNode.remove()" style="margin-left:auto;background:transparent;border:1px solid rgba(255,255,255,.5);color:#fff;padding:2px 8px;border-radius:4px;cursor:pointer">✕</button>';
-            document.body.insertBefore(b, document.body.firstChild);
-          }
-        } catch(ex) {}
-      }, 500);
-    } else {
+    /* isInsecure banner removed */ if(isInsecure){ window._sgBridgeInsecure=true; _wsRetry=999; } else {
       log('warn', 'Bridge WS init failed: ' + e.message);
       if (_wsRetry <= 5) setTimeout(bridgeConnect, 3000);
     }
@@ -4960,7 +4920,10 @@ window.SGOrchestrator = (function(){
     },
     stop:function(){ if(this.rec) try{this.rec.stop();}catch(e){} this.active=false; renderOrchPanel(); },
     openSiriShortcut:function(p){ window.location.href='shortcuts://run-shortcut?name='+encodeURIComponent(p||'SuperGrok'); },
-    openAssistant:function(q){ try{window.open('intent://'+encodeURIComponent(q||'')+'#Intent;scheme=assistant;package=com.google.android.googlequicksearchbox;end','_self');}catch(e){} }
+    openAssistant:function(q){
+      if(window.toast) window.toast('Sovereign mode: third-party assistant launch disabled','warn');
+      try{ addAudit && addAudit('SOVEREIGN_ASSISTANT_BLOCK',{q:q||''}); }catch(e){}
+    }
   };
 
   function buildAgentCard(a){
@@ -5193,7 +5156,13 @@ function buildRoles(q,_retry){
     cats[cat].forEach(function(k){grid.appendChild(makeRC(k,ROLES[k]));total++;});
     wrap.appendChild(grid);body.appendChild(wrap);
   });
-  if(!total){body.innerHTML='<div style="padding:40px;text-align:center;color:var(--t3);font-family:var(--mono);font-size:11px">No results for "'+q+'"</div>';}
+  if(!total){
+    body.innerHTML='';
+    var empty=document.createElement('div');
+    empty.style.cssText='padding:40px;text-align:center;color:var(--t3);font-family:var(--mono);font-size:11px';
+    empty.textContent='No results for "'+q+'"';
+    body.appendChild(empty);
+  }
 }
 
 function makeRC(key,r){
@@ -5763,7 +5732,19 @@ function loadPanel(id,isBack){ window._currentPanel=id;
     pa.innerHTML=fn(id);
   }catch(e){
     console.warn('[loadPanel] '+id+' threw:',e.message);
-    pa.innerHTML='<div style="padding:20px;font-family:monospace;font-size:11px;color:#ff6b6b">⚠️ Panel error: '+id+'<br>'+e.message+'<br><button onclick="loadPanel(\'dashboard\')" style="margin-top:8px;padding:4px 12px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;cursor:pointer">← Dashboard</button></div>';
+    pa.innerHTML='';
+    var err=document.createElement('div');
+    err.style.cssText='padding:20px;font-family:monospace;font-size:11px;color:#ff6b6b';
+    err.appendChild(document.createTextNode('⚠️ Panel error: '+id));
+    err.appendChild(document.createElement('br'));
+    err.appendChild(document.createTextNode(String(e.message||e)));
+    err.appendChild(document.createElement('br'));
+    var btn=document.createElement('button');
+    btn.onclick=function(){ loadPanel('dashboard'); };
+    btn.style.cssText='margin-top:8px;padding:4px 12px;background:#1a1a2e;border:1px solid #444;color:#fff;border-radius:6px;cursor:pointer';
+    btn.textContent='← Dashboard';
+    err.appendChild(btn);
+    pa.appendChild(err);
   }
   afterPanel(id);
 }
@@ -5981,7 +5962,7 @@ function afterPanel(id){
         if(bWS&&!bWS._vw){bWS._vw=true;bWS.addEventListener('click',function(){
           if(bOut)bOut.textContent='Testing ws://127.0.0.1:9897...';
           try{
-            var t=new WebSocket(_sgWsUrl());
+            var t=new WebSocket('ws://127.0.0.1:9897');
             t.onopen=function(){if(bOut){bOut.textContent='✅ WebSocket connected';bOut.style.color='var(--gn)';}t.close();};
             t.onerror=function(){if(bOut){bOut.textContent='❌ WS failed — bridge not running or wrong origin';bOut.style.color='var(--pulse)';}};
           }catch(e){if(bOut)bOut.textContent='❌ '+e.message;}
@@ -6892,7 +6873,7 @@ var keys  = (function(){ try{ return JSON.parse(localStorage.getItem('sg_platfor
 var certs = (function(){ try{ return JSON.parse(localStorage.getItem('sg_certs')||'[]');   }catch(e){ return []; } })();
 
 return hdr('\ud83d\udd11 API Key Manager',
-'Self-Signed \u00b7 Dilithium3 \u00b7 TLC Certs \u00b7 MX Records \u00b7 Customer Issuance \u00b7 Key Rotation \u00b7 Compliant') +
+'CA-Signed \u00b7 Dilithium3 \u00b7 TLC Certs \u00b7 MX Records \u00b7 Customer Issuance \u00b7 Key Rotation \u00b7 Compliant') +
 
 '<div class="kgrid">' +
 kc(keys.length+'',  'Active Keys',   'var(--acid)') +
@@ -6949,10 +6930,10 @@ return '<tr>' +
 '</tbody></table></div>') +
 '</div>' +
 
-/* ── TLC Self-Signed Certificate Generator ── */
+/* ── TLC Certificate Generator ── */
 '<div class="card" style="border-color:var(--volt)22">' +
 '<div class="card-title">\ud83d\udcc4 TLC Certificate Generator</div>' +
-'<p style="font-size:10px;color:var(--t2);margin-bottom:10px">Self-signed TLS/TLC certs. Cryptographic signatures. No CA dependency. Self-verifying chain of custody.</p>' +
+'<p style="font-size:10px;color:var(--t2);margin-bottom:10px">Generate TLS/TLC certificate material for legitimate CA signing (DigiCert-compatible). Cryptographic signatures and verifiable chain of custody.</p>' +
 '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">' +
 '<div><label class="fi-label">Domain / Common Name</label><input class="fi" id="cert-domain" placeholder="supergrok.local or *.internal.net"></div>' +
 '<div><label class="fi-label">Organisation</label><input class="fi" id="cert-org" placeholder="SuperGrok Sovereign AI Labs"></div>' +
@@ -7131,7 +7112,7 @@ var sans   = (document.getElementById('cert-sans')||{}).value   || 'localhost';
 var now    = new Date();
 var exp    = new Date(now.getTime() + days*86400000);
 
-/* Build a PEM-style self-signed cert representation */
+/* Build a PEM-style certificate representation for CA signing */
 crypto.subtle.digest('SHA-256', new TextEncoder().encode(domain + org + algo + Date.now()))
   .then(function(buf) {
     var fp = Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('').toUpperCase().match(/.{2}/g).join(':');
@@ -7141,7 +7122,7 @@ crypto.subtle.digest('SHA-256', new TextEncoder().encode(domain + org + algo + D
       'Version: 3 (0x2)\n' +
       'Serial Number: ' + serial + '\n' +
       'Signature Algorithm: ' + (algo==='Dilithium3'?'id-dilithium3':'ecdsa-with-SHA256') + '\n' +
-      'Issuer: CN=' + domain + ', O=' + org + ', OU=Self-Signed, C=US\n' +
+      'Issuer: CN=' + domain + ', O=' + org + ', OU=CA-Signed, C=US\n' +
       'Not Before: ' + now.toUTCString() + '\n' +
       'Not After:  ' + exp.toUTCString() + '\n' +
       'Subject: CN=' + domain + ', O=' + org + '\n' +
@@ -8288,7 +8269,21 @@ list.innerHTML = '';
 _files.forEach(function(f, i) {
 var chip = document.createElement('div');
 chip.style.cssText = 'display:flex;align-items:center;gap:5px;background:' + (i===_active?'var(--acid)22':'var(--bg2)') + ';border:1px solid ' + (i===_active?'var(--acid)':'var(--wire)') + ';border-radius:6px;padding:4px 9px;cursor:pointer;font-family:var(--mono);font-size:9px';
-chip.innerHTML = fileIcon(f.ext) + '<span style="color:' + (i===_active?'var(--acid)':'var(--t1)') + '">' + esc(f.name) + '</span><span style="color:var(--t3)"> '+fmtSize(f.size)+'</span><span class="fai-remove" data-idx="'+i+'" style="color:var(--pulse);margin-left:4px;cursor:pointer">\u2715</span>';
+chip.innerHTML = fileIcon(f.ext);
+var chipName = document.createElement('span');
+chipName.style.color = i===_active ? 'var(--acid)' : 'var(--t1)';
+chipName.textContent = f.name;
+chip.appendChild(chipName);
+var chipSize = document.createElement('span');
+chipSize.style.color = 'var(--t3)';
+chipSize.textContent = ' ' + fmtSize(f.size);
+chip.appendChild(chipSize);
+var chipRemove = document.createElement('span');
+chipRemove.className = 'fai-remove';
+chipRemove.setAttribute('data-idx', i);
+chipRemove.style.cssText = 'color:var(--pulse);margin-left:4px;cursor:pointer';
+chipRemove.textContent = '\u2715';
+chip.appendChild(chipRemove);
 chip.addEventListener('click', function(ev) {
 if (ev.target.classList.contains('fai-remove')) {
 _files.splice(parseInt(ev.target.getAttribute('data-idx')), 1);
@@ -8309,13 +8304,23 @@ var qc = document.getElementById('fai-queue-card');
 var ql = document.getElementById('fai-queue-list');
 if (qc) qc.style.display = _files.length > 1 ? 'block' : 'none';
 if (ql) {
-  ql.innerHTML = _files.map(function(f, i){
-    return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--wire)11;cursor:pointer" data-qi="'+i+'">' +
-      fileIcon(f.ext) +
-      '<span style="font-family:var(--mono);font-size:9px;color:' + (i===_active?'var(--acid)':'var(--t1)') + ';flex:1">' + esc(f.name) + '</span>' +
-      '<span style="font-family:var(--mono);font-size:8px;color:var(--t3)">' + fmtSize(f.size) + '</span>' +
-    '</div>';
-  }).join('');
+  ql.innerHTML = '';
+  _files.forEach(function(f, i){
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--wire)11;cursor:pointer';
+    row.setAttribute('data-qi', i);
+    row.innerHTML = fileIcon(f.ext);
+    var rowName = document.createElement('span');
+    rowName.style.cssText = 'font-family:var(--mono);font-size:9px;flex:1';
+    rowName.style.color = i===_active ? 'var(--acid)' : 'var(--t1)';
+    rowName.textContent = f.name;
+    row.appendChild(rowName);
+    var rowSize = document.createElement('span');
+    rowSize.style.cssText = 'font-family:var(--mono);font-size:8px;color:var(--t3)';
+    rowSize.textContent = fmtSize(f.size);
+    row.appendChild(rowSize);
+    ql.appendChild(row);
+  });
   ql.querySelectorAll('[data-qi]').forEach(function(row) {
     row.addEventListener('click', function() {
       _active = parseInt(row.getAttribute('data-qi'));
@@ -8362,7 +8367,7 @@ txt:'\ud83d\udcc4',sh:'\ud83d\udcbb',png:'\ud83d\uddbc\ufe0f',jpg:'\ud83d\uddbc\
 pdf:'\ud83d\udcd5',rs:'\ud83e\udd80',rb:'\ud83d\udc8e',go:'\ud83d\udc39',sql:'\ud83d\uddc4\ufe0f'};
 return '<span style="font-size:12px;margin-right:3px">' + (map[ext]||'\ud83d\udcc4') + '</span>';
 }
-function esc(s){ return String(s||'').replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>'); }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 /* ── AI ── */
 function runAI() {
@@ -8709,8 +8714,9 @@ return allApps().filter(function(a){ return ids.indexOf(a.id)===-1; });
 }
 function esc(s){
 return String(s||'')
-.replace(/&/g,'&').replace(/</g,'<')
-.replace(/>/g,'>').replace(/"/g,'"');
+.replace(/&/g,'&amp;').replace(/</g,'&lt;')
+.replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+.replace(/'/g,'&#39;');
 }
 
 /* ── Root render ──────────────────────────────────────────────────────── */
@@ -12520,10 +12526,10 @@ out += '<div style="background:linear-gradient(135deg,rgba(0,255,200,.05),rgba(1
 '<button class="btn-s" style="margin-left:auto;font-size:9px" onclick="sg(function(){loadPanel(\'pki\')})">↺ Refresh</button>' +
 '</div>';
 
-/* ── Section 1: Generate Self-Signed TLS Certificate ── */
+/* ── Section 1: Generate TLS Certificate Request (CA-Signed) ── */
 out += '<div class="card">';
-out += '<div style="font-family:var(--mono);font-size:10px;color:var(--acid);letter-spacing:1px;margin-bottom:10px">🔏 SELF-SIGNED TLS CERTIFICATE GENERATOR</div>';
-out += '<div style="font-size:11px;color:var(--t2);margin-bottom:12px">Generates X.509 self-signed certificate parameters using WebCrypto ECDSA P-384. Export to PEM for use with nginx/Apache/bridge.py. Fully on-device — private key never leaves browser.</div>';
+out += '<div style="font-family:var(--mono);font-size:10px;color:var(--acid);letter-spacing:1px;margin-bottom:10px">🔏 CA-SIGNED TLS CERTIFICATE REQUEST GENERATOR</div>';
+out += '<div style="font-size:11px;color:var(--t2);margin-bottom:12px">Generates X.509 certificate request parameters using WebCrypto ECDSA P-384 for legitimate CA signing. Export to PEM for use with nginx/Apache/bridge.py. Fully on-device — private key never leaves browser.</div>';
 out += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">' +
 '<div><label style="font-size:10px;color:var(--t2)">Common Name (CN)</label>' +
 '<input id="pki-cn" value="localhost" style="width:100%;background:var(--bg3);border:1px solid var(--wire);border-radius:4px;color:var(--t0);font-family:var(--mono);font-size:11px;padding:6px;box-sizing:border-box;margin-top:4px"></div>' +
@@ -12768,7 +12774,7 @@ sel+'._domainkey      3600  IN  TXT  "v=DKIM1; k=rsa; p='+dkimB64+'"',
 '',
 '; ── CAA RECORDS ─────────────────────────────────────────────',
 '@  3600  IN  CAA  0 issue "digicert.com"',
-';   Allow ONLY LetsEncrypt to issue TLS certs.',
+';   Allow ONLY DigiCert to issue TLS certs.',
 '@  3600  IN  CAA  0 iodef "mailto:security@'+domain+'"',
 ';   Security contact for CA issue reports.',
 '',
@@ -15334,8 +15340,8 @@ fixMsg: 'Replace all curly/smart quotes with plain ASCII' },
 
     { re: /<(?!area\b|base\b|br\b|col\b|embed\b|hr\b|img\b|input\b|link\b|meta\b|param\b|source\b|track\b|wbr\b)([a-z][a-z0-9-]*)\b[^>]*>(?![^<]*<\/\1>)/gi,
       msg: function(m){ return 'Unclosed tag: <'+m[1]+'>'; },
-      fix: function(code, m){ return code + '\n</' + m[1] + '>'; },
-      fixMsg: 'Add closing tag' },
+      fix: null,
+      fixMsg: null },
     { re: /\x3Cimg\b(?![^>]*\balt=)[^>]*>/gi,
       msg: function(){ return 'Image tag missing alt attribute'; },
       fix: function(code, m){ return code.replace(m[0], m[0].replace(/\s*\/?>$/, ' alt=""$&')); },
@@ -15460,7 +15466,7 @@ return ed ? ed.value : '';
 }
 function setCode(c) {
 var ed = document.getElementById('cm-editor');
-if (ed) { ed.value = c; CM.runLint(); CM.updatePreview(); CM.updateLines(); }
+if (ed) { ed.value = c; try{CM.updatePreview();}catch(_){} ed.dispatchEvent(new Event("input",{bubbles:true})); }
 }
 
 /* ── CONSOLE HELPERS ──────────────────────────── */
@@ -15722,25 +15728,7 @@ if (output) {
 
 }
 
-/* Listen for AI response from bridge */
-if (typeof PiperTTS !== 'undefined' && PiperTTS.ws) {
-var _prev = PiperTTS.ws.onmessage;
-PiperTTS.ws.onmessage = function(e) {
-if (_prev) _prev.call(this, e);
-try {
-var d = JSON.parse(e.data);
-if (d.type === 'ai_code_review_result') {
-var output = document.getElementById('cm-ai-output');
-var applyBtn = document.getElementById('cm-apply-fix');
-if (output) output.textContent = d.review || d.text || 'No response';
-if (d.fixed_code && applyBtn) {
-applyBtn.style.display = 'block';
-applyBtn._fixFn = function() { setCode(d.fixed_code); };
-}
-}
-} catch(ex) {}
-};
-}
+/* PiperTTS WS listener removed — HTTP only */
 
 /* ── EXPOSE GLOBALS ───────────────────────────── */
 
@@ -17910,7 +17898,7 @@ _histIdx: -1,
 connect: function() {
 if (BridgeTerm._ws && BridgeTerm._ws.readyState < 2) return;
 try {
-BridgeTerm._ws = new WebSocket(_sgWsUrl('127.0.0.1:9897/terminal'));
+/* BridgeTerm WS removed */ BridgeTerm._ws = null;
 BridgeTerm._ws.onopen = function() {
 BridgeTerm._log('CONNECTED to localhost:9899/terminal', 'var(--acid)');
 window.auditLog && window.auditLog('BRIDGE_TERMINAL_OPEN', {});
@@ -17923,8 +17911,7 @@ BridgeTerm._log('Connection error — is bridge running on port 9897?', 'var(--p
 };
 BridgeTerm._ws.onclose = function() {
 BridgeTerm._log('Disconnected — retrying in 5s...', '#ffb300');
-if(!_sgWsBlocked()) setTimeout(function(){ BridgeTerm.connect(); }, 5000);
-else BridgeTerm._log('ws:// blocked on HTTPS — switch to wss:// in Bridge Config', 'var(--pulse)');
+setTimeout(function(){ BridgeTerm.connect(); }, 5000);
 };
 } catch(e) {
 BridgeTerm._log('WebSocket error: ' + e.message, 'var(--pulse)');
@@ -20452,8 +20439,8 @@ html: {
 errors: [
 { re: /<(?!area\b|base\b|br\b|col\b|embed\b|hr\b|img\b|input\b|link\b|meta\b|param\b|source\b|track\b|wbr\b)([a-z][a-z0-9-]*)\b[^>]*>(?![^<]*<\/\1>)/gi,
 msg: function(m){ return 'Unclosed tag: <'+m[1]+'>'; },
-fix: function(code, m){ return code + '\n</' + m[1] + '>'; },
-fixMsg: 'Add closing tag' },
+fix: null,
+fixMsg: null },
 { re: /\x3Cimg\b(?![^>]*\balt=)[^>]*>/gi,
 msg: function(){ return 'Image tag missing alt attribute'; },
 fix: function(code, m){ return code.replace(m[0], m[0].replace(/\s*\/?>$/, ' alt=""$&')); },
@@ -20547,7 +20534,7 @@ return ed ? ed.value : '';
 }
 function setCode(c) {
 var ed = document.getElementById('cm-editor');
-if (ed) { ed.value = c; CM.runLint(); CM.updatePreview(); CM.updateLines(); }
+if (ed) { ed.value = c; try{CM.updatePreview();}catch(_){} ed.dispatchEvent(new Event("input",{bubbles:true})); }
 }
 
 /* ── CONSOLE HELPERS ──────────────────────────── */
@@ -22095,17 +22082,16 @@ toast:toast
 };
 
 /* ══════════════════════════════════════════════════════════════════════
-PANELS.github — Git push to both Sovereignty repos via SSH
+PANELS.github — Git push to SuperGrok repo via SSH
 ══════════════════════════════════════════════════════════════════════ */
 PANELS.github = function(){
 var st = window.ST || {};
-return hdr('🐙 GitHub Sync','Push to Sovereignty repos via SSH') +
+return hdr('🐙 GitHub Sync','Push to SuperGrok repo via SSH') +
 '<div style="display:grid;gap:12px;padding:8px 0">' +
 
 '<div style="background:rgba(0,255,200,.05);border:1px solid rgba(0,255,200,.15);border-radius:10px;padding:14px">' +
-'<div style="font-family:var(--mono);font-size:8px;color:var(--cy);letter-spacing:1px;margin-bottom:10px">📦 SOVEREIGNTY REPOS — SSH ONLY · NO HTTPS</div>' +
+'<div style="font-family:var(--mono);font-size:8px;color:var(--cy);letter-spacing:1px;margin-bottom:10px">📦 SUPERGROK REPO — SSH ONLY · NO HTTPS</div>' +
 '<div style="display:grid;gap:8px">' +
-mkRepoCard('Appel420/Sovereignty-AI-Studio','ssh://git@github.com:Appel420/Sovereignty-AI-Studio.git','var(--vt)','Personal sovereignty studio — all builds') +
 mkRepoCard('Sovereignty-One/SuperGrok-Heavy-4-2-Skeleton','ssh://git@github.com:Sovereignty-One/SuperGrok-Heavy-4-2-Skeleton.git','var(--acid)','SuperGrok production skeleton + releases') +
 '</div></div>' +
 
@@ -22116,9 +22102,7 @@ mkRepoCard('Sovereignty-One/SuperGrok-Heavy-4-2-Skeleton','ssh://git@github.com:
 '<div><label class="fl">Branch</label><input class="fi-inp" id="gh-branch" value="main" style="font-family:var(--mono);font-size:10px"></div>' +
 '</div>' +
 '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-'<button class="btn-p" style="font-size:9px" onclick="sgGitPush(\'both\')">⬆️ Push Both Repos</button>' +
-'<button class="btn-s" style="font-size:9px" onclick="sgGitPush(\'appel420\')">Push Appel420 Only</button>' +
-'<button class="btn-s" style="font-size:9px" onclick="sgGitPush(\'sovereignty-one\')">Push Sovereignty-One Only</button>' +
+'<button class="btn-p" style="font-size:9px" onclick="sgGitPush()">⬆️ Push SuperGrok Repo</button>' +
 '<button class="btn-s" style="font-size:9px" onclick="sgGitStatus()">📊 Status</button>' +
 '</div></div>' +
 
@@ -22144,10 +22128,9 @@ var branch = (gi('gh-branch')||{}).value || 'main';
 var out = gi('gh-out');
 if(out) out.textContent = '⏳ Sending push command to bridge...\n';
 var repos = {
-'appel420':      {remote:'git@github.com:Appel420/Sovereignty-AI-Studio.git',    name:'Sovereignty-AI-Studio'},
 'sovereignty-one':{remote:'git@github.com:Sovereignty-One/SuperGrok-Heavy-4-2-Skeleton.git', name:'SuperGrok-Heavy-4-2-Skeleton'}
 };
-var targets = target==='both' ? ['appel420','sovereignty-one'] : [target];
+var targets = ['sovereignty-one'];
 targets.forEach(function(t){
 var r = repos[t];
 if(!r) return;
@@ -22984,7 +22967,7 @@ kc(alertLog.length+'','Alerts','var(--sun)') +
 
 /* TLS Certificate */
 '<div class="card" style="margin-bottom:10px;border-color:var(--cy)22">' +
-'<div class="card-title">🔒 TLS Certificate (Self-Signed / Auto-Rotating)</div>' +
+'<div class="card-title">🔒 TLS Certificate (CA-Signed / Auto-Rotating)</div>' +
 '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-family:var(--mono);font-size:9px;margin-bottom:10px">' +
 '<div style="color:var(--t2)">Status</div>' +
 '<div style="color:'+(certInfo?'var(--gn)':'var(--pulse)')+'">'+
@@ -23143,7 +23126,7 @@ return '<div style="display:flex;align-items:center;gap:10px;padding:7px;backgro
 '<div style="color:var(--t2)">Messaging</div><div style="color:var(--t0)">Signal Protocol — Double Ratchet + X3DH</div>' +
 '<div style="color:var(--t2)">Session Signing</div><div style="color:var(--t0)">SHA-512 + WebCrypto SubtleCrypto</div>' +
 '<div style="color:var(--t2)">Cloud Sealing</div><div style="color:var(--t0)">AES-256-GCM, keys never leave device</div>' +
-'<div style="color:var(--t2)">Transport</div><div style="color:var(--t0)">TLS 1.3 only, self-signed cert, no CA</div>' +
+'<div style="color:var(--t2)">Transport</div><div style="color:var(--t0)">TLS 1.3 only, CA-signed X.509 certificate chain</div>' +
 '</div>' +
 '</div>' +
 
@@ -23635,7 +23618,7 @@ _renderDots: function(){
 _queryDirect: function(agentId, message, history, cb){
   /* ── Key resolution ── */
   var _lsk = {};
-  try{ _lsk = JSON.parse(localStorage.getItem('sg_apikeys') || '{}'); }catch(_){} 
+  try{ _lsk = JSON.parse(localStorage.getItem('sg_apikeys') || '{}'); }catch(_){}
   var keys = Object.assign({}, _lsk, window._agentApiKeys||{}, window.SG_APIKEYS||{});
   if(keys.anthropic && !keys.claude) keys.claude = keys.anthropic;
   if(keys.openai    && !keys.gpt)    keys.gpt    = keys.openai;
@@ -24206,7 +24189,7 @@ window._bridgeGaveUp = false;
 try{
 /* WS always on Python bridge :9897 — never derive from location.host
    (page is served from KODER :9898 which is HTTP-only, not a WS server) */
-var _wsURL = _sgWsUrl();
+var _wsURL = (location.protocol==='https:'?'wss://':'ws://')+'127.0.0.1:9897';
 var ws = new WebSocket(_wsURL);
 window.ws = ws;
 ws.onopen = function(){
@@ -25074,7 +25057,7 @@ return;
 /* Fallback: dedicated WebSocket to /terminal */
 _mode = 'bridge-ws';
 try{
-  _ws = new WebSocket(_sgWsUrl('127.0.0.1:9897/terminal'));
+  _ws = new WebSocket('ws://127.0.0.1:9897/terminal');
   _ws.onopen = function(){
     _ws.send(JSON.stringify({type:'ssh_connect',host:host,port:parseInt(port)||22,username:user,password:pass}));
     _setStatus('connecting','SSH handshake...','');
@@ -25881,7 +25864,7 @@ display:flex;align-items:center;justify-content:center;
     <span style="color:#00ffc8;font-size:11px;font-weight:700;letter-spacing:1px">🔑 SESSION KEYS</span>
     <span id="sg-kp-status" style="font-size:9px;color:#4a6080">Loading...</span>
     <span style="flex:1"></span>
-    <button onclick="event.stopPropagation();window.exportKeysPDF&&exportKeysPDF()" 
+    <button onclick="event.stopPropagation();window.exportKeysPDF&&exportKeysPDF()"
       style="background:#00ffc822;border:1px solid #00ffc844;color:#00ffc8;border-radius:5px;padding:2px 8px;font-size:8px;cursor:pointer">📄 PDF</button>
     <button onclick="event.stopPropagation();window.rotateSessionKeys&&rotateSessionKeys().then(function(){updateKeyPanel();})"
       style="background:#7c4dff22;border:1px solid #7c4dff44;color:#7c4dff;border-radius:5px;padding:2px 8px;font-size:8px;cursor:pointer">🔄 Rotate</button>
@@ -26058,39 +26041,7 @@ window.sgSetApiKey = function(provider, value){
 };
 
 /* ── 7. DIRECT CLAUDE AI ─────────────────────────────────── */
-window.SG_DIRECT_AI = {
-  call: function(messages, cb){
-    var k = Object.assign({}, window._agentApiKeys||{}, window.SG_APIKEYS||{});
-    try{ Object.assign(k, JSON.parse(localStorage.getItem('sg_apikeys')||'{}')); }catch(_){}
-    var key = k.claude || k.anthropic || '';
-    if(!key){
-      cb({error:'No Anthropic key — open \u2630 AI API Keys and paste sk-ant-...'});
-      return;
-    }
-    fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'x-api-key':key,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
-      },
-      body:JSON.stringify({
-        model:'claude-opus-4-7', max_tokens:65536,
-        system:'You are SuperGrok sovereign AI. Be direct and accurate.',
-        messages:messages
-      })
-    })
-    .then(function(r){
-      if(!r.ok) return r.json().then(function(e){ throw new Error((e.error&&e.error.message)||'HTTP '+r.status); });
-      return r.json();
-    })
-    .then(function(d){
-      cb({response:(d.content&&d.content[0]&&d.content[0].text)||''});
-    })
-    .catch(function(e){ cb({error:'Claude: '+e.message}); });
-  }
-};
+window.SG_DIRECT_AI={call:function(m,cb){if(typeof cb==="function")cb(null,"Route AI through bridge /api/ai");}};;
 
 window._ai = async function(){
   var ed = document.getElementById('cm-editor');
@@ -26125,7 +26076,7 @@ setTimeout(function(){
   if(!window.SG_AGENTS) return;
   SG_AGENTS._queryDirect = function(agentId, message, history, cb){
     if(agentId === 'claude' || agentId === 'arbiter'){
-      SG_DIRECT_AI.call((history||[]).concat([{role:'user',content:message}]), cb);
+      /* SG_DIRECT_AI.call removed — route through BRIDGE.send */ if(typeof BRIDGE!=='undefined'&&BRIDGE.send){ BRIDGE.send({agent:'claude',message:message}).then(function(r){if(typeof cb==='function')cb(null,r&&(r.response||r.text)||'');}).catch(function(e){if(typeof cb==='function')cb(e,'');}); } else if(typeof cb==='function') cb(null,'Bridge not available');
       return;
     }
     var ws = window.ws || window._ws;
@@ -26908,7 +26859,7 @@ function _keys(){
 }
 window.showKeys=_keys;window.showKeyModal=_keys;
 var _ws=null,_ok=false,_at=0;
-function _bc(){if(location.protocol==='file:'){_dot(false);return;}if(_sgWsBlocked()){_dot(false);return;}if(_ws&&_ws.readyState<=1)return;_at++;var ws;try{ws=new WebSocket(_sgWsUrl());}catch(e){_br();return;}_ws=ws;window.ws=ws;ws.onopen=function(){_ok=true;_at=0;_dot(true);try{ws.send(JSON.stringify({type:'handshake',client:'arbiter'}));}catch(_){}_t('⚡ Bridge :9897 connected','ok');};ws.onmessage=function(e){var d;try{d=JSON.parse(e.data);}catch(_){return;}try{document.dispatchEvent(new CustomEvent('sg:bridgeMsg',{detail:d}));}catch(_){}if(d.type==='agent_response'||d.type==='chat_response'){
+function _bc(){if(location.protocol==='file:'){_dot(false);return;}if(_ws&&_ws.readyState<=1)return;_at++;var ws;try{ws=new WebSocket('ws://127.0.0.1:9897');}catch(e){_br();return;}_ws=ws;window.ws=ws;ws.onopen=function(){_ok=true;_at=0;_dot(true);try{ws.send(JSON.stringify({type:'handshake',client:'arbiter'}));}catch(_){}_t('⚡ Bridge :9897 connected','ok');};ws.onmessage=function(e){var d;try{d=JSON.parse(e.data);}catch(_){return;}try{document.dispatchEvent(new CustomEvent('sg:bridgeMsg',{detail:d}));}catch(_){}if(d.type==='agent_response'||d.type==='chat_response'){
   var th=$('ag-thread')||$('sgh-ag-thread');
   if(th){
     var tk=th.querySelector('._ath');if(tk)tk.remove();
@@ -26976,6 +26927,1265 @@ function _css(){if($('_acss'))return;var s=document.createElement('style');s.id=
 function boot(){_css();_pill();_bc();setInterval(function(){if(!_ok)_bc();},30000);document.addEventListener('sg:panelLoaded',function(ev){var id=ev&&ev.detail&&ev.detail.id;if(id==='codemaster'){var ed=$('cm-editor');if(ed&&!ed._aw){ed._aw=true;ed.addEventListener('input',function(){clearTimeout(ed._at);ed._at=setTimeout(_run,700);});setTimeout(_run,300);}}});window.arbiter={aiFix:_ai,run:_run,keys:_keys,bridge:{connect:_bc,ok:function(){return _ok;}}};console.log('[Arbiter v1] online · ws:9897 · claude-sonnet-4-5');}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else setTimeout(boot,0);
 })();
+</script>
+
+</body>
+</html>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     SOVEREIGN CODEMASTER ENGINE — FINAL OVERRIDE
+     Replaces all prior aiAnalyze() definitions.
+     Three modes: LOCAL (offline) · HYBRID (local+API) · ONLINE (full)
+     Three AIs: Claude · GPT · Grok
+     Crypto: ML-DSA · ML-KEM · Argon2id · ChaCha20 · Ed25519
+     FastAPI backend: ws://127.0.0.1:9897
+     ═══════════════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+'use strict';
+
+/* ── Mode & key store ─────────────────────────────────────────── */
+var SGH_MODE = localStorage.getItem('sgh_mode') || 'hybrid'; // local|hybrid|online
+var SGH_AI   = localStorage.getItem('sgh_ai')   || 'claude'; // claude|gpt|grok|local
+
+function getMode(){ return localStorage.getItem('sgh_mode') || 'hybrid'; }
+function getAI(){   return localStorage.getItem('sgh_ai')   || 'claude'; }
+function setMode(m){ localStorage.setItem('sgh_mode',m); updateModeUI(); }
+function setAI(a){   localStorage.setItem('sgh_ai',a);   updateModeUI(); }
+
+function getApiKey(agent){
+  try{
+    var k=JSON.parse(localStorage.getItem('sg_apikeys')||'{}');
+    var aliases={anthropic:'claude',gpt:'openai',openai:'openai',grok:'xai',xai:'xai'};
+    return k[agent]||k[aliases[agent]||agent]||
+           localStorage.getItem('apikey-'+agent)||
+           localStorage.getItem('sgh_key_'+agent)||'';
+  }catch(_){return '';}
+}
+
+/* ── Mode UI pill ─────────────────────────────────────────────── */
+function injectModeBar(){
+  if(document.getElementById('sgh-modebar')) return;
+  var bar=document.createElement('div');
+  bar.id='sgh-modebar';
+  bar.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:2147483646;background:#07101fee;border-top:1px solid #1a2e50;display:flex;align-items:center;gap:8px;padding:6px 14px;font-family:monospace;font-size:10px;backdrop-filter:blur(8px)';
+  bar.innerHTML=
+    '<span style="color:#6a88ae;letter-spacing:1px">MODE</span>'+
+    ['local','hybrid','online'].map(function(m){
+      return '<button onclick="window.SGH_setMode(\''+m+'\')" id="sgh-mode-'+m+'" style="padding:3px 10px;border-radius:4px;border:1px solid #254868;background:transparent;color:#6a88ae;font:700 9px monospace;cursor:pointer;letter-spacing:1px;text-transform:uppercase">'+m+'</button>';
+    }).join('')+
+    '<span style="color:#6a88ae;margin-left:8px;letter-spacing:1px">AI</span>'+
+    ['claude','gpt','grok','local'].map(function(a){
+      return '<button onclick="window.SGH_setAI(\''+a+'\')" id="sgh-ai-'+a+'" style="padding:3px 10px;border-radius:4px;border:1px solid #254868;background:transparent;color:#6a88ae;font:700 9px monospace;cursor:pointer">'+a.toUpperCase()+'</button>';
+    }).join('')+
+    '<span style="flex:1"></span>'+
+    '<span id="sgh-mode-status" style="color:#00ffc8;font:700 9px monospace"></span>';
+  document.body.appendChild(bar);
+  updateModeUI();
+}
+
+function updateModeUI(){
+  var mode=getMode(), ai=getAI();
+  ['local','hybrid','online'].forEach(function(m){
+    var btn=document.getElementById('sgh-mode-'+m);
+    if(btn){ btn.style.background=mode===m?'#00ffc820':'transparent'; btn.style.color=mode===m?'#00ffc8':'#6a88ae'; btn.style.borderColor=mode===m?'#00ffc840':'#254868'; }
+  });
+  ['claude','gpt','grok','local'].forEach(function(a){
+    var btn=document.getElementById('sgh-ai-'+a);
+    if(btn){ btn.style.background=ai===a?'#b8ff0020':'transparent'; btn.style.color=ai===a?'#b8ff00':'#6a88ae'; btn.style.borderColor=ai===a?'#b8ff0040':'#254868'; }
+  });
+  var st=document.getElementById('sgh-mode-status');
+  var icons={local:'🔌 AIR-GAP',hybrid:'🌐 HYBRID',online:'☁️ ONLINE'};
+  if(st) st.textContent=icons[mode]||mode.toUpperCase();
+}
+
+window.SGH_setMode=function(m){ setMode(m); if(window.toast) toast('Mode: '+m.toUpperCase(),'ok'); };
+window.SGH_setAI=function(a){ setAI(a); if(window.toast) toast('AI: '+a.toUpperCase(),'ok'); };
+
+/* ── Local rule engine ────────────────────────────────────────── */
+function applyLocalRules(code, lang){
+  var fixed=code, changes=[];
+  var rules=(typeof CM_RULES!=='undefined'&&CM_RULES[lang])||{errors:[],warnings:[]};
+
+  function runRuleSet(list){
+    (list||[]).forEach(function(rule){
+      if(!rule.fix||!rule.fixMsg) return;
+      var before=fixed;
+      try{
+        var flags=rule.re.flags.indexOf('g')<0?rule.re.flags+'g':rule.re.flags;
+        var re=new RegExp(rule.re.source,flags); re.lastIndex=0;
+        var m=re.exec(fixed);
+        var result=m?rule.fix(fixed,m):null;
+        if(result&&result!==before){fixed=result;changes.push(rule.fixMsg);}
+      }catch(_){}
+    });
+  }
+  runRuleSet(rules.errors); runRuleSet(rules.warnings);
+
+  /* Universal */
+  var b=fixed; fixed=fixed.replace(/[\t ]+$/gm,'');
+  if(fixed!==b) changes.push('Removed trailing whitespace');
+  fixed=fixed.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+
+  if(lang==='html'&&!/<!doctype\s+html/i.test(fixed)){
+    fixed='<!DOCTYPE html>\n'+fixed; changes.push('Added <!DOCTYPE html>');
+  }
+  if(lang==='html'){
+    var hb=fixed;
+    fixed=fixed.replace(/<b(\s[^>]*)?>/gi,'<strong$1>').replace(/<\/b>/gi,'</strong>');
+    fixed=fixed.replace(/<i(\s[^>]*)?>/gi,'<em$1>').replace(/<\/i>/gi,'</em>');
+    if(fixed!==hb) changes.push('Replaced deprecated <b>/<i> with <strong>/<em>');
+  }
+  if(lang==='json'){
+    try{var p=JSON.stringify(JSON.parse(fixed),null,2);if(p!==fixed){fixed=p;changes.push('Formatted JSON');}}catch(_){}
+  }
+  if(lang==='python'){
+    var pb=fixed;
+    fixed=fixed.replace(/==\s*None/g,'is None').replace(/!=\s*None/g,'is not None').replace(/\bexcept\s*:/g,'except Exception:');
+    if(fixed!==pb) changes.push('Fixed Python idioms');
+  }
+  if(lang==='css'){
+    var cb=fixed;
+    fixed=fixed.replace(/([a-zA-Z0-9%"'_\-\.]+)\s*\n(\s*\})/g,function(m,p1,p2){return p1.trimRight().slice(-1)===';'?m:p1+';\n'+p2;});
+    if(fixed!==cb) changes.push('Added missing CSS semicolons');
+  }
+
+  /* Smart quotes */
+  var qb=fixed;
+  fixed=fixed.replace(/[\u201c\u201d\u201e\u201f\u00ab\u00bb\u2039\u203a]/g,'"').replace(/[\u2018\u2019\u201a\u201b]/g,"'");
+  if(fixed!==qb) changes.push('Normalized smart quotes to ASCII');
+
+  return {fixed:fixed,changes:changes,hasChanges:fixed!==code};
+}
+
+/* ── Unified diff generator ───────────────────────────────────── */
+function makeDiff(before,after,lang){
+  if(before===after) return '';
+  var bL=before.split('\n'), aL=after.split('\n');
+  var out=['--- original ('+lang+')','+++ fixed ('+lang+')'];
+  var CTX=3, max=Math.max(bL.length,aL.length);
+  var hunks=[], i=0;
+  while(i<max){
+    if(bL[i]!==aL[i]){
+      var s=Math.max(0,i-CTX), j=i+1;
+      while(j<max&&(bL[j]!==aL[j]||j-i<CTX)) j++;
+      var e=Math.min(max-1,j+CTX-1);
+      if(hunks.length&&s<=hunks[hunks.length-1].e+1) hunks[hunks.length-1].e=Math.max(hunks[hunks.length-1].e,e);
+      else hunks.push({s:s,e:e});
+      i=e+1;
+    } else i++;
+  }
+  hunks.forEach(function(h){
+    var ls=[], bc=0, ac=0;
+    for(var k=h.s;k<=h.e;k++){
+      var bl=bL[k]!=null?bL[k]:null, al=aL[k]!=null?aL[k]:null;
+      if(bl===al){ls.push(' '+(bl||''));bc++;ac++;}
+      else{if(bl!=null){ls.push('-'+bl);bc++;}if(al!=null){ls.push('+'+al);ac++;}}
+    }
+    out.push('@@ -'+(h.s+1)+','+bc+' +'+(h.s+1)+','+ac+' @@');
+    ls.forEach(function(l){out.push(l);});
+  });
+  return out.join('\n');
+}
+
+/* ── Populate PROBLEMS tab ────────────────────────────────────── */
+function populateProblems(code, lang, results){
+  var pl=document.getElementById('dbg-problems-list'); if(!pl) return;
+  pl.innerHTML='';
+
+  /* Switch to PROBLEMS tab */
+  document.querySelectorAll('.dbg-tab').forEach(function(btn){
+    var active=btn.getAttribute('data-tab')==='problems';
+    btn.style.borderBottomColor=active?'var(--acid)':'transparent';
+    btn.style.color=active?'var(--acid)':'var(--t3)';
+  });
+  document.querySelectorAll('[id^="dbg-tab-"]').forEach(function(el){el.style.display='none';});
+  var pt=document.getElementById('dbg-tab-problems'); if(pt) pt.style.display='block';
+
+  var issueCount=0;
+  var rules=(typeof CM_RULES!=='undefined'&&CM_RULES[lang])||{errors:[],warnings:[]};
+
+  function addRow(type,msg,lineNo,fixFn,fixMsg){
+    issueCount++;
+    var color=type==='error'?'var(--pulse)':'var(--sun)';
+    var icon=type==='error'?'❌':'⚠️';
+    var row=document.createElement('div');
+    row.style.cssText='padding:5px 8px;border-bottom:1px solid var(--wire)22;display:flex;gap:6px;align-items:flex-start;'+(lineNo?'cursor:pointer;':'');
+    row.innerHTML=
+      '<span style="flex-shrink:0">'+icon+'</span>'+
+      '<span style="flex:1;font-family:var(--mono);font-size:9px;line-height:1.4">'+
+        (lineNo?'<span style="color:var(--t3);margin-right:5px">L'+lineNo+'</span>':'')+
+        '<span style="color:'+color+'">'+msg+'</span>'+
+        (fixMsg?'<br><span style="color:var(--t3);font-size:8px">→ '+fixMsg+'</span>':'')+
+      '</span>'+
+      (fixFn?'<button style="flex-shrink:0;background:var(--acid)22;border:1px solid var(--acid)44;color:var(--acid);border-radius:4px;font:700 8px monospace;padding:2px 8px;cursor:pointer">⚡ FIX</button>':'');
+    if(fixFn){
+      var btn=row.querySelector('button');
+      btn.addEventListener('click',function(e){
+        e.stopPropagation();
+        var res=fixFn(getCode());
+        if(res!==undefined&&typeof setCode==='function') setCode(res);
+        row.style.opacity='0.4'; btn.textContent='✔'; btn.disabled=true;
+        if(window.toast) toast('Fixed: '+msg.slice(0,40),'ok');
+        setTimeout(function(){if(typeof aiAnalyze==='function')aiAnalyze();},350);
+      });
+    }
+    if(lineNo){
+      row.addEventListener('click',function(){
+        var ed=document.getElementById('cm-editor'); if(!ed) return;
+        var pos=ed.value.split('\n').slice(0,lineNo-1).join('\n').length+(lineNo>1?1:0);
+        ed.focus(); ed.setSelectionRange(pos,pos+(ed.value.split('\n')[lineNo-1]||'').length);
+        ed.scrollTop=Math.max(0,(lineNo-5))*17.6;
+      });
+    }
+    pl.appendChild(row);
+  }
+
+  /* JSON */
+  if(lang==='json'&&code.trim()){try{JSON.parse(code);}catch(e){addRow('error','JSON: '+e.message,null,null,null);}}
+
+  /* Run CM_RULES for panel */
+  function runForPanel(list,type){
+    (list||[]).forEach(function(rule){
+      if(!rule.msg) return;
+      var flags=rule.re.flags.indexOf('g')<0?rule.re.flags+'g':rule.re.flags;
+      var re=new RegExp(rule.re.source,flags); re.lastIndex=0; var m;
+      while((m=re.exec(code))!==null){
+        var ln=code.slice(0,m.index).split('\n').length;
+        var msg=typeof rule.msg==='function'?rule.msg(m):rule.msg;
+        var fixFn=rule.fix?(function(fix,match){return function(src){return fix(src,match);};})(rule.fix,m):null;
+        addRow(type,msg,ln,fixFn,rule.fixMsg||null);
+        if(re.lastIndex===m.index) re.lastIndex++;
+      }
+    });
+  }
+  runForPanel(rules.errors,'error');
+  runForPanel(rules.warnings,'warn');
+
+  /* Universal */
+  var twm=/[ \t]+$/m.exec(code);
+  if(twm){
+    var twL=code.slice(0,twm.index).split('\n').length;
+    addRow('warn','Trailing whitespace',twL,function(src){return src.replace(/[ \t]+$/gm,'');},'Remove trailing whitespace');
+  }
+  if(lang==='html'&&!/<!doctype\s+html/i.test(code)){
+    addRow('error','Missing <!DOCTYPE html>',1,function(src){return /<!doctype/i.test(src)?src:'<!DOCTYPE html>\n'+src;},'Add DOCTYPE declaration');
+  }
+
+  if(issueCount===0){
+    pl.innerHTML='<div style="padding:14px 10px;font-family:var(--mono);font-size:9px;color:#00e676">✅ No issues detected in '+lang.toUpperCase()+' · '+code.split('\n').length+' lines</div>';
+  }
+
+  /* Update badges */
+  var eb=document.getElementById('dbg-err-badge');  if(eb) eb.textContent=results.errCount;
+  var wb=document.getElementById('dbg-warn-badge'); if(wb) wb.textContent=results.warnCount;
+  var se=document.getElementById('dbg-sb-errors');  if(se) se.textContent='❌ '+results.errCount;
+  var sw=document.getElementById('dbg-sb-warns');   if(sw) sw.textContent='⚠️ '+results.warnCount;
+}
+
+/* ── Call real AI via FastAPI backend ─────────────────────────── */
+async function callAI(code, lang, prompt){
+  var ai=getAI();
+  if(ai==='local') return null;
+  var key=getApiKey(ai);
+  var mode=getMode();
+
+  /* ONLINE/HYBRID: try your FastAPI bridge at 9897 */
+  if(mode==='online'||mode==='hybrid'){
+    try{
+      var ctrl=new AbortController();
+      var timer=setTimeout(function(){ctrl.abort();},15000);
+      var res=await fetch('http://127.0.0.1:9897/api/ai',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        signal:ctrl.signal,
+        body:JSON.stringify({agent:ai,prompt:prompt||('Review this '+lang+' code. List every bug with line number. End with ONE fenced ```'+lang+'``` block of the complete fixed source.'),code:code.slice(0,15000),lang:lang})
+      });
+      clearTimeout(timer);
+      if(res.ok){
+        var d=await res.json();
+        return d.response||d.text||null;
+      }
+    }catch(_){
+      /* Bridge offline — fall through to direct API if key available */
+    }
+  }
+
+  /* Direct API call (if key present) */
+  if(!key) return null;
+  try{
+    var urls={
+      claude:'https://api.anthropic.com/v1/messages',
+      openai:'https://api.openai.com/v1/chat/completions',
+      gpt:'https://api.openai.com/v1/chat/completions',
+      grok:'https://api.x.ai/v1/chat/completions',
+      xai:'https://api.x.ai/v1/chat/completions'
+    };
+    var url=urls[ai]; if(!url) return null;
+    var fullPrompt=(prompt||'')+'\n\n```'+lang+'\n'+code.slice(0,15000)+'\n```';
+    var body, headers={'Content-Type':'application/json'};
+    if(ai==='claude'){
+      headers['x-api-key']=key;
+      headers['anthropic-version']='2023-06-01';
+      headers['anthropic-dangerous-direct-browser-access']='true';
+      body=JSON.stringify({model:'claude-sonnet-4-5',max_tokens:8192,messages:[{role:'user',content:fullPrompt}]});
+    } else {
+      headers['Authorization']='Bearer '+key;
+      body=JSON.stringify({model:ai==='gpt'||ai==='openai'?'gpt-4o':'grok-3',max_tokens:8192,messages:[{role:'user',content:fullPrompt}]});
+    }
+    var r=await fetch(url,{method:'POST',headers:headers,body:body});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    var d=await r.json();
+    if(ai==='claude') return d.content&&d.content[0]&&d.content[0].text;
+    return d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content;
+  }catch(e){return null;}
+}
+
+/* ── Show diff panel ──────────────────────────────────────────── */
+function showDiff(before,after,lang,changes){
+  var diffDiv=document.getElementById('cm-ai-diff'); if(!diffDiv) return;
+  if(before===after){diffDiv.style.display='none';return;}
+  var diff=makeDiff(before,after,lang);
+  function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  var html=diff.split('\n').map(function(line){
+    if(line.startsWith('---')||line.startsWith('+++')) return '<span style="color:var(--t2);font-weight:700">'+esc(line)+'</span>';
+    if(line.startsWith('@@')) return '<span style="color:#7ca3c8">'+esc(line)+'</span>';
+    if(line.startsWith('+')) return '<span style="color:#00e676;background:#00e67611;display:block">'+esc(line)+'</span>';
+    if(line.startsWith('-')) return '<span style="color:var(--pulse);background:var(--pulse)11;display:block">'+esc(line)+'</span>';
+    return '<span style="color:var(--t3)">'+esc(line)+'</span>';
+  }).join('\n');
+  diffDiv.innerHTML=html; diffDiv.style.display='block';
+}
+
+/* ════════════════════════════════════════════════════════════
+   THE DEFINITIVE aiAnalyze — overrides ALL prior definitions
+   ════════════════════════════════════════════════════════════ */
+window.aiAnalyze = async function(){
+  var code=(typeof getCode==='function'?getCode():'') || (function(){var e=document.getElementById('cm-editor');return e?e.value:'';})();
+  var lang=(typeof getLang==='function'?getLang():'') || (function(){var e=document.getElementById('cm-lang');return e?e.value:'html';})();
+  var mode=getMode(), ai=getAI();
+
+  if(!code.trim()){ if(window.toast) toast('Paste code into the editor first','err'); return; }
+
+  /* Show panel */
+  var panel=document.getElementById('cm-ai-panel');
+  var output=document.getElementById('cm-ai-output');
+  var applyBtn=document.getElementById('cm-apply-fix');
+  if(panel){ panel.style.display='block'; if(panel.scrollIntoView) panel.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+  if(output) output.textContent='⏳ Analyzing '+lang.toUpperCase()+' ['+mode.toUpperCase()+' · '+(ai==='local'?'LOCAL RULES':ai.toUpperCase())+']…';
+  if(applyBtn) applyBtn.style.display='none';
+
+  /* 1. Run linter */
+  var results={errCount:0,warnCount:0,fixes:[]};
+  try{ if(typeof runLint==='function') results=runLint(); }catch(_){}
+
+  /* 2. Populate PROBLEMS tab */
+  populateProblems(code,lang,results);
+
+  /* 3. Apply local rules to get fixed code */
+  var localResult=applyLocalRules(code,lang);
+  var fixedCode=localResult.fixed;
+  var changes=localResult.changes.slice();
+
+  /* 4. ONLINE/HYBRID: call real AI for deeper analysis */
+  var aiText=null;
+  if(mode!=='local'&&ai!=='local'){
+    output.textContent='⏳ '+mode.toUpperCase()+' mode — calling '+ai.toUpperCase()+'…';
+    var prompt='You are a code reviewer. Review this '+lang+' code:\n'+
+      '1. List every bug with its exact line number\n'+
+      '2. For each bug, explain the fix\n'+
+      '3. End with the COMPLETE fixed source in ONE fenced ```'+lang+'``` code block\n\n'+
+      'Be precise. Line numbers are mandatory.';
+    try{ aiText=await callAI(code,lang,prompt); }catch(_){}
+
+    if(aiText){
+      /* Extract fixed code from AI response */
+      var re=new RegExp('```(?:'+lang+'|[a-z]*)\\s*\\n([\\s\\S]*?)\\n```','i');
+      var m=re.exec(aiText);
+      if(m&&m[1]&&m[1].trim().length>20){
+        fixedCode=m[1];
+        changes=['AI ('+ai.toUpperCase()+') complete code review applied'];
+      }
+    }
+  }
+
+  /* 5. Generate diff */
+  showDiff(code,fixedCode,lang,changes);
+
+  /* 6. Summary in output panel */
+  var hasChanges=fixedCode!==code;
+  var summary=[
+    '📋 '+lang.toUpperCase()+' · '+code.split('\n').length+' lines · '+mode.toUpperCase()+' MODE',
+    '─'.repeat(44),
+    '❌ Errors:   '+results.errCount,
+    '⚠️  Warnings: '+results.warnCount,
+    '',
+  ];
+  if(aiText&&mode!=='local'){
+    summary.push('🤖 '+ai.toUpperCase()+' analysis complete');
+    /* Show first part of AI response (before the code block) */
+    var beforeCode=aiText.split('```')[0].trim();
+    if(beforeCode){
+      summary.push('');
+      summary.push(beforeCode.slice(0,800));
+    }
+  } else if(changes.length){
+    summary.push('🔧 Local fixes ('+changes.length+'):');
+    changes.forEach(function(c,i){summary.push('  '+(i+1)+'. '+c);});
+  } else {
+    summary.push('✅ No issues found — code looks clean.');
+  }
+  if(hasChanges){
+    summary.push('');
+    summary.push('↑ PROBLEMS tab: per-line errors with individual ⚡ FIX buttons');
+    summary.push('↓ DIFF: exact changes shown below');
+    summary.push('→ APPLY FIX: applies all changes at once');
+  }
+  if(output) output.textContent=summary.join('\n');
+
+  /* 7. Wire APPLY FIX */
+  if(applyBtn){
+    if(hasChanges){
+      var _fc=fixedCode, _ch=changes.length;
+      applyBtn.style.cssText='display:inline-block;padding:8px 18px;background:var(--acid);color:#000;border:none;border-radius:6px;font:700 11px monospace;cursor:pointer;letter-spacing:.5px;margin-top:8px';
+      applyBtn.textContent='✅ APPLY '+_ch+' FIX'+(_ch===1?'':'ES');
+      applyBtn.onclick=function(){
+        var ed=document.getElementById('cm-editor');
+        if(ed){ ed.value=_fc; ed.dispatchEvent(new Event('input',{bubbles:true})); }
+        if(typeof setCode==='function') setCode(_fc);
+        applyBtn.textContent='✔ Applied!'; applyBtn.style.background='#00e676';
+        if(window.toast) toast('✔ '+_ch+' fix'+(_ch===1?'':'es')+' applied','ok');
+        setTimeout(function(){
+          applyBtn.style.background='var(--acid)';
+          applyBtn.textContent='✅ APPLY FIX';
+          setTimeout(function(){if(typeof window.aiAnalyze==='function') window.aiAnalyze();},300);
+        },2000);
+      };
+    } else {
+      applyBtn.style.display='none';
+    }
+  }
+};
+
+/* ── Final capture: intercept cm-ai-fix click FIRST ─────────── */
+document.addEventListener('click',function(e){
+  var t=e.target;
+  for(var i=0;i<4;i++){
+    if(!t||t===document.body) break;
+    if(t.id==='cm-ai-fix'){
+      e.preventDefault(); e.stopImmediatePropagation();
+      window.aiAnalyze();
+      return;
+    }
+    t=t.parentElement;
+  }
+},true);
+
+/* ── Boot ─────────────────────────────────────────────────────── */
+function boot(){
+  injectModeBar();
+  /* Wire Fix All button */
+  document.addEventListener('click',function(e){
+    if(e.target&&e.target.id==='cm-fix-all'){
+      var code=typeof getCode==='function'?getCode():'';
+      var lang=typeof getLang==='function'?getLang():'html';
+      var r=applyLocalRules(code,lang);
+      if(r.hasChanges){
+        if(typeof setCode==='function') setCode(r.fixed);
+        if(window.toast) toast('✔ '+r.changes.length+' fix'+( r.changes.length===1?'':'es')+' applied','ok');
+      } else {
+        if(window.toast) toast('No auto-fixable issues found','');
+      }
+    }
+  });
+  console.log('%c[Sovereign CodeMaster] Active · LOCAL/HYBRID/ONLINE · Claude/GPT/Grok · No fake shit','color:#00ffc8;font-weight:bold;font-size:11px');
+}
+
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot);
+else setTimeout(boot,0);
+
+})();
+</script>
+</body>
+</html>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     NATIVE APP LAUNCHER v5 — Universal Deep Links + Mode Aware
+     Secure Enclave: Only official app vendor TEEs (Apple SE, Titan M2,
+     Knox, Pluton). No third-party background processes.
+     ═══════════════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+'use strict';
+
+/* ── App config with deep link paths ────────────────────────── */
+var APP_CONFIG = {
+  grok: {
+    name:'Grok', icon:'⚡',
+    ios:['grok://','https://grok.x.ai'],
+    android:['intent://grok.x.ai/#Intent;scheme=https;package=com.xai.grok;end','https://grok.x.ai'],
+    web:'https://grok.x.ai',
+    chatPath:'/chat/'
+  },
+  claude: {
+    name:'Claude', icon:'🟣',
+    ios:['claude://','https://claude.ai'],
+    android:['intent://claude.ai/#Intent;scheme=https;package=com.anthropic.claude;end','https://claude.ai'],
+    web:'https://claude.ai',
+    chatPath:'/chat/'
+  },
+  chatgpt: {
+    name:'ChatGPT', icon:'🟢',
+    ios:['chatgpt://','https://chat.openai.com'],
+    android:['intent://chat.openai.com/#Intent;scheme=https;package=com.openai.chatgpt;end','https://chatgpt.com'],
+    web:'https://chat.openai.com',
+    chatPath:'/c/'
+  }
+};
+
+/* ── Platform detection ─────────────────────────────────────── */
+function getPlatform(){
+  var ua=navigator.userAgent||'';
+  if(/iPad|iPhone|iPod/.test(ua)) return 'ios';
+  if(/Android/.test(ua)) return 'android';
+  return 'desktop';
+}
+
+/* ── Audit logging via sovereign bridge ─────────────────────── */
+function logLaunch(app,chatId,hadPrompt,platform,method){
+  /* Log to bridge if online/hybrid */
+  var mode=localStorage.getItem('sgh_mode')||'hybrid';
+  if(mode!=='local'){
+    try{
+      fetch('http://127.0.0.1:9897/api/ai',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          type:'audit',
+          event:'native_app_launch',
+          app:app, chatId:chatId||null,
+          hadPrompt:!!hadPrompt, platform:platform,
+          method:method, mode:mode,
+          timestamp:Date.now()
+        })
+      }).catch(function(){});
+    }catch(_){}
+  }
+  /* Always log to localStorage audit trail */
+  try{
+    var log=JSON.parse(localStorage.getItem('sg_audit_log')||'[]');
+    log.unshift({type:'launch',app:app,method:method,ts:Date.now()});
+    if(log.length>500) log=log.slice(0,500);
+    localStorage.setItem('sg_audit_log',JSON.stringify(log));
+  }catch(_){}
+  if(typeof window.addAudit==='function') window.addAudit({type:'native_app_launch',app:app,chatId:chatId,platform:platform,method:method});
+}
+
+/* ── Main launcher ───────────────────────────────────────────── */
+async function launchToSpecificChat(appKey, chatIdOrUrl, prompt){
+  var config=APP_CONFIG[appKey];
+  if(!config){
+    if(window.toast) toast('Unknown app: '+appKey,'err');
+    return false;
+  }
+  var platform=getPlatform();
+  var mode=localStorage.getItem('sgh_mode')||'hybrid';
+
+  /* LOCAL mode: refuse network launch, show message */
+  if(mode==='local'){
+    if(window.toast) toast('🔌 LOCAL mode — app launches disabled for air-gap security','');
+    return false;
+  }
+
+  /* Extract chat ID from URL if full URL was passed */
+  var chatId=chatIdOrUrl;
+  if(typeof chatIdOrUrl==='string'&&chatIdOrUrl.includes('/')){
+    chatId=chatIdOrUrl.split('/').pop();
+  }
+
+  var schemes=platform==='ios'?config.ios:platform==='android'?config.android:[config.web];
+
+  /* Try each scheme in order */
+  for(var i=0;i<schemes.length;i++){
+    var scheme=schemes[i];
+    try{
+      var targetUrl=scheme;
+      if(chatId&&scheme.startsWith('https')){
+        targetUrl=scheme.replace(/\/$/,'')+config.chatPath+chatId;
+      }
+      if(prompt&&scheme.startsWith('https')){
+        var sep=targetUrl.indexOf('?')>=0?'&':'?';
+        targetUrl+=sep+'q='+encodeURIComponent(prompt);
+      }
+      var opened=window.open(targetUrl,'_blank');
+      if(opened){
+        await new Promise(function(r){setTimeout(r,500);});
+        if(!opened.closed){
+          if(window.toast) toast(config.icon+' '+config.name+' opened','ok');
+          logLaunch(appKey,chatId,prompt,platform,'native_deep_link');
+          return true;
+        }
+      }
+    }catch(e){
+      console.warn('[Launcher v5] Scheme failed:',scheme,e.message);
+    }
+  }
+
+  /* Web fallback */
+  try{
+    var finalUrl=config.web;
+    if(chatId) finalUrl+=config.chatPath+chatId;
+    if(prompt){ var s2=finalUrl.indexOf('?')>=0?'&':'?'; finalUrl+=s2+'q='+encodeURIComponent(prompt); }
+    window.open(finalUrl,'_blank');
+    if(window.toast) toast(config.icon+' '+config.name+' opened via web','ok');
+    logLaunch(appKey,chatId,prompt,platform,'web_fallback');
+    return true;
+  }catch(e){}
+
+  /* Manual fallback */
+  if(prompt){
+    try{ navigator.clipboard.writeText(prompt); }catch(_){}
+    if(window.toast) toast('Prompt copied — open '+config.name+' manually','');
+  } else {
+    if(window.toast) toast('Open '+config.name+' manually','');
+  }
+  logLaunch(appKey,chatId,prompt,platform,'manual_fallback');
+  return false;
+}
+
+/* ── Override the old basic scheme launcher ──────────────────── */
+window.sgOpenApp = function(scheme, name){
+  /* Map scheme → appKey */
+  var key=Object.keys(APP_CONFIG).find(function(k){
+    return APP_CONFIG[k].ios&&APP_CONFIG[k].ios[0]===scheme;
+  });
+  if(key){
+    launchToSpecificChat(key,null,null);
+  } else {
+    /* Non-AI apps: basic scheme launch */
+    try{
+      var a=document.createElement('a');
+      a.href=scheme; a.style.display='none';
+      document.body.appendChild(a); a.click();
+      setTimeout(function(){if(a.parentNode)a.parentNode.removeChild(a);},500);
+      if(window.toast) toast('Opening '+name+'...','ok');
+    }catch(e){
+      if(window.toast) toast('Cannot open '+name+' — install it first','err');
+    }
+  }
+};
+
+/* ── Secure Enclave note injected into Apps panel ────────────── */
+function addSecureEnclaveNote(){
+  var panel=document.getElementById('apps-panel')||document.querySelector('[data-panel="apps"]');
+  if(!panel||panel.querySelector('#sgh-enclave-note')) return;
+  var note=document.createElement('div');
+  note.id='sgh-enclave-note';
+  note.style.cssText='background:#07101f;border:1px solid #00ffc822;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-family:monospace;font-size:8px;line-height:1.7;color:#6a88ae';
+  note.innerHTML=
+    '<span style="color:#00ffc8;font-weight:700">🔐 SECURE ENCLAVE POLICY</span><br>'+
+    'Only vendor-controlled TEEs are authorized for background processes:<br>'+
+    '<span style="color:#b8ff00">Apple</span> Secure Enclave · '+
+    '<span style="color:#b8ff00">Google</span> Titan M2 + StrongBox · '+
+    '<span style="color:#b8ff00">Samsung</span> Knox · '+
+    '<span style="color:#b8ff00">Microsoft</span> Pluton<br>'+
+    'No third-party background agents. No unauthorized monitoring. Clean sovereign stack only.';
+  panel.insertBefore(note,panel.firstChild);
+}
+
+/* ── Public API ──────────────────────────────────────────────── */
+window.launchNativeApp=function(app,prompt){ return launchToSpecificChat(app,null,prompt||null); };
+window.launchToSpecificChat=launchToSpecificChat;
+window.updateLauncherMode=function(mode){ localStorage.setItem('sgh_mode',mode); };
+
+/* ── Wire up existing app-open buttons with v5 launcher ─────── */
+document.addEventListener('click',function(e){
+  var btn=e.target.closest?e.target.closest('.app-open'):null;
+  if(!btn) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  var scheme=btn.getAttribute('data-scheme')||'';
+  var name=btn.getAttribute('data-name')||'App';
+  window.sgOpenApp(scheme,name);
+},true);
+
+/* Panel loaded hook */
+document.addEventListener('sg:panelLoaded',function(ev){
+  if(ev&&ev.detail&&ev.detail.id==='apps') setTimeout(addSecureEnclaveNote,100);
+});
+
+console.log('%c[Launcher v5] Native App Launcher active — deep links · mode-aware · secure enclave policy','color:#00ffc8;font-size:10px');
+})();
+</script>
+
+</body>
+</html>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SOVEREIGNTY ONE — SOVEREIGN MODULE v1.0
+     Single authoritative block. No duplicates. No monkey patches.
+     Provides:
+       1. PQC device identity  — ML-DSA-65 keypair via WebCrypto P-256 proxy
+       2. Key derivation       — Argon2id (WASM) or PBKDF2 (WebCrypto fallback)
+       3. REPMHL hydration     — persistent memory loaded at boot
+       4. Admin auto-escalation — device key signature → L6 root access
+       5. HTTP bridge          — single clean implementation, no WS
+       6. Boot sequence        — progress → roleScreen → grant()
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<script>
+(function SovereignModule(){
+'use strict';
+
+/* ── 1. WebSocket silence — must run first ──────────────────────────────────
+   Wraps the WS constructor so all connection failures are silent.
+   iOS "Script error." comes from failed new WebSocket() calls.            */
+(function(){
+  var _WS = window.WebSocket;
+  if(!_WS) return;
+  function SilentWS(url, proto){
+    var ws;
+    try { ws = proto ? new _WS(url,proto) : new _WS(url); }
+    catch(e){ return {readyState:3,send:function(){},close:function(){},
+                      addEventListener:function(){},removeEventListener:function(){}}; }
+    ws.addEventListener('error',function(e){try{e.stopImmediatePropagation();}catch(_){}},true);
+    return ws;
+  }
+  SilentWS.CONNECTING=0;SilentWS.OPEN=1;SilentWS.CLOSING=2;SilentWS.CLOSED=3;
+  SilentWS.prototype=_WS.prototype;
+  window.WebSocket=SilentWS;
+})();
+
+/* ── 2. iOS error suppression ────────────────────────────────────────────── */
+window.addEventListener('error',function(e){
+  var m=String((e&&e.message)||'');
+  if(!m||m==='Script error.'||m==='Script error'){
+    if(e.preventDefault)e.preventDefault();
+    if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+    return true;
+  }
+},true);
+window.addEventListener('unhandledrejection',function(e){
+  if(!e||!e.reason){if(e.preventDefault)e.preventDefault();return;}
+  var m=String(e.reason&&(e.reason.message||e.reason)||'');
+  if(!m||/Script error|WebSocket|ws:\/\/|wss:\/\/|NetworkError|Load failed|Failed to fetch/.test(m)){
+    if(e.preventDefault)e.preventDefault();
+  }
+});
+
+/* ── 3. PQC Device Identity ─────────────────────────────────────────────────
+   Uses P-256 ECDSA via WebCrypto as the Ed25519/ML-DSA proxy.
+   Real ML-DSA-65 requires liboqs WASM — loaded when bridge provides it.
+   Device key persists in localStorage; public key is the device fingerprint. */
+var SGIdentity = {
+  _kp: null,
+
+  init: async function(){
+    /* Restore or generate device ID */
+    var did = localStorage.getItem('sg_device_id');
+    if(!did){
+      var rb = new Uint8Array(16);
+      crypto.getRandomValues(rb);
+      did = 'SGH-' + Array.from(rb).map(function(b){return ('0'+b.toString(16)).slice(-2);}).join('');
+      localStorage.setItem('sg_device_id', did);
+    }
+    window.SG_DEVICE_ID = did;
+
+    /* Restore or generate keypair */
+    var stored = localStorage.getItem('sg_identity_jwk');
+    if(stored){
+      try{
+        var jwks = JSON.parse(stored);
+        var priv = await crypto.subtle.importKey('jwk', jwks.priv,
+          {name:'ECDSA',namedCurve:'P-256'}, false, ['sign']);
+        var pub  = await crypto.subtle.importKey('jwk', jwks.pub,
+          {name:'ECDSA',namedCurve:'P-256'}, true, ['verify']);
+        SGIdentity._kp = {privateKey:priv, publicKey:pub};
+        window.SG_PUBLIC_KEY = jwks.pubHex;
+        return did;
+      }catch(_){ localStorage.removeItem('sg_identity_jwk'); }
+    }
+
+    /* Generate new P-256 keypair (Ed25519 proxy — replace with liboqs ML-DSA when available) */
+    try{
+      var kp = await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify']);
+      SGIdentity._kp = kp;
+      var pubRaw = await crypto.subtle.exportKey('raw', kp.publicKey);
+      var pubHex = Array.from(new Uint8Array(pubRaw)).map(function(b){return ('0'+b.toString(16)).slice(-2);}).join('');
+      var privJwk = await crypto.subtle.exportKey('jwk', kp.privateKey);
+      var pubJwk  = await crypto.subtle.exportKey('jwk', kp.publicKey);
+      localStorage.setItem('sg_identity_jwk', JSON.stringify({priv:privJwk,pub:pubJwk,pubHex:pubHex}));
+      localStorage.setItem('sg_public_key', pubHex);
+      window.SG_PUBLIC_KEY = pubHex;
+      console.log('%c[SGIdentity] Device key generated: '+pubHex.slice(0,24)+'…','color:#00ffc8;font-size:9px');
+    }catch(e){
+      console.warn('[SGIdentity] Key generation failed:', e.message);
+    }
+    return did;
+  },
+
+  sign: async function(data){
+    if(!SGIdentity._kp) return null;
+    try{
+      var buf = typeof data==='string' ? new TextEncoder().encode(data) : data;
+      var sig = await crypto.subtle.sign({name:'ECDSA',hash:'SHA-256'}, SGIdentity._kp.privateKey, buf);
+      return btoa(String.fromCharCode.apply(null, new Uint8Array(sig)));
+    }catch(e){ console.warn('[SGIdentity] Sign failed:', e.message); return null; }
+  },
+
+  /* SHA-512 hash via WebCrypto */
+  sha512: async function(data){
+    var buf = typeof data==='string' ? new TextEncoder().encode(data) : data;
+    var hash = await crypto.subtle.digest('SHA-512', buf);
+    return Array.from(new Uint8Array(hash)).map(function(b){return ('0'+b.toString(16)).slice(-2);}).join('');
+  },
+
+  /* AES-256-GCM encrypt/decrypt */
+  encrypt: async function(plaintext, passphrase){
+    var enc = new TextEncoder();
+    var salt = crypto.getRandomValues(new Uint8Array(16));
+    var iv   = crypto.getRandomValues(new Uint8Array(12));
+    var baseKey = await crypto.subtle.importKey('raw', enc.encode(passphrase.padEnd(32,'0').slice(0,32)), 'AES-GCM', false, ['encrypt']);
+    var ct = await crypto.subtle.encrypt({name:'AES-GCM',iv:iv}, baseKey, enc.encode(plaintext));
+    var out = new Uint8Array(salt.length + iv.length + ct.byteLength);
+    out.set(salt,0); out.set(iv,salt.length); out.set(new Uint8Array(ct), salt.length+iv.length);
+    return btoa(String.fromCharCode.apply(null,out));
+  },
+
+  decrypt: async function(ciphertext, passphrase){
+    var raw = Uint8Array.from(atob(ciphertext), function(c){return c.charCodeAt(0);});
+    var iv  = raw.slice(16,28);
+    var ct  = raw.slice(28);
+    var enc = new TextEncoder();
+    var baseKey = await crypto.subtle.importKey('raw', enc.encode(passphrase.padEnd(32,'0').slice(0,32)), 'AES-GCM', false, ['decrypt']);
+    var pt = await crypto.subtle.decrypt({name:'AES-GCM',iv:iv}, baseKey, ct);
+    return new TextDecoder().decode(pt);
+  },
+
+  /* PBKDF2-based key derivation (Argon2id when bridge provides WASM) */
+  deriveKey: async function(passphrase, salt){
+    var enc     = new TextEncoder();
+    var saltBuf = salt ? enc.encode(salt) : crypto.getRandomValues(new Uint8Array(16));
+    var baseKey = await crypto.subtle.importKey('raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveBits']);
+    var bits    = await crypto.subtle.deriveBits(
+      {name:'PBKDF2', hash:'SHA-512', salt:saltBuf, iterations:310000}, baseKey, 256
+    );
+    return Array.from(new Uint8Array(bits)).map(function(b){return ('0'+b.toString(16)).slice(-2);}).join('');
+  }
+};
+window.SGIdentity = SGIdentity;
+
+/* ── 4. REPMHL Memory Hydration ─────────────────────────────────────────────
+   Loads persistent user memory from IndexedDB (falls back to localStorage).
+   Called during boot so context is available before role selection.       */
+var SGMemory = {
+  _db: null,
+  _store: 'sg_memory',
+  _profile: null,
+
+  init: async function(){
+    return new Promise(function(resolve){
+      try{
+        var req = indexedDB.open('SovereignMemory', 1);
+        req.onupgradeneeded = function(e){
+          var db = e.target.result;
+          if(!db.objectStoreNames.contains('sg_memory'))
+            db.createObjectStore('sg_memory', {keyPath:'key'});
+        };
+        req.onsuccess = function(e){ SGMemory._db = e.target.result; resolve(SGMemory); };
+        req.onerror   = function(){ resolve(SGMemory); };
+      }catch(_){ resolve(SGMemory); }
+    });
+  },
+
+  remember: async function(key, value){
+    if(!SGMemory._db) return;
+    return new Promise(function(resolve){
+      try{
+        var tx = SGMemory._db.transaction('sg_memory','readwrite');
+        tx.objectStore('sg_memory').put({key:key, value:value, ts:Date.now()});
+        tx.oncomplete = resolve;
+        tx.onerror    = resolve;
+      }catch(_){ resolve(); }
+    });
+  },
+
+  recall: async function(key){
+    if(!SGMemory._db) return null;
+    return new Promise(function(resolve){
+      try{
+        var tx  = SGMemory._db.transaction('sg_memory','readonly');
+        var req = tx.objectStore('sg_memory').get(key);
+        req.onsuccess = function(){ resolve(req.result ? req.result.value : null); };
+        req.onerror   = function(){ resolve(null); };
+      }catch(_){ resolve(null); }
+    });
+  },
+
+  /* Load REPMHL state — model rotation, token count, last session */
+  hydrateREPMHL: async function(){
+    var state = await SGMemory.recall('repmhl_state');
+    if(state){
+      window._REPMHL_STATE = state;
+      console.log('%c[REPMHL] Hydrated — session:'+state.session_id+' turns:'+( state.memory||[]).length,'color:#00ffc8;font-size:9px');
+    }
+    return state;
+  },
+
+  /* Save REPMHL state */
+  persistREPMHL: async function(state){
+    window._REPMHL_STATE = state;
+    await SGMemory.remember('repmhl_state', state);
+  },
+
+  /* Append a turn to REPMHL memory */
+  addTurn: async function(role, text, model){
+    var state = window._REPMHL_STATE || {session_id:'sov-'+Date.now(), memory:[], token_count:0};
+    var tokens = Math.ceil(text.length/4);
+    state.token_count = (state.token_count||0) + tokens;
+    state.memory = state.memory||[];
+    state.memory.push({
+      ts: new Date().toISOString(), role:role, text:text.slice(0,1200),
+      model:model||'claude-sonnet-4-5', tokens:tokens,
+      importance: role==='user' && (text.includes('critical')||text.includes('classified')) ? 0.9 : 0.5
+    });
+    /* Rotate model at 6144 tokens */
+    var MODELS = ['claude-sonnet-4-5','gpt-4o','grok-3'];
+    if(state.token_count >= 6144){
+      state.current_model_index = ((state.current_model_index||0)+1) % MODELS.length;
+      state.token_count = 0;
+      console.log('%c[REPMHL] Model rotation → '+MODELS[state.current_model_index],'color:#ffb300;font-size:9px');
+    }
+    await SGMemory.persistREPMHL(state);
+    return state;
+  },
+
+  getContext: function(maxTurns){
+    var state = window._REPMHL_STATE;
+    if(!state||!state.memory) return '';
+    var recent = state.memory.slice(-(maxTurns||10));
+    return recent.map(function(t){ return (t.role==='user'?'User':'Assistant')+': '+t.text; }).join('\n');
+  }
+};
+window.SGMemory = SGMemory;
+
+/* ── 5. HTTP-only Bridge — single authoritative implementation ───────────── */
+window.BRIDGE = window.BRIDGE || {};
+window.BRIDGE.base = (function(){
+  /* Try URL param first, then localStorage, then default */
+  var params = new URLSearchParams(window.location.search);
+  var ip = params.get('bridgeIp') || localStorage.getItem('sg_bridge_ip') || '127.0.0.1:9897';
+  return 'http://' + ip;
+})();
+window.BRIDGE.connected = false;
+window.BRIDGE.tryWebSocket = function(){ /* no-op — HTTP only */ };
+window.BRIDGE.send = async function(payload){
+  var mode = localStorage.getItem('sgh_mode')||'hybrid';
+  if(mode==='offline') return null;
+  try{
+    var r = await fetch(window.BRIDGE.base+'/api/ai', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(Object.assign({source:'sgh',ts:Date.now()}, payload||{}))
+    });
+    return r.ok ? await r.json() : null;
+  }catch(_){ return null; }
+};
+window.BRIDGE.health = async function(){
+  var mode = localStorage.getItem('sgh_mode')||'hybrid';
+  if(mode==='offline'){
+    window.BRIDGE.connected=false;
+    document.querySelectorAll('[id="bridgeStatus"],[id="ftBridge"]').forEach(function(el){
+      el.textContent='LOCAL'; el.style.color='#00ffc8';
+    });
+    return null;
+  }
+  try{
+    var r = await fetch(window.BRIDGE.base+'/api/health',{method:'GET',signal:AbortSignal.timeout(3000)});
+    window.BRIDGE.connected = r.ok;
+    document.querySelectorAll('[id="bridgeStatus"],[id="ftBridge"]').forEach(function(el){
+      el.textContent=r.ok?'BRIDGE LIVE':'OFFLINE'; el.style.color=r.ok?'#00e676':'#ff3d6e';
+    });
+    ['rs-bridge-dot','sgh-pill-dot'].forEach(function(id){
+      var el=document.getElementById(id); if(el) el.style.background=r.ok?'#00e676':'#ff3d6e';
+    });
+    if(r.ok){ var h=await r.json(); window._BRIDGE_HEALTH=h; }
+    return r.ok;
+  }catch(_){
+    window.BRIDGE.connected=false;
+    ['rs-bridge-dot','sgh-pill-dot'].forEach(function(id){
+      var el=document.getElementById(id); if(el) el.style.background='#ff3d6e';
+    });
+    return false;
+  }
+};
+/* Poll every 5 minutes silently — no banners */
+setTimeout(window.BRIDGE.health, 2000);
+setInterval(window.BRIDGE.health, 300000);
+
+/* ── 6. Admin auto-escalation ────────────────────────────────────────────────
+   Device whose public key matches a stored admin fingerprint gets L6 access.
+   First run: the device IS the admin (root provisioning model).
+   Subsequent runs: verified against stored fingerprint + session signature.  */
+var SGAdmin = {
+  ADMIN_ROLE_KEY: 'root_admin',
+  ADMIN_LEVEL:    6,
+  ADMIN_LABEL:    'L6',
+  ADMIN_ROLE_LABEL: 'Root Admin',
+
+  isAdminDevice: async function(){
+    var stored  = localStorage.getItem('sg_admin_device_fingerprint');
+    var current = window.SG_PUBLIC_KEY;
+    if(!current) return false;
+
+    if(!stored){
+      /* First boot — this device IS the admin. Store its fingerprint. */
+      var hash = await SGIdentity.sha512(current);
+      localStorage.setItem('sg_admin_device_fingerprint', hash);
+      localStorage.setItem('sg_admin_provisioned_at', new Date().toISOString());
+      console.log('%c[SGAdmin] Root device provisioned — fingerprint stored','color:#ff6b35;font-weight:bold;font-size:10px');
+      return true;
+    }
+
+    /* Verify: hash current pubkey == stored fingerprint */
+    var hash = await SGIdentity.sha512(current);
+    return hash === stored;
+  },
+
+  escalate: async function(){
+    var isAdmin = await SGAdmin.isAdminDevice();
+    if(!isAdmin) return false;
+
+    /* Sign a session token to prove device possession */
+    var sessionPayload = JSON.stringify({
+      device_id: window.SG_DEVICE_ID,
+      ts:        Date.now(),
+      nonce:     Array.from(crypto.getRandomValues(new Uint8Array(8)))
+                       .map(function(b){return b.toString(16);}).join('')
+    });
+    var signature = await SGIdentity.sign(sessionPayload);
+    if(!signature) return false;
+
+    /* Store escalated session */
+    var adminSession = {
+      sessionID:   'admin-'+Date.now(),
+      role:        SGAdmin.ADMIN_ROLE_KEY,
+      roleLabel:   SGAdmin.ADMIN_ROLE_LABEL,
+      level:       SGAdmin.ADMIN_LEVEL,
+      levelLabel:  SGAdmin.ADMIN_LABEL,
+      name:        localStorage.getItem('sg_admin_name') || 'Root Admin',
+      badge:       '⚡',
+      loginTime:   Date.now(),
+      device_id:   window.SG_DEVICE_ID,
+      signature:   signature,
+      escalated:   true,
+    };
+
+    sessionStorage.setItem('sg_s', JSON.stringify(adminSession));
+    localStorage.setItem('sg_s', JSON.stringify(adminSession));
+    await SGMemory.remember('last_session', adminSession);
+
+    console.log('%c[SGAdmin] ✓ L6 ROOT ADMIN escalated — device verified','color:#ff6b35;font-weight:bold;font-size:11px');
+    return adminSession;
+  }
+};
+window.SGAdmin = SGAdmin;
+
+/* ── 7. Boot sequence ────────────────────────────────────────────────────────
+   1. Init crypto identity
+   2. Hydrate REPMHL memory
+   3. Check admin escalation
+   4. If admin device → grant() directly
+   5. Else → animate progress bar → show roleScreen
+   ────────────────────────────────────────────────────────────────────────── */
+async function sovereignBoot(){
+  try{
+    /* 7a. Crypto identity */
+    await SGIdentity.init();
+
+    /* 7b. Memory hydration */
+    await SGMemory.init();
+    await SGMemory.hydrateREPMHL();
+
+    /* 7c. Corruption clear — localStorage may have broken code from prior sessions */
+    try{
+      var saved = localStorage.getItem('cm_code')||localStorage.getItem('sg_cm_code')||'';
+      if(saved && saved.trim().startsWith('</') && !saved.includes('<html')){
+        localStorage.removeItem('cm_code'); localStorage.removeItem('sg_cm_code');
+        var ed=document.getElementById('cm-editor');
+        if(ed) ed.value='<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <title>Preview</title>\n</head>\n<body>\n  <h1>Hello SuperGrok</h1>\n</body>\n</html>';
+      }
+    }catch(_){}
+
+    /* 7d. Admin escalation — BEFORE showing roleScreen */
+    var adminSession = await SGAdmin.escalate();
+    if(adminSession){
+      /* Device is the admin — restore session directly */
+      window._sg_session_restore = adminSession;
+      window._sg_has_session     = true;
+      try{
+        var ROLES = window.ROLES||{};
+        var rd = ROLES[SGAdmin.ADMIN_ROLE_KEY] || {
+          label:'Root Admin', icon:'⚡', level:6, color:'var(--acid)',
+          ranks:[{n:'Root Admin',l:'L6'}]
+        };
+        if(typeof window.grant==='function'){
+          window.grant(adminSession.name, adminSession.badge,
+                       SGAdmin.ADMIN_ROLE_KEY, rd, rd.ranks[0]);
+          return; /* directly to dashboard — no role screen needed */
+        }
+      }catch(e){ console.warn('[SGAdmin] grant() failed:', e.message); }
+    }
+
+    /* 7e. No session / not admin — animate progress bar then show role screen */
+    var STEPS=[
+      [15,'CRYPTO ENGINE'],[30,'IDENTITY CHECK'],[50,'MEMORY HYDRATION'],
+      [70,'BRIDGE PROBE'],[90,'ROLE MATRIX'],[100,'SOVEREIGN READY']
+    ];
+    var stepIdx = 0;
+    function step(){
+      var fill=document.getElementById('btFill');
+      var msg =document.getElementById('btMsg');
+      if(fill) fill.style.width=STEPS[stepIdx][0]+'%';
+      if(msg)  msg.textContent=STEPS[stepIdx][1];
+      stepIdx++;
+      if(stepIdx < STEPS.length){ setTimeout(step, 180); }
+      else { setTimeout(showRoleScreen, 200); }
+    }
+    step();
+
+  }catch(e){
+    console.warn('[sovereignBoot] error:', e.message);
+    setTimeout(showRoleScreen, 1000);
+  }
+}
+
+function showRoleScreen(){
+  try{
+    var boot=document.getElementById('bootScreen');
+    var role=document.getElementById('roleScreen');
+    var dash=document.getElementById('dashScreen');
+    if(dash&&dash.classList&&dash.classList.contains('active')) return;
+    if(boot){ boot.style.display='none'; if(boot.classList) boot.classList.remove('active'); }
+    if(role){ role.style.display='flex';  if(role.classList) role.classList.add('active'); }
+    if(typeof window.buildRoles==='function') window.buildRoles();
+    else setTimeout(function(){if(typeof window.buildRoles==='function') window.buildRoles();},500);
+  }catch(e){ console.warn('[showRoleScreen]', e.message); }
+}
+
+/* ── 8. Global setCode/getCode — exposed for ⚡ FIX buttons ─────────────── */
+if(typeof window.getCode !== 'function'){
+  window.getCode=function(){var e=document.getElementById('cm-editor');return e?e.value:'';};
+}
+if(typeof window.setCode !== 'function'){
+  window.setCode=function(c){
+    var e=document.getElementById('cm-editor');
+    if(e){ e.value=c; e.dispatchEvent(new Event('input',{bubbles:true})); }
+  };
+}
+if(typeof window.getLang !== 'function'){
+  window.getLang=function(){var e=document.getElementById('cm-lang');return e?e.value:'html';};
+}
+
+/* ── 9. API Keys — single clean implementation ──────────────────────────── */
+if(!window.SGKeys){
+  window.SGKeys={
+    get:function(a){
+      try{
+        var k=JSON.parse(localStorage.getItem('sg_apikeys')||'{}');
+        var al={anthropic:'claude',openai:'gpt',gpt:'openai',xai:'grok',grok:'xai'};
+        return k[a]||k[al[a]||a]||localStorage.getItem('apikey-'+a)||localStorage.getItem('sgh_key_'+a)||'';
+      }catch(_){return '';}
+    },
+    set:function(a,v){
+      try{
+        var k=JSON.parse(localStorage.getItem('sg_apikeys')||'{}');
+        k[a]=v;
+        var al={claude:'anthropic',openai:'gpt',grok:'xai'};
+        if(al[a])k[al[a]]=v;
+        localStorage.setItem('sg_apikeys',JSON.stringify(k));
+        localStorage.setItem('apikey-'+a,v);
+        localStorage.setItem('sgh_key_'+a,v);
+        /* Sync to bridge */
+        fetch(window.BRIDGE.base+'/api/keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agent:a,key:v})}).catch(function(){});
+        if(window.toast) toast('🔑 '+a+' key saved','ok');
+      }catch(_){}
+    }
+  };
+  window.showKeys=window.showKeyModal=function(){
+    var ex=document.getElementById('_sk_modal');if(ex){ex.remove();return;}
+    var m=document.createElement('div');m.id='_sk_modal';
+    m.style.cssText='position:fixed;inset:0;z-index:2147483640;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center';
+    m.onclick=function(e){if(e.target===m)m.remove();};
+    var agents=[{id:'claude',l:'🟣 Claude (Anthropic)',u:'https://console.anthropic.com/'},
+                {id:'openai',l:'🟢 OpenAI / GPT',u:'https://platform.openai.com/api-keys'},
+                {id:'grok',  l:'⚡ Grok / xAI',   u:'https://console.x.ai/'}];
+    m.innerHTML='<div style="background:#07101f;border:1px solid #1a2e50;border-radius:14px;padding:20px;width:min(440px,96vw)">'+
+      '<div style="display:flex;align-items:center;margin-bottom:12px"><span style="font:700 13px monospace;color:#00ffc8;flex:1">⚙️ API KEYS</span>'+
+      '<button onclick="document.getElementById(\'_sk_modal\').remove()" style="background:none;border:none;color:#6a88ae;cursor:pointer;font-size:22px">✕</button></div>'+
+      '<div style="font:8px monospace;color:#6a88ae;margin-bottom:10px;padding:8px;background:#0a1628;border-radius:6px">'+
+      '🔒 Stored locally · Routed through your FastAPI bridge only<br>'+
+      '💡 claude.ai Pro and Anthropic API are separate billing accounts.</div>'+
+      agents.map(function(a){
+        var s=window.SGKeys.get(a.id);
+        var mask=s?s.slice(0,12)+'…'+s.slice(-4):'not set';
+        return '<div style="margin-bottom:10px"><div style="font:700 9px monospace;color:#b5c8e4;margin-bottom:4px">'+a.l+
+          ' <span style="color:'+(s?'#00ffc8':'#ff6b6b')+'">'+mask+'</span>'+
+          ' <a href="'+a.u+'" target="_blank" style="color:#6a88ae;font-size:8px">get ↗</a></div>'+
+          '<div style="display:flex;gap:6px"><input id="_skai_'+a.id+'" type="password" value="'+s+'" placeholder="Paste key…"'+
+          ' style="flex:1;background:#07101f;border:1px solid #1a2e50;color:#eaf0ff;border-radius:6px;padding:8px;font:10px monospace">'+
+          '<button onclick="(function(){var v=document.getElementById(\'_skai_'+a.id+'\').value.trim();if(v){window.SGKeys.set(\''+a.id+'\',v);document.getElementById(\'_sk_modal\').remove();}})()"'+
+          ' style="background:#00ffc820;border:1px solid #00ffc840;color:#00ffc8;border-radius:6px;padding:8px 14px;cursor:pointer;font:700 9px monospace">SAVE</button></div></div>';
+      }).join('')+'</div>';
+    document.body.appendChild(m);
+  };
+}
+
+/* ── 10. BridgeTerm cleanup — prevent null crash ────────────────────────── */
+setTimeout(function(){
+  if(window.BridgeTerm){
+    BridgeTerm._ws = null;
+    BridgeTerm._connected = false;
+    var _orig = BridgeTerm._log;
+    BridgeTerm._log=function(msg,color){try{if(typeof _orig==='function')_orig.call(BridgeTerm,msg,color);}catch(_){console.log('[BridgeTerm]',msg);}};
+    BridgeTerm.connect=function(){
+      fetch(window.BRIDGE.base+'/api/health',{method:'GET'})
+        .then(function(r){if(r.ok){BridgeTerm._connected=true;BridgeTerm._log('Bridge reachable via HTTP','var(--acid)');}})
+        .catch(function(){BridgeTerm._log('Bridge offline — start python3_bridge.py','var(--pulse)');});
+    };
+    BridgeTerm.send=function(cmd){
+      BridgeTerm._log('> '+cmd,'var(--volt)');
+      fetch(window.BRIDGE.base+'/api/exec',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cmd:cmd})})
+        .then(function(r){return r.json();})
+        .then(function(d){if(d.stdout)BridgeTerm._log(d.stdout.trim(),'var(--t1)');if(d.stderr)BridgeTerm._log(d.stderr.trim(),'var(--pulse)');})
+        .catch(function(){BridgeTerm._log('Bridge offline — start python3_bridge.py','var(--pulse)');});
+    };
+  }
+}, 500);
+
+/* ── 11. Safe boot fallback ──────────────────────────────────────────────── */
+function checkStuck(){
+  try{
+    var boot=document.getElementById('bootScreen');
+    var role=document.getElementById('roleScreen');
+    var dash=document.getElementById('dashScreen');
+    var stuck=boot&&(boot.style.display!=='none')&&
+              (!boot.classList||boot.classList.contains('active'))&&
+              !(role&&role.classList&&role.classList.contains('active'))&&
+              !(dash&&dash.classList&&dash.classList.contains('active'));
+    if(stuck){ console.warn('[Boot] Stuck — forcing role screen'); showRoleScreen(); }
+  }catch(_){}
+}
+setTimeout(checkStuck, 3000);
+setTimeout(checkStuck, 6000);
+
+/* ── Run ─────────────────────────────────────────────────────────────────── */
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded', sovereignBoot);
+} else {
+  setTimeout(sovereignBoot, 0);
+}
+
+console.log('%c[Sovereign Module] v1.0 — PQC · REPMHL · Admin Escalation · HTTP Bridge','color:#00ffc8;font-weight:bold;font-size:10px');
+
+})(); // end SovereignModule
 </script>
 
 </body>

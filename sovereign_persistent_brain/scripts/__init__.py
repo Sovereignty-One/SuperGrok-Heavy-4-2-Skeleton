@@ -3,7 +3,8 @@
 from .dispatch_event import dispatch_event
 from .handle_error import handle_error
 from .hydrate_brain import hydrate_brain
-from .persist_brain import persist_brain, signer
+from ._brain_store import signer
+from .persist_brain import persist_brain
 from .register_agent import register_agent
 from .rotate_keys import rotate_keys
 from .rotate_tokens import rotate_tokens

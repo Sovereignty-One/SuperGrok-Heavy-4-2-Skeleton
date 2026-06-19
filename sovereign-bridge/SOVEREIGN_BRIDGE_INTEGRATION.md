@@ -1,0 +1,1 @@
+$(cat /tmp/SOVEREIGN_BRIDGE_INTEGRATION.md)
