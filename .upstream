@@ -1,5 +1,5 @@
 {
-  "upstream_repo": "https://github.com/appel420/sovereignty-ai-studio.git",
+  "upstream_repo": "https://github.com/Appel420/Sovereignty-AI-Studio.git",
   "upstream_branch": "main",
   "relationship": "skeleton-of",
   "subtree_path": "Sovereignty-AI-Studio-main",

@@ -12,7 +12,7 @@ export class ExportService {
 """
 SuperGrok Enterprise Backend
 Production-ready FastAPI with post-quantum cryptography
-Dependencies: fastapi, uvicorn, liboqs-python, cryptography, sqlalchemy
+Dependencies: fastapi, uvicorn, liboqs-python, cryptography, sqlalchemy, python-multipart
 """
 
 from fastapi import FastAPI, HTTPException, Depends, status
