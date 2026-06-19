@@ -8,6 +8,7 @@
     "dev":     "VERBOSE=1 node Unified_Server.js",
     "shell":   "ALLOW_SHELL=1 node Unified_Server.js",
     "check":   "node --check Unified_Server.js && echo OK",
+    "local:deploy-sync": "bash ci-cd/local/deploy-local.sh",
     "keygen":  "node -e \"const k=require('crypto').randomBytes(64);require('fs').writeFileSync('.sg_master_key',k,{mode:0o600});console.log('MASTER_KEY_B64='+k.toString('base64'));\""
   },
   "engines": { "node": ">=18.0.0" },
