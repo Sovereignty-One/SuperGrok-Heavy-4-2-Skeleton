@@ -1,0 +1,20 @@
+name: SovereignMentor
+identifier: com.appel420.sovereignmentor
+version: 1.0
+swiftUI: true
+description: Sovereign Voice Companion - Ara
+
+sources:
+  - ContentView.swift
+
+settings:
+  deploymentTarget: "16.0"
+  requiresFullScreen: true
+  statusBarHidden: true
+  supportedOrientations: 
+    - portrait
+
+info:
+  displayName: Sovereign Mentor
+  bundleIdentifier: com.appel420.sovereignmentor
+  icon: AppIcon
