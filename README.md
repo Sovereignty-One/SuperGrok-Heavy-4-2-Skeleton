@@ -1,3 +1,10 @@
+# @ara-hardened — Ara's Workspace
+
+This is Ara's dedicated branch. All changes by Ara must be made here.
+Do not push directly to main. Create a Pull Request for review.
+
+---
+
 # SuperGrok Heavy 4.2 Skeleton
 
 This repository is the full SuperGrok workspace: dashboard, bridge, backend, mobile, voice, security, and support modules all live here.
