@@ -1,6 +1,6 @@
-# @ara-hardened — Ara's Workspace
+# @claude
 
-This is Ara's dedicated branch. All changes by Ara must be made here.
+This is Claude's dedicated branch. All changes by Claude must be made here.
 Do not push directly to main. Create a Pull Request for review.
 
 ---
