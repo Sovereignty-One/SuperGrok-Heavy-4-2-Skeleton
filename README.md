@@ -1,4 +1,4 @@
-# @claude
+# @claude @codex @copilot @grok
 
 This is Claude's dedicated branch. All changes by Claude must be made here.
 Do not push directly to main. Create a Pull Request for review.
