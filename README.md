@@ -1,6 +1,6 @@
 # @claude @codex @copilot @grok
 
-This is Claude's dedicated branch. All changes by Claude must be made here.
+This is the main dedicated branch. All changes by Claude Grok/Ara GPT/Codex Copilot must be made in their dedicated branch.
 Do not push directly to main. Create a Pull Request for review.
 
 ---
