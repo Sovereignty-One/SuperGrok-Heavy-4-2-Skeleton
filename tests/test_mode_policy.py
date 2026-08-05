@@ -1,8 +1,6 @@
 """Tests for the explicit three-mode local control-plane policy."""
 from __future__ import annotations
 
-import importlib
-
 import mode_policy
 
 
