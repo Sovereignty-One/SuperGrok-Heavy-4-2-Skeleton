@@ -1,14 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="SuperGrok Enterprise - Post-Quantum Cryptography Dashboard" />
     <title>SuperGrok Enterprise</title>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <main id="app" aria-live="polite">
+      <header class="site-header">
+        <h1>SuperGrok Enterprise</h1>
+        <p>Local, device-owned dashboard</p>
+      </header>
+
+      <section class="panel">
+        <h2>Local control plane</h2>
+        <p id="status">Ready. No external providers are required.</p>
+        <div class="actions">
+          <button id="health-button" type="button">Run local check</button>
+          <button id="clear-button" type="button">Clear log</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Activity</h2>
+        <pre id="log" class="log" aria-label="Local activity log"></pre>
+      </section>
+    </main>
+    <script type="module" src="/src/main.js"></script>
   </body>
 </html>
