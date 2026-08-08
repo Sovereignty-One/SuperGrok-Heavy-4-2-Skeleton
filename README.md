@@ -1,3 +1,4 @@
+[![OAUTH-API-GENERATOR](https://github.com/Sovereignty-One/SuperGrok-Heavy-4-2-Skeleton/actions/workflows/oauth-api-generator.yml/badge.svg)](https://github.com/Sovereignty-One/SuperGrok-Heavy-4-2-Skeleton/actions/workflows/oauth-api-generator.yml)
 # @claude @codex @copilot @grok
 
 This is the main dedicated branch. All changes by Claude Grok/Ara GPT/Codex Copilot must be made in their dedicated branch.
