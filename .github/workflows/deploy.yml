@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Set up Python 3.13
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v3
         with:
           python-version: '3.13'
 
@@ -31,7 +31,7 @@ jobs:
         run: pytest --tb=short -q
         env:
           DATABASE_URL: sqlite:///./test.db
-          REDIS_URL: redis://localhost:6379/0
+          REDIS_URL: redis://localhost:9897
           SECRET_KEY: test-secret-key-for-ci-only-not-production-use-1234
 
   security-sentinel:
