@@ -12,12 +12,12 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.13'
 
       - name: Install dependencies
         run: |
@@ -37,12 +37,12 @@ jobs:
   security-sentinel:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v3
         with:
-          python-version: '3.11'
+          python-version: '3.13'
 
       - name: Syntax check security sentinel
         run: python -m py_compile security_sentinel.py
@@ -56,12 +56,12 @@ jobs:
     needs: [test, security-sentinel]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
       - name: Verify deploy file layout
         run: |
           test -f Dockerfile.backend
-          test -f supergrok-enterprise/Dockerfile
+          test -f SGHv119.html/Dockerfile
           test -f docker-compose.yml
           test -f security_sentinel.py
 
@@ -69,7 +69,7 @@ jobs:
         run: docker build -t sovereignty-backend -f Dockerfile.backend .
 
       - name: Build frontend Docker image
-        run: docker build -t sovereignty-frontend ./supergrok-enterprise
+        run: docker build -t sovereignty-frontend ./SGHv119.html
 
       - name: Verify Docker Compose config
         run: docker compose config --quiet
