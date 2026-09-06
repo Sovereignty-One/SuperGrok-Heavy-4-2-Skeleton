@@ -12,10 +12,15 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.sha }}
+          fetch-depth: 1
 
       - name: Set up Python 3.13
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.13'
 
@@ -37,10 +42,15 @@ jobs:
   security-sentinel:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.sha }}
+          fetch-depth: 1
 
       - name: Set up Python 3.13
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.13'
 
@@ -56,14 +66,36 @@ jobs:
     needs: [test, security-sentinel]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.sha }}
+          fetch-depth: 1
 
       - name: Verify deploy file layout
         run: |
-          test -f Dockerfile.backend
-          test -f SGHv119.html/Dockerfile
-          test -f docker-compose.yml
-          test -f security_sentinel.py
+          set -euxo pipefail
+          echo "Repository: ${GITHUB_REPOSITORY}"
+          echo "Revision: ${GITHUB_SHA}"
+          echo "Workspace: ${GITHUB_WORKSPACE}"
+          git remote -v
+          git rev-parse HEAD
+          pwd
+          ls -la
+          find . -maxdepth 2 -type f | sort
+
+          missing=0
+          for file in Dockerfile.backend SGHv119.html/Dockerfile docker-compose.yml security_sentinel.py; do
+            if [[ ! -f "${file}" ]]; then
+              echo "::error::Missing required deploy file: ${file}"
+              missing=1
+            fi
+          done
+
+          if [[ "${missing}" -ne 0 ]]; then
+            exit 1
+          fi
 
       - name: Build backend Docker image
         run: docker build -t sovereignty-backend -f Dockerfile.backend .
