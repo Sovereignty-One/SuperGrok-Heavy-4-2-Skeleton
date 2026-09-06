@@ -8,7 +8,7 @@ Do not push directly to main. Create a Pull Request for review.
 
 ---
 
-# SuperGrok Heavy 4.2 Skeleton
+# https://github.com/Sovereignty-One/Grok-4.6-ChatGPT-6-Claude-5.1-Skeleton/tree/main
 
 This repository is the full SuperGrok workspace: dashboard, bridge, backend, mobile, voice, security, and support modules all live here.
 
