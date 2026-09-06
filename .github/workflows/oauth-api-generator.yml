@@ -194,7 +194,7 @@ jobs:
       - name: OWASP dependency check
         run: |
           pip install pip-audit
-          pip-audit -r requirements.txt || true
+          pip-audit -r requirements.txt
         continue-on-error: false
 
       - name: Security headers reference
