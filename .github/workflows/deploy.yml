@@ -86,7 +86,7 @@ jobs:
           find . -maxdepth 2 -type f | sort
 
           missing=0
-          for file in Dockerfile.backend SGHv119.html/Dockerfile docker-compose.yml security_sentinel.py; do
+          for file in Dockerfile.backend supergrok-enterprise/Dockerfile docker-compose.yml security_sentinel.py; do
             if [[ ! -f "${file}" ]]; then
               echo "::error::Missing required deploy file: ${file}"
               missing=1
@@ -101,7 +101,7 @@ jobs:
         run: docker build -t sovereignty-backend -f Dockerfile.backend .
 
       - name: Build frontend Docker image
-        run: docker build -t sovereignty-frontend ./SGHv119.html
+        run: docker build -t sovereignty-frontend ./supergrok-enterprise
 
       - name: Verify Docker Compose config
         run: docker compose config --quiet
