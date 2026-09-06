@@ -70,7 +70,7 @@ jobs:
           node-version: 24
 
       - name: Install Node dependencies
-        run: npm ci --scripts || npm install --scripts
+        run: npm ci || npm install
 
       - name: Node syntax check
         run: |
