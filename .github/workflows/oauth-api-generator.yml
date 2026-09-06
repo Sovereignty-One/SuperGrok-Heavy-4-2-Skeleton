@@ -33,7 +33,7 @@ permissions:
 
 concurrency:
   group: oauth-api-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build-test:
@@ -44,10 +44,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.13
         uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: "3.13"
 
       - name: Install Python dependencies
         run: |
@@ -70,7 +70,7 @@ jobs:
           node-version: 24
 
       - name: Install Node dependencies
-        run: npm ci --ignore-scripts || npm install --ignore-scripts
+        run: npm ci || npm install
 
       - name: Node syntax check
         run: |
@@ -171,7 +171,7 @@ jobs:
             ${{ env.REGISTRY_LC }}:${{ github.sha }}
         env:
           COSIGN_EXPERIMENTAL: "1"
-        continue-on-error: true
+        continue-on-error: false
 
   security-scan:
     needs: build-test
@@ -194,8 +194,8 @@ jobs:
       - name: OWASP dependency check
         run: |
           pip install pip-audit
-          pip-audit -r requirements.txt || true
-        continue-on-error: true
+          pip-audit -r requirements.txt
+        continue-on-error: false
 
       - name: Security headers reference
         run: |
