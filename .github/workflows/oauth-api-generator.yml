@@ -33,7 +33,7 @@ permissions:
 
 concurrency:
   group: oauth-api-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build-test:
@@ -47,7 +47,7 @@ jobs:
       - name: Set up Python 3.11
         uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: "3.13"
 
       - name: Install Python dependencies
         run: |
@@ -171,7 +171,7 @@ jobs:
             ${{ env.REGISTRY_LC }}:${{ github.sha }}
         env:
           COSIGN_EXPERIMENTAL: "1"
-        continue-on-error: true
+        continue-on-error: false
 
   security-scan:
     needs: build-test
@@ -195,7 +195,7 @@ jobs:
         run: |
           pip install pip-audit
           pip-audit -r requirements.txt || true
-        continue-on-error: true
+        continue-on-error: false
 
       - name: Security headers reference
         run: |
